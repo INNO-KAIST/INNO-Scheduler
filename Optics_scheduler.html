@@ -1538,7 +1538,7 @@ function openLogin() {
     <h2>멤버 로그인</h2>
     <p class="muted" style="margin-bottom:10px">Synthesis Scheduler와 같은 계정(이름+PIN)입니다.</p>
     <div class="field"><label>이름</label><select id="loginMember">${opts}</select></div>
-    <div class="field"><label>PIN</label><input id="loginPin" type="password" inputmode="numeric" placeholder="합성 스케줄러와 동일한 PIN"></div>
+    <div class="field"><label>PIN</label><input id="loginPin" type="password" inputmode="numeric"></div>
     <div class="flexrow"><button class="btn primary" id="btnDoLogin">로그인</button><button class="btn" data-close>취소</button></div>`);
   $('#btnDoLogin').addEventListener('click', async () => {
     const id = $('#loginMember').value, pin = $('#loginPin').value.trim();

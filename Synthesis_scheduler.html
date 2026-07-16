@@ -1266,6 +1266,7 @@ function openLogin() {
     .map(m => `<option value="${m.id}">${esc(m.name)}${m.pinHash ? '' : ' (첫 로그인)'}</option>`).join('');
   showModal(`
     <h2>멤버 로그인</h2>
+    <p class="muted" style="margin-bottom:10px">Optics Scheduler와 같은 계정(이름+PIN)입니다.</p>
     <div class="field"><label>이름</label><select id="loginMember">${opts}</select></div>
     <div class="field"><label>PIN (숫자 4자리 이상)</label><input id="loginPin" type="password" inputmode="numeric" placeholder="처음이면 여기서 입력한 PIN이 등록됩니다"></div>
     <div class="flexrow"><button class="btn primary" id="btnDoLogin">로그인</button><button class="btn" data-close>취소</button></div>
