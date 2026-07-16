@@ -471,6 +471,8 @@ const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const memberName = id => S.members[id]?.name || `(삭제된 멤버:${String(id).slice(0,5)})`;
 const pinHashOf = (memberId, pin) => sha256Hex(memberId + '|' + pin);
+// 키 순서 무관 canonical 직렬화 (Firestore는 맵 키를 정렬해 반환하므로 순서 비교 금지)
+const canonMap = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k]]));
 
 function toast(msg, cls = '') {
   const el = document.createElement('div');
@@ -619,23 +621,23 @@ function makeFirestoreStore() {
     async verifyResults(week, resultsDoc) {
       const v = await fetchWeekVotes(week);
       const r = computeLottery(v);
-      const ok = r.seed === resultsDoc.seed && JSON.stringify(r.assignments) === JSON.stringify(resultsDoc.assignments)
+      const ok = r.seed === resultsDoc.seed && canonMap(r.assignments) === canonMap(resultsDoc.assignments)
         && JSON.stringify([...r.priorityMembers].sort()) === JSON.stringify([...(resultsDoc.priorityMembers||[])].sort());
       return { ok, recomputed: r };
     },
-    async book(cellKey) {
+    async book(cellKey, memberId) {
       const c = cycle();
       await db.doc(`bookings/${c.targetWeek}_${cellKey}`).set({
-        week: c.targetWeek, cellKey, memberId: S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
+        week: c.targetWeek, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
       });
     },
     async unbook(cellKey, week) {
       await db.doc(`bookings/${week}_${cellKey}`).delete();
     },
-    async cancelAssignment(cellKey) {
+    async cancelAssignment(cellKey, memberId) {
       const c = cycle();
       await db.doc(`cancellations/${c.targetWeek}_${cellKey}`).set({
-        week: c.targetWeek, cellKey, memberId: S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
+        week: c.targetWeek, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
       });
     },
     async loadHistory(week) {
@@ -735,20 +737,20 @@ function makeDemoStore() {
     },
     async verifyResults(week, doc) {
       const r = computeLottery(mem.votes[week] || {});
-      return { ok: r.seed === doc.seed && JSON.stringify(r.assignments) === JSON.stringify(doc.assignments), recomputed: r };
+      return { ok: r.seed === doc.seed && canonMap(r.assignments) === canonMap(doc.assignments), recomputed: r };
     },
-    async book(cellKey) {
+    async book(cellKey, memberId) {
       const c = cycle();
       const b = mem.bookings[c.targetWeek] = mem.bookings[c.targetWeek] || {};
       if (b[cellKey]) throw new Error('이미 예약된 슬롯입니다.');
-      b[cellKey] = { week: c.targetWeek, cellKey, memberId: S.user.id, createdAt: Date.now() };
+      b[cellKey] = { week: c.targetWeek, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
       pushState();
     },
     async unbook(cellKey, week) { delete (mem.bookings[week] || {})[cellKey]; pushState(); },
-    async cancelAssignment(cellKey) {
+    async cancelAssignment(cellKey, memberId) {
       const c = cycle();
       (mem.cancels[c.targetWeek] = mem.cancels[c.targetWeek] || {})[cellKey] =
-        { week: c.targetWeek, cellKey, memberId: S.user.id, createdAt: Date.now() };
+        { week: c.targetWeek, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
       pushState();
     },
     async loadHistory(week) {
@@ -925,11 +927,15 @@ function gridHtml(mode) {
           if (mode === 'book' && S.user && st.member === S.user.id && !isThis) {
             cls += ' clickable'; click = ` data-cell="${key}" data-act="cancelwin"`;
             inner += '<span class="tag">(클릭해 확정 취소)</span>';
+          } else if (mode === 'book' && S.user?.isAdmin && !isThis) {
+            cls += ' clickable'; click = ` data-cell="${key}" data-act="admin-cancelwin" data-owner="${st.member}"`;
+            inner += '<span class="tag">(관리자: 확정 취소)</span>';
           }
         } else if (st.type === 'booked') {
           cls += ' booked' + (S.user && st.member === S.user.id ? ' minewin' : '');
           inner = `${esc(memberName(st.member))}<span class="tag">예약</span>`;
           if (mode === 'book' && S.user && st.member === S.user.id) { cls += ' clickable'; click = ` data-cell="${key}" data-act="unbook"`; inner += '<span class="tag">(클릭해 취소)</span>'; }
+          else if (mode === 'book' && S.user?.isAdmin && !isThis) { cls += ' clickable'; click = ` data-cell="${key}" data-act="admin-unbook" data-owner="${st.member}"`; inner += '<span class="tag">(관리자: 예약 취소)</span>'; }
         } else {
           if (mode === 'book' && c.phase === 'BOOKING' && !isThis) {
             cls += ' empty-book clickable'; inner = '예약 가능'; click = ` data-cell="${key}" data-act="book"`;
@@ -1185,6 +1191,8 @@ function renderRules() {
     <li>예약은 서버에서 원자적으로 처리 — 동시에 눌러도 정확히 1명만 성공.</li>
     <li>본인 예약은 본인이 취소 가능 (취소 즉시 빈 슬롯으로 전환).</li>
     <li>Day 2배치 제한의 예약 단계 적용 여부는 연구실 정책에 따라 관리자가 설정 (기본: 미적용).</li>
+    <li><b>관리자 운영 조치</b>: 관리자는 실시간 예약 탭에서 노쇼 정리·대리 조정 목적으로 모든 칸을 직접 관리할 수 있음 — 임의 멤버 이름으로 대리 예약, 타인 예약 취소, 타인 추첨 확정 취소(권리 상실 처리). 관리자 조치는 우선예약 창의 제한을 받지 않음.</li>
+    <li>공용 구글캘린더는 이 시스템의 상태를 그대로 따라가므로(1분 내 자동 동기화), <b>캘린더에서 직접 수정하지 말고 반드시 앱에서 조정</b>할 것 (캘린더 수동 변경은 자동으로 원상복구됨).</li>
   </ul>
 
   <h3>7. 편법·오류 방지책</h3>
@@ -1283,6 +1291,25 @@ function openBootstrap() {
     catch (e) { toast(e.message, 'err'); }
   });
 }
+function openAdminBook(cellKey) {
+  const actives = Object.values(S.members).filter(m => m.active !== false)
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  showModal(`
+    <h2>예약 — ${esc(cellLabel(cellKey))}</h2>
+    <p class="muted" style="margin-bottom:10px">관리자 권한으로 예약합니다. 본인 또는 다른 멤버를 지정할 수 있습니다.</p>
+    <div class="field"><label>예약자</label><select id="adminBookMember">
+      ${actives.map(m => `<option value="${m.id}" ${m.id === S.user.id ? 'selected' : ''}>${esc(m.name)}${m.id === S.user.id ? ' (본인)' : ''}</option>`).join('')}
+    </select></div>
+    <div class="flexrow"><button class="btn primary" id="btnAdminBook">예약</button><button class="btn" data-close>취소</button></div>`);
+  document.querySelector('#btnAdminBook').addEventListener('click', async () => {
+    const mid = document.querySelector('#adminBookMember').value;
+    try {
+      await store.book(cellKey, mid);
+      closeModal();
+      toast(`${memberName(mid)}님 이름으로 예약되었습니다. (캘린더에 곧 반영)`, 'okk');
+    } catch (e) { toast(/permission|exist/i.test(e.message) ? '방금 다른 예약이 먼저 들어갔습니다.' : '예약 실패: ' + e.message, 'err'); }
+  });
+}
 function showModal(html) {
   $('#modalRoot').innerHTML = `<div class="modal-bg" id="modalBg"><div class="modal">${html}</div></div>`;
   $('#modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
@@ -1328,6 +1355,7 @@ function bindMain() {
   document.querySelectorAll('[data-act="book"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell;
     const c = cycle();
+    if (S.user.isAdmin) { openAdminBook(key); return; } // 관리자: 우선창 제한 없이 대리 예약 모달
     if (inPriorityWindow(c) && !S.results?.priorityMembers?.includes(S.user.id))
       return toast('지금은 Day 탈락자 우선예약 시간입니다. 잠시 후 전체 오픈됩니다.', 'err');
     if (S.config.bookingDayCapEnabled && isDaySlot(parseCell(key).slot)) {
@@ -1338,6 +1366,20 @@ function bindMain() {
     if (!confirm(`${cellLabel(key)} 슬롯을 예약할까요?`)) return;
     try { await store.book(key); toast('예약 완료!', 'okk'); }
     catch (e) { toast(/permission|exist/i.test(e.message) ? '한발 늦었습니다 — 방금 다른 분이 예약했습니다.' : '예약 실패: ' + e.message, 'err'); }
+  }));
+  // 관리자: 타인 예약 취소
+  document.querySelectorAll('[data-act="admin-unbook"]').forEach(td => td.addEventListener('click', async () => {
+    const key = td.dataset.cell, owner = td.dataset.owner;
+    if (!confirm(`[관리자 조치] ${memberName(owner)}님의 ${cellLabel(key)} 예약을 취소할까요?`)) return;
+    try { await store.unbook(key, cycle().targetWeek); toast('예약이 취소되었습니다. (캘린더에 곧 반영)', 'okk'); }
+    catch (e) { toast(e.message, 'err'); }
+  }));
+  // 관리자: 타인 추첨 확정 취소
+  document.querySelectorAll('[data-act="admin-cancelwin"]').forEach(td => td.addEventListener('click', async () => {
+    const key = td.dataset.cell, owner = td.dataset.owner;
+    if (!confirm(`[관리자 조치] ${memberName(owner)}님의 ${cellLabel(key)} 추첨 확정을 취소할까요?\n\n⚠ 권리가 영구히 상실되며 되돌릴 수 없습니다. 칸은 빈 슬롯으로 전환됩니다.`)) return;
+    try { await store.cancelAssignment(key, owner); toast('확정이 취소되었습니다. (캘린더에 곧 반영)', 'okk'); }
+    catch (e) { toast(e.message, 'err'); }
   }));
   document.querySelectorAll('[data-act="cancelwin"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell;
