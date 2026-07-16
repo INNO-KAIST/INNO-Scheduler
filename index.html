@@ -454,8 +454,10 @@ const S = {
   votes: {},             // targetWeek: memberId -> [cells]
   results: null,         // targetWeek results doc
   bookings: {},          // targetWeek: cellKey -> {memberId}
+  cancels: {},           // targetWeek: cellKey -> 취소 기록 (확정 포기)
   curResults: null,      // 이번 주(진행중인 주) 결과
   curBookings: {},
+  curCancels: {},
   pendingCells: null,    // 투표 탭 편집 중 선택
   verify: null,          // {ok, msg}
   histCache: {},         // week -> {votes, results, bookings, verify}
@@ -547,14 +549,20 @@ function makeFirestoreStore() {
     on(db.collection('bookings').where('week', '==', c.targetWeek), snap => {
       const b = {}; snap.forEach(d => b[d.data().cellKey] = d.data()); S.bookings = b; render();
     });
+    on(db.collection('cancellations').where('week', '==', c.targetWeek), snap => {
+      const x = {}; snap.forEach(d => x[d.data().cellKey] = d.data()); S.cancels = x; render();
+    });
     on(db.doc('results/' + c.votingWeek), d => { S.curResults = d.exists ? d.data() : null; render(); });
     on(db.collection('bookings').where('week', '==', c.votingWeek), snap => {
       const b = {}; snap.forEach(d => b[d.data().cellKey] = d.data()); S.curBookings = b; render();
     });
+    on(db.collection('cancellations').where('week', '==', c.votingWeek), snap => {
+      const x = {}; snap.forEach(d => x[d.data().cellKey] = d.data()); S.curCancels = x; render();
+    });
   }
 
   /* 주가 바뀌면(월요일 00시 통과) 리스너 재구성 */
-  setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.bookings = {}; S.pendingCells = null; resubscribe(); } }, 30000);
+  setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.bookings = {}; S.cancels = {}; S.curCancels = {}; S.pendingCells = null; resubscribe(); } }, 30000);
 
   async function fetchWeekVotes(week) {
     const snap = await db.collection('votes').where('week', '==', week).get();
@@ -624,13 +632,21 @@ function makeFirestoreStore() {
     async unbook(cellKey, week) {
       await db.doc(`bookings/${week}_${cellKey}`).delete();
     },
+    async cancelAssignment(cellKey) {
+      const c = cycle();
+      await db.doc(`cancellations/${c.targetWeek}_${cellKey}`).set({
+        week: c.targetWeek, cellKey, memberId: S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
+      });
+    },
     async loadHistory(week) {
-      const [rd, votes, bsnap] = await Promise.all([
+      const [rd, votes, bsnap, csnap] = await Promise.all([
         db.doc('results/' + week).get(), fetchWeekVotes(week),
         db.collection('bookings').where('week', '==', week).get(),
+        db.collection('cancellations').where('week', '==', week).get(),
       ]);
       const bookings = {}; bsnap.forEach(d => bookings[d.data().cellKey] = d.data());
-      return { results: rd.exists ? rd.data() : null, votes, bookings };
+      const cancels = {}; csnap.forEach(d => cancels[d.data().cellKey] = d.data());
+      return { results: rd.exists ? rd.data() : null, votes, bookings, cancels };
     },
     admin: {
       async bootstrap(name, pin) {
@@ -656,7 +672,7 @@ function makeFirestoreStore() {
 /* ---------------- Demo store (Firebase 미설정 시) ---------------- */
 function makeDemoStore() {
   const mem = {
-    members: {}, votes: {}, results: {}, bookings: {},
+    members: {}, votes: {}, results: {}, bookings: {}, cancels: {},
     config: { priorityWindowMin: 60, bookingDayCapEnabled: false },
   };
   ['김데모', '이샘플', '박예시', '최가상', '정테스트', '한체험'].forEach((n, i) => {
@@ -678,8 +694,10 @@ function makeDemoStore() {
     if (S.pendingCells === null && S.user && S.votes[S.user.id]) S.pendingCells = [...S.votes[S.user.id]];
     S.results = mem.results[c.targetWeek] || null;
     S.bookings = { ...(mem.bookings[c.targetWeek] || {}) };
+    S.cancels = { ...(mem.cancels[c.targetWeek] || {}) };
     S.curResults = mem.results[c.votingWeek] || null;
     S.curBookings = { ...(mem.bookings[c.votingWeek] || {}) };
+    S.curCancels = { ...(mem.cancels[c.votingWeek] || {}) };
     S.connected = true;
     render();
   }
@@ -727,8 +745,14 @@ function makeDemoStore() {
       pushState();
     },
     async unbook(cellKey, week) { delete (mem.bookings[week] || {})[cellKey]; pushState(); },
+    async cancelAssignment(cellKey) {
+      const c = cycle();
+      (mem.cancels[c.targetWeek] = mem.cancels[c.targetWeek] || {})[cellKey] =
+        { week: c.targetWeek, cellKey, memberId: S.user.id, createdAt: Date.now() };
+      pushState();
+    },
     async loadHistory(week) {
-      return { results: mem.results[week] || null, votes: mem.votes[week] || {}, bookings: mem.bookings[week] || {} };
+      return { results: mem.results[week] || null, votes: mem.votes[week] || {}, bookings: mem.bookings[week] || {}, cancels: mem.cancels[week] || {} };
     },
     admin: {
       async bootstrap(name, pin) {
@@ -775,7 +799,7 @@ async function maybeVerify() {
  * 렌더링
  * ===================================================================== */
 const TABS = [
-  ['dash', '📊 현황'], ['vote', '🗳️ 토큰 투표'], ['book', '⚡ 선착순 예약'],
+  ['dash', '📊 현황'], ['vote', '🗳️ 토큰 투표'], ['book', '⚡ 실시간 예약'],
   ['results', '🎲 추첨 결과'], ['members', '👥 명단'], ['rules', '📖 규칙'], ['admin', '🔧 관리자'],
 ];
 
@@ -827,7 +851,7 @@ function renderPhasebar() {
   const badge = P === 'VOTING' ? '<span class="badge b-accent">1단계 · 토큰 투표 진행중</span>'
     : P === 'WAITING' ? '<span class="badge b-amber">2단계 · 투표 마감 — 추첨 대기</span>'
     : inPriorityWindow(c) ? '<span class="badge b-violet">3단계 · 우선예약 진행중 (Day 탈락자 전용)</span>'
-    : '<span class="badge b-green">3단계 · 선착순 예약 진행중</span>';
+    : '<span class="badge b-green">3단계 · 실시간 예약 진행중</span>';
   const target = P === 'VOTING' ? c.voteClose : P === 'WAITING' ? c.announce
     : inPriorityWindow(c) ? priorityWindowEnd(c) : weekStartMs(c.targetWeek + 1);
   const targetLabel = P === 'VOTING' ? '투표 마감까지' : P === 'WAITING' ? '추첨 발표까지'
@@ -836,7 +860,7 @@ function renderPhasebar() {
     ['투표', `월 00:00 ~ 수 24:00`, P === 'VOTING' ? 'on' : 'done'],
     ['마감·추첨 대기', `목 00:00 ~ 12:00`, P === 'WAITING' ? 'on' : (P === 'VOTING' ? '' : 'done')],
     ['발표 + 우선예약', `목 12:00 (${S.config.priorityWindowMin}분간)`, P === 'BOOKING' && inPriorityWindow(c) ? 'on' : (P === 'BOOKING' ? 'done' : '')],
-    ['전체 선착순 예약', `이후 ~ 대상 주 일요일`, P === 'BOOKING' && !inPriorityWindow(c) ? 'on' : ''],
+    ['전체 실시간 예약', `이후 ~ 대상 주 일요일`, P === 'BOOKING' && !inPriorityWindow(c) ? 'on' : ''],
   ];
   $('#phasebar').innerHTML = `
     <div class="toprow">${badge}
@@ -857,18 +881,19 @@ function renderTabs() {
 /* ---------------- 그리드 공통 ---------------- */
 function myVoteSet() { return new Set(S.user ? (S.votes[S.user.id] || []) : []); }
 function cellState(cellKey, ctx) {
-  // ctx: {results, bookings, phase} → 표시 상태 결정
+  // ctx: {results, bookings, cancels} → 표시 상태 결정
   const a = ctx.results?.assignments?.[cellKey];
-  if (a) return { type: 'lottery', member: a };
+  const cancelled = !!ctx.cancels?.[cellKey];
+  if (a && !cancelled) return { type: 'lottery', member: a };
   const b = ctx.bookings[cellKey];
   if (b) return { type: 'booked', member: b.memberId };
-  return { type: 'empty' };
+  return { type: 'empty', wasCancelled: a && cancelled };
 }
 function gridHtml(mode) {
   // mode: 'status' | 'vote' | 'book' | 'thisweek'
   const c = cycle();
   const isThis = mode === 'thisweek';
-  const ctx = isThis ? { results: S.curResults, bookings: S.curBookings } : { results: S.results, bookings: S.bookings };
+  const ctx = isThis ? { results: S.curResults, bookings: S.curBookings, cancels: S.curCancels } : { results: S.results, bookings: S.bookings, cancels: S.cancels };
   const pending = new Set(S.pendingCells || []);
   const counts = {};
   if (!isThis) for (const [m, cells] of Object.entries(S.votes)) for (const k of cells) counts[k] = (counts[k] || 0) + 1;
@@ -897,6 +922,10 @@ function gridHtml(mode) {
         if (st.type === 'lottery') {
           cls += ' lottery' + (S.user && st.member === S.user.id ? ' minewin' : '');
           inner = `${esc(memberName(st.member))}<span class="tag">추첨 확정</span>`;
+          if (mode === 'book' && S.user && st.member === S.user.id && !isThis) {
+            cls += ' clickable'; click = ` data-cell="${key}" data-act="cancelwin"`;
+            inner += '<span class="tag">(클릭해 확정 취소)</span>';
+          }
         } else if (st.type === 'booked') {
           cls += ' booked' + (S.user && st.member === S.user.id ? ' minewin' : '');
           inner = `${esc(memberName(st.member))}<span class="tag">예약</span>`;
@@ -924,7 +953,7 @@ function gridHtml(mode) {
     <tr><th class="rowh">시간표</th>${BATCHES.map(b => `<th>Batch #${b}</th>`).join('')}</tr>${rows}</table></div>
     <div class="legend">
       <span><span class="sw" style="background:var(--accent-soft);border-color:var(--accent)"></span>내 토큰/추첨 확정</span>
-      <span><span class="sw" style="background:var(--green-soft);border-color:#bfe6d2"></span>선착순 예약</span>
+      <span><span class="sw" style="background:var(--green-soft);border-color:#bfe6d2"></span>실시간 예약</span>
       <span><span class="sw" style="border-style:dashed"></span>예약 가능(빈 슬롯)</span>
       <span><span class="sw" style="background:#fff"></span>지원자 수는 우측 상단 숫자</span>
     </div>`;
@@ -951,7 +980,7 @@ function renderDash() {
         <div class="flexrow" style="gap:14px">
           <div class="stat"><b>${nVoters}/${nMembers}</b><span>투표 참여 인원</span></div>
           <div class="stat"><b>${c.phase === 'BOOKING' ? nAssigned : '–'}</b><span>추첨 확정 슬롯</span></div>
-          <div class="stat"><b>${c.phase === 'BOOKING' ? nBooked : '–'}</b><span>선착순 예약 슬롯</span></div>
+          <div class="stat"><b>${c.phase === 'BOOKING' ? nBooked : '–'}</b><span>실시간 예약 슬롯</span></div>
         </div>
         <div>
           ${S.user ? `<div class="flexrow">내 토큰 (이번 주): <span class="tokens">${BATCHES.map((_, i) => `<span class="tok ${i < used ? 'used' : ''}">${i < used ? '✓' : '●'}</span>`).join('')}</span> <span class="muted">${TOKENS_PER_WEEK - used}개 남음</span></div>
@@ -1008,9 +1037,9 @@ function renderVote() {
 function renderBook() {
   const c = cycle();
   if (c.phase !== 'BOOKING') {
-    return `<div class="card"><h2>선착순 예약</h2><p class="muted">예약은 <b>목요일 12:00 추첨 발표 직후</b>부터 가능합니다. 오픈까지: <span class="countdown" data-target="${c.announce}">${fmtDur(c.announce - now())}</span></p></div>`;
+    return `<div class="card"><h2>실시간 예약</h2><p class="muted">예약은 <b>목요일 12:00 추첨 발표 직후</b>부터 가능합니다. 오픈까지: <span class="countdown" data-target="${c.announce}">${fmtDur(c.announce - now())}</span></p></div>`;
   }
-  if (!S.user) return `<div class="card"><h2>선착순 예약</h2><p class="muted">예약하려면 먼저 로그인해주세요.</p></div>`;
+  if (!S.user) return `<div class="card"><h2>실시간 예약</h2><p class="muted">예약하려면 먼저 로그인해주세요.</p></div>`;
   const inPrio = inPriorityWindow(c);
   const amPrio = S.results?.priorityMembers?.includes(S.user.id);
   let banner = '';
@@ -1022,8 +1051,8 @@ function renderBook() {
   const myBookings = Object.entries(S.bookings).filter(([, b]) => b.memberId === S.user.id).map(([k]) => k);
   const dayCapNote = S.config.bookingDayCapEnabled ? `<div class="note">이 연구실 설정: 선착순 예약 단계에도 Day 주간 2배치 제한이 적용됩니다.</div>` : '';
   return `${banner}<div class="card">
-    <h2>선착순 실시간 예약 — ${weekLabel(c.targetWeek)} 대상</h2>
-    <p class="muted">빈 슬롯(점선)을 누르면 즉시 예약됩니다. 예약은 서버에서 원자적으로 처리되어 정확히 선착순이 보장됩니다. 내 예약 칸을 누르면 취소됩니다.</p>
+    <h2>실시간 예약 — ${weekLabel(c.targetWeek)} 대상</h2>
+    <p class="muted">빈 슬롯(점선)을 누르면 즉시 예약됩니다. 예약은 서버에서 원자적으로 처리되어 정확히 선착순이 보장됩니다. <b>내 예약 칸</b> 또는 <b>내 추첨 확정 칸</b>을 누르면 취소할 수 있습니다 (확정 취소는 권리 상실 — 되돌릴 수 없음).</p>
     ${dayCapNote}
     ${gridHtml('book')}
     <h3>내 예약 (${myBookings.length}건)</h3>
@@ -1038,7 +1067,7 @@ function renderResults() {
   for (let w = c.targetWeek; w >= c.targetWeek - 8; w--) weekOpts.push(w);
   const sel = S.resultsWeek ?? c.targetWeek;
   const isCurrent = sel === c.targetWeek;
-  const data = isCurrent ? { results: S.results, votes: S.votes, bookings: S.bookings } : S.histCache[sel];
+  const data = isCurrent ? { results: S.results, votes: S.votes, bookings: S.bookings, cancels: S.cancels } : S.histCache[sel];
   let body = '';
   if (!isCurrent && !data) {
     body = '<p class="muted">불러오는 중...</p>';
@@ -1057,15 +1086,17 @@ function renderResults() {
     const vbadge = verify == null ? '<span class="badge b-gray">검증 중...</span>'
       : verify.ok ? '<span class="badge b-green">✓ 검증 완료 — 투표 데이터로부터 재계산한 결과와 일치</span>'
       : '<span class="badge b-red">⚠ 검증 불일치 — 관리자에게 결과 재생성을 요청하세요</span>';
+    const cxl = data.cancels || {};
     const rows = Object.entries(r.assignments || {}).sort().map(([k, m]) =>
-      `<tr><td>${cellLabel(k)}</td><td><b>${esc(memberName(m))}</b></td><td><span class="badge b-accent">추첨</span></td></tr>`).join('');
+      `<tr><td>${cellLabel(k)}</td><td><b style="${cxl[k] ? 'text-decoration:line-through;opacity:.55' : ''}">${esc(memberName(m))}</b></td>
+       <td>${cxl[k] ? '<span class="badge b-red">확정 취소됨 (권리 상실)</span>' : '<span class="badge b-accent">추첨</span>'}</td></tr>`).join('');
     const brows = Object.entries(data.bookings || {}).sort().map(([k, b]) =>
-      `<tr><td>${cellLabel(k)}</td><td><b>${esc(memberName(b.memberId))}</b></td><td><span class="badge b-green">선착순 예약</span></td></tr>`).join('');
+      `<tr><td>${cellLabel(k)}</td><td><b>${esc(memberName(b.memberId))}</b></td><td><span class="badge b-green">실시간 예약</span></td></tr>`).join('');
     body = `
       <div class="flexrow" style="margin-bottom:10px">${vbadge}</div>
       <h3>추첨 배정 (${Object.keys(r.assignments || {}).length}건)</h3>
       ${rows ? `<table class="list"><tr><th>슬롯</th><th>배정자</th><th>방식</th></tr>${rows}</table>` : '<p class="muted">추첨 배정 없음 (투표 없음)</p>'}
-      <h3>선착순 예약 (${Object.keys(data.bookings || {}).length}건)</h3>
+      <h3>실시간 예약 (${Object.keys(data.bookings || {}).length}건)</h3>
       ${brows ? `<table class="list"><tr><th>슬롯</th><th>예약자</th><th>방식</th></tr>${brows}</table>` : '<p class="muted">아직 없음</p>'}
       <h3>Day 우선예약 대상자</h3>
       <p class="muted">${(r.priorityMembers || []).length ? r.priorityMembers.map(m => esc(memberName(m))).join(', ') : '없음'}</p>
@@ -1096,6 +1127,12 @@ function renderMembers() {
 /* ---------------- 탭: 규칙 ---------------- */
 function renderRules() {
   return `<div class="card rules"><h2>📖 운영 규칙 및 내부 프로세스</h2>
+
+  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:#8a2530;font-size:14px">
+    <b>⚠ 최우선 주의사항</b> — 확보한 시간(추첨 확정·실시간 예약)에 사용이 불가능해진 경우,
+    다른 멤버가 그 시간을 쓸 수 있도록 <b>최대한 빨리 시스템에서 직접 취소</b>해 주세요.
+    (실시간 예약 탭에서 본인 칸 클릭 → 취소. 방치는 전체 장비 가동률 손실로 이어집니다.)
+  </div>
 
   <h3>1. 토큰 제도</h3>
   <ul>
@@ -1139,9 +1176,11 @@ function renderRules() {
     <li>결과 문서는 생성 후 수정 불가(서버 규칙). 불일치 시에만 관리자가 삭제 후 재생성.</li>
   </ul>
 
-  <h3>6. 선착순 예약 (목 12:00 이후)</h3>
+  <h3>6. 실시간 예약 (목 12:00 이후)</h3>
   <ul>
     <li>추첨 후 빈 칸에 대해 <b>1인당 횟수 제한 없이</b> 실시간 예약 가능.</li>
+    <li><b>추첨 확정 칸의 취소</b>: 본인이 추첨으로 확정받은 칸도 실시간 예약 탭에서 클릭하여 취소할 수 있음.</li>
+    <li>추첨 확정 칸을 취소하면 그 <b>권리는 즉시·영구히 상실</b>되며(복구 불가), 해당 칸은 빈 슬롯으로 전환되어 전원이 실시간 예약 가능. 사용한 토큰은 반환되지 않음.</li>
     <li><b>우선예약</b>: Day에 토큰을 1개 이상 냈으나 Day에 한 번도 선정되지 못한 인원은 발표 직후 일정 시간(기본 60분, 관리자 설정) 동안 <b>단독으로</b> 예약 가능. 그 후 전체 오픈.</li>
     <li>예약은 서버에서 원자적으로 처리 — 동시에 눌러도 정확히 1명만 성공.</li>
     <li>본인 예약은 본인이 취소 가능 (취소 즉시 빈 슬롯으로 전환).</li>
@@ -1156,6 +1195,7 @@ function renderRules() {
     <li><b>마감 후 투표 수정</b> → 서버 규칙이 시간창 밖의 쓰기를 전면 거부. 투표 데이터는 영구 동결되어 사후 검증 가능.</li>
     <li><b>추첨 조작</b> → 시드가 투표 데이터 해시로 고정 + 전원 재검증 + 결과 문서 수정 불가.</li>
     <li><b>예약 경합/이중 배정</b> → 슬롯당 고유 문서 1개(원자적 생성)로 이중 예약이 구조적으로 불가능.</li>
+    <li><b>확정 취소 위조/남용</b> → 본인이 배정받은 칸만 취소할 수 있도록 서버 규칙이 검증하며, 취소 기록은 수정·삭제 불가(관리자 제외). 추첨 결과 원본은 그대로 보존되어 공정성 검증에 영향 없음.</li>
     <li><b>추첨 확정 슬롯 침범</b> → 서버 규칙이 추첨 배정된 칸의 예약 생성을 거부.</li>
     <li><b>우선예약 새치기</b> → 우선예약 시간 중 비대상자의 예약을 서버 규칙이 거부.</li>
     <li><b>알려진 한계 (연구실 내부 신뢰 전제)</b>: ① 아직 첫 로그인을 하지 않은 계정은 그 전까지 내부자가 선점할 수 있으므로 명단 등록 후 <b>즉시 첫 로그인(PIN 등록)</b>을 권장. ② 예약 단계 Day 제한 토글은 UI에서만 강제됨(서버 집계 제한).</li>
@@ -1291,13 +1331,19 @@ function bindMain() {
     if (inPriorityWindow(c) && !S.results?.priorityMembers?.includes(S.user.id))
       return toast('지금은 Day 탈락자 우선예약 시간입니다. 잠시 후 전체 오픈됩니다.', 'err');
     if (S.config.bookingDayCapEnabled && isDaySlot(parseCell(key).slot)) {
-      const lotteryDay = Object.entries(S.results?.assignments || {}).filter(([k, m]) => m === S.user.id && isDaySlot(parseCell(k).slot)).length;
+      const lotteryDay = Object.entries(S.results?.assignments || {}).filter(([k, m]) => m === S.user.id && isDaySlot(parseCell(k).slot) && !S.cancels[k]).length;
       const bookedDay = Object.entries(S.bookings).filter(([k, b]) => b.memberId === S.user.id && isDaySlot(parseCell(k).slot)).length;
       if (lotteryDay + bookedDay >= DAY_CAP) return toast('Day 시간대는 주당 최대 2배치까지입니다 (연구실 설정).', 'err');
     }
     if (!confirm(`${cellLabel(key)} 슬롯을 예약할까요?`)) return;
     try { await store.book(key); toast('예약 완료!', 'okk'); }
     catch (e) { toast(/permission|exist/i.test(e.message) ? '한발 늦었습니다 — 방금 다른 분이 예약했습니다.' : '예약 실패: ' + e.message, 'err'); }
+  }));
+  document.querySelectorAll('[data-act="cancelwin"]').forEach(td => td.addEventListener('click', async () => {
+    const key = td.dataset.cell;
+    if (!confirm(`${cellLabel(key)} 칸의 추첨 확정을 취소할까요?\n\n⚠ 취소 즉시 권리가 영구히 상실되며 되돌릴 수 없습니다.\n- 사용한 토큰은 반환되지 않습니다.\n- 이 칸은 빈 슬롯으로 전환되어 누구나 실시간 예약할 수 있게 됩니다.`)) return;
+    try { await store.cancelAssignment(key); toast('추첨 확정이 취소되었습니다. 해당 칸은 실시간 예약이 가능합니다.', 'okk'); }
+    catch (e) { toast('취소 실패: ' + e.message, 'err'); }
   }));
   document.querySelectorAll('[data-act="unbook"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell;
