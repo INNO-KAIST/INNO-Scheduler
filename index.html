@@ -1366,12 +1366,27 @@ function bindMain() {
   document.querySelectorAll('[data-adm]').forEach(b => b.addEventListener('click', async () => {
     const id = b.dataset.id, act = b.dataset.adm, m = S.members[id];
     const A = store.admin;
+    const isSelf = id === S.user?.id;
+    const adminCount = Object.values(S.members).filter(x => x.isAdmin && x.active !== false).length;
     try {
       if (act === 'pin' && confirm(`${m.name}의 PIN을 초기화할까요? 다음 로그인 시 새 PIN을 등록하게 됩니다.`)) await A.resetPin(id);
       if (act === 'dev' && confirm(`${m.name}의 연결 기기를 모두 해제할까요?`)) await A.resetDevices(id);
-      if (act === 'adm') await A.setAdmin(id, !m.isAdmin);
-      if (act === 'act') await A.setActive(id, m.active === false);
-      if (act === 'del' && confirm(`${m.name}을(를) 완전히 삭제할까요? 가급적 '비활성화'를 권장합니다.`)) await A.removeMember(id);
+      if (act === 'adm') {
+        // 잠금 사고 방지: 마지막 활성 관리자의 권한 해제 금지
+        if (m.isAdmin && adminCount <= 1) return toast('마지막 관리자의 권한은 해제할 수 없습니다. 먼저 다른 멤버를 관리자로 지정하세요.', 'err');
+        if (confirm(`${m.name}을(를) ${m.isAdmin ? '관리자에서 해제' : '관리자로 지정'}할까요?`)) await A.setAdmin(id, !m.isAdmin);
+      }
+      if (act === 'act') {
+        // 잠금 사고 방지: 본인 및 마지막 활성 관리자 비활성화 금지
+        if (m.active !== false && isSelf) return toast('본인 계정은 비활성화할 수 없습니다. (잠금 방지)', 'err');
+        if (m.active !== false && m.isAdmin && adminCount <= 1) return toast('마지막 관리자는 비활성화할 수 없습니다.', 'err');
+        if (confirm(`${m.name}을(를) ${m.active === false ? '활성화' : '비활성화'}할까요?${m.active === false ? '' : ' (명단에는 남지만 로그인·토큰 지급 대상에서 제외됩니다)'}`)) await A.setActive(id, m.active === false);
+      }
+      if (act === 'del') {
+        if (isSelf) return toast('본인 계정은 삭제할 수 없습니다. (잠금 방지)', 'err');
+        if (m.isAdmin && m.active !== false && adminCount <= 1) return toast('마지막 관리자는 삭제할 수 없습니다.', 'err');
+        if (confirm(`${m.name}을(를) 완전히 삭제할까요? 가급적 '비활성화'를 권장합니다.`)) await A.removeMember(id);
+      }
     } catch (e) { toast(e.message, 'err'); }
   }));
   $('#btnSaveCfg')?.addEventListener('click', async () => {
