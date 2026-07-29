@@ -155,6 +155,10 @@
   .stat span { font-size: 12px; color: var(--sub); }
   .flexrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   code.k { background:#eef1f6; border-radius:5px; padding:1px 6px; font-size:12px; }
+  .weekchips { display: inline-flex; gap: 6px; }
+  .weekchips button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+                      padding: 5px 14px; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; }
+  .weekchips button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 </style>
 </head>
 <body>
@@ -459,6 +463,7 @@ const S = {
   curBookings: {},
   curCancels: {},
   pendingCells: null,    // 투표 탭 편집 중 선택
+  viewWeek: 'cur',       // 일정 탭: 'cur'(이번 주) | 'next'(다음 주)
   verify: null,          // {ok, msg}
   histCache: {},         // week -> {votes, results, bookings, verify}
   connected: false,
@@ -496,6 +501,14 @@ function fmtDur(ms) {
   return (d ? d + '일 ' : '') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
 }
 function priorityWindowEnd(c) { return c.announce + (S.config.priorityWindowMin || 0) * 60000; }
+/* 슬롯 종료 시각 (KST): Day n일 18시 / Night 익일 06시 / Weekend 해당일 24시 */
+function slotEndMs(week, slotKey) {
+  const base = weekStartMs(week);
+  const n = parseInt(slotKey[1], 10);
+  if (slotKey[0] === 'D') return base + n * DAY_MS + 18 * 3600000;
+  if (slotKey[0] === 'N') return base + n * DAY_MS + 30 * 3600000;
+  return base + (4 + n) * DAY_MS + 24 * 3600000;
+}
 function inPriorityWindow(c) {
   return S.results && S.results.priorityMembers?.length > 0 && now() >= c.announce && now() < priorityWindowEnd(c);
 }
@@ -625,10 +638,10 @@ function makeFirestoreStore() {
         && JSON.stringify([...r.priorityMembers].sort()) === JSON.stringify([...(resultsDoc.priorityMembers||[])].sort());
       return { ok, recomputed: r };
     },
-    async book(cellKey, memberId) {
-      const c = cycle();
-      await db.doc(`bookings/${c.targetWeek}_${cellKey}`).set({
-        week: c.targetWeek, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
+    async book(cellKey, memberId, week) {
+      const w = week ?? cycle().targetWeek;
+      await db.doc(`bookings/${w}_${cellKey}`).set({
+        week: w, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
       });
     },
     async unbook(cellKey, week) {
@@ -739,11 +752,11 @@ function makeDemoStore() {
       const r = computeLottery(mem.votes[week] || {});
       return { ok: r.seed === doc.seed && canonMap(r.assignments) === canonMap(doc.assignments), recomputed: r };
     },
-    async book(cellKey, memberId) {
-      const c = cycle();
-      const b = mem.bookings[c.targetWeek] = mem.bookings[c.targetWeek] || {};
+    async book(cellKey, memberId, week) {
+      const w = week ?? cycle().targetWeek;
+      const b = mem.bookings[w] = mem.bookings[w] || {};
       if (b[cellKey]) throw new Error('이미 예약된 슬롯입니다.');
-      b[cellKey] = { week: c.targetWeek, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
+      b[cellKey] = { week: w, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
       pushState();
     },
     async unbook(cellKey, week) { delete (mem.bookings[week] || {})[cellKey]; pushState(); },
@@ -801,8 +814,8 @@ async function maybeVerify() {
  * 렌더링
  * ===================================================================== */
 const TABS = [
-  ['dash', '📊 현황'], ['vote', '🗳️ 토큰 투표'], ['book', '⚡ 실시간 예약'],
-  ['results', '🎲 추첨 결과'], ['members', '👥 명단'], ['rules', '📖 규칙'], ['admin', '🔧 관리자'],
+  ['dash', '📅 일정'], ['vote', '🗳️ 사전 투표'], ['book', '⚡ 실시간 예약'],
+  ['results', '🎲 투표 결과'], ['members', '👥 명단'], ['rules', '📖 규칙'], ['admin', '🔧 관리자'],
 ];
 
 function render() {
@@ -841,7 +854,7 @@ function renderHeader() {
     const mode = b.dataset.demo;
     if (mode === 'vote') S.demoOffset = c2.monday + 3600000 * 26 - Date.now();          // 화요일 02시
     if (mode === 'wait') S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 9 - Date.now();  // 목 09시
-    if (mode === 'book') S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 12.5 - Date.now(); // 목 12:30
+    if (mode === 'book') { S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 12.5 - Date.now(); S.viewWeek = 'next'; } // 목 12:30
     S.results = null; S.verify = null;
     if (store._demo) store._demo.mem.results = {}; // 데모: 국면 전환 시 결과 재계산 유도
     store._demo?.pushState();
@@ -851,7 +864,7 @@ function renderHeader() {
 function renderPhasebar() {
   const c = cycle();
   const P = c.phase;
-  const badge = P === 'VOTING' ? '<span class="badge b-accent">1단계 · 토큰 투표 진행중</span>'
+  const badge = P === 'VOTING' ? '<span class="badge b-accent">1단계 · 사전 투표 진행중</span>'
     : P === 'WAITING' ? '<span class="badge b-amber">2단계 · 투표 마감 — 추첨 대기</span>'
     : inPriorityWindow(c) ? '<span class="badge b-violet">3단계 · 우선예약 진행중 (Day 탈락자 전용)</span>'
     : '<span class="badge b-green">3단계 · 실시간 예약 진행중</span>';
@@ -860,7 +873,7 @@ function renderPhasebar() {
   const targetLabel = P === 'VOTING' ? '투표 마감까지' : P === 'WAITING' ? '추첨 발표까지'
     : inPriorityWindow(c) ? '전체 예약 오픈까지' : '대상 주 종료까지';
   const steps = [
-    ['투표', `월 00:00 ~ 수 24:00`, P === 'VOTING' ? 'on' : 'done'],
+    ['사전 투표', `월 00:00 ~ 수 24:00`, P === 'VOTING' ? 'on' : 'done'],
     ['마감·추첨 대기', `목 00:00 ~ 12:00`, P === 'WAITING' ? 'on' : (P === 'VOTING' ? '' : 'done')],
     ['발표 + 우선예약', `목 12:00 (${S.config.priorityWindowMin}분간)`, P === 'BOOKING' && inPriorityWindow(c) ? 'on' : (P === 'BOOKING' ? 'done' : '')],
     ['전체 실시간 예약', `이후 ~ 대상 주 일요일`, P === 'BOOKING' && !inPriorityWindow(c) ? 'on' : ''],
@@ -897,6 +910,8 @@ function gridHtml(mode) {
   const c = cycle();
   const isThis = mode === 'thisweek';
   const ctx = isThis ? { results: S.curResults, bookings: S.curBookings, cancels: S.curCancels } : { results: S.results, bookings: S.bookings, cancels: S.cancels };
+  const wk = isThis ? c.votingWeek : c.targetWeek;
+  const curBookable = isThis && !!S.curResults; // 이번 주 결과 문서가 있어야 서버 규칙상 예약 생성 가능
   const pending = new Set(S.pendingCells || []);
   const counts = {};
   if (!isThis) for (const [m, cells] of Object.entries(S.votes)) for (const k of cells) counts[k] = (counts[k] || 0) + 1;
@@ -935,15 +950,18 @@ function gridHtml(mode) {
         } else if (st.type === 'booked') {
           cls += ' booked' + (S.user && st.member === S.user.id ? ' minewin' : '');
           inner = `${esc(memberName(st.member))}<span class="tag">예약</span>`;
-          if (mode === 'book' && S.user && st.member === S.user.id) { cls += ' clickable'; click = ` data-cell="${key}" data-act="unbook"`; inner += '<span class="tag">(클릭해 취소)</span>'; }
-          else if (mode === 'book' && S.user?.isAdmin && !isThis) { cls += ' clickable'; click = ` data-cell="${key}" data-act="admin-unbook" data-owner="${st.member}"`; inner += '<span class="tag">(관리자: 예약 취소)</span>'; }
+          if ((mode === 'book' || isThis) && S.user && st.member === S.user.id) { cls += ' clickable'; click = ` data-cell="${key}" data-act="unbook" data-week="${wk}"`; inner += '<span class="tag">(클릭해 취소)</span>'; }
+          else if ((mode === 'book' || isThis) && S.user?.isAdmin) { cls += ' clickable'; click = ` data-cell="${key}" data-act="admin-unbook" data-owner="${st.member}" data-week="${wk}"`; inner += '<span class="tag">(관리자: 예약 취소)</span>'; }
         } else {
           if (mode === 'book' && c.phase === 'BOOKING' && !isThis) {
-            cls += ' empty-book clickable'; inner = '예약 가능'; click = ` data-cell="${key}" data-act="book"`;
+            cls += ' empty-book clickable'; inner = '예약 가능'; click = ` data-cell="${key}" data-act="book" data-week="${wk}"`;
           } else if ((mode === 'status') && c.phase === 'BOOKING') {
             cls += ' empty-book'; inner = '빈 슬롯';
           } else if (isThis) {
-            cls += ' disabled'; inner = '-';
+            const ended = now() >= slotEndMs(wk, sd.key);
+            if (ended) { cls += ' disabled'; inner = '<span class="tag">종료</span>'; }
+            else if (S.user && curBookable) { cls += ' empty-book clickable'; inner = '신청 가능'; click = ` data-cell="${key}" data-act="book" data-week="${wk}"`; }
+            else { cls += ' empty-book'; inner = '빈 슬롯'; }
           } else {
             const cnt = counts[key] || 0;
             if (c.phase !== 'BOOKING' && cnt > 0) inner = `<span class="tag">지원 ${cnt}명</span>`;
@@ -980,9 +998,17 @@ function renderDash() {
     prio = `<div class="prio-banner">🎗 <b>Day 우선예약 대상자</b> (Day에 토큰을 냈으나 한 번도 선정되지 못한 인원): ${S.results.priorityMembers.map(m => esc(memberName(m))).join(', ')}
       ${inPriorityWindow(c) ? ` — <b>${fmtDT(priorityWindowEnd(c))}까지 이분들만 예약 가능</b>` : ' (우선예약 시간 종료됨)'}</div>`;
   }
-  return `
+  const isNext = S.viewWeek === 'next';
+  const chips = `<span class="weekchips">
+      <button data-vw="cur" class="${!isNext ? 'on' : ''}">이번 주 (${weekLabel(c.votingWeek)})</button>
+      <button data-vw="next" class="${isNext ? 'on' : ''}">다음 주 (${weekLabel(c.targetWeek)})</button>
+    </span>`;
+  if (isNext) {
+    return `
     ${prio}
-    <div class="card"><h2>다음 주 (${weekLabel(c.targetWeek)}) 진행 현황</h2>
+    <div class="card">
+      <div class="flexrow" style="margin-bottom:10px"><h2 style="margin:0">일정</h2>${chips}</div>
+      <h3 style="margin-top:0">다음 주 (${weekLabel(c.targetWeek)}) 진행 현황</h3>
       <div class="grid2" style="margin-bottom:12px">
         <div class="flexrow" style="gap:14px">
           <div class="stat"><b>${nVoters}/${nMembers}</b><span>투표 참여 인원</span></div>
@@ -995,10 +1021,21 @@ function renderDash() {
           : '<div class="note">로그인하면 내 토큰 현황이 표시됩니다.</div>'}
         </div>
       </div>
+      <p class="muted" style="margin-bottom:8px">다음 주 스케줄의 예약·취소는 <b>실시간 예약 탭</b>에서 진행하세요.</p>
       ${gridHtml('status')}
-    </div>
-    <div class="card"><h2>이번 주 (${weekLabel(c.votingWeek)}) 확정 스케줄</h2>
-      ${S.curResults || Object.keys(S.curBookings).length ? gridHtml('thisweek') : '<p class="muted">이번 주 확정 스케줄 데이터가 없습니다. (지난주에 시스템 미사용 또는 데이터 없음)</p>'}
+    </div>`;
+  }
+  const hasCurData = S.curResults || Object.keys(S.curBookings).length;
+  let curNote;
+  if (!S.user) curNote = '이번 주 확정 스케줄입니다. 로그인하면 빈 칸을 실시간으로 신청할 수 있습니다.';
+  else if (S.curResults) curNote = '<b>빈 칸(점선)을 클릭해 즉시 신청</b>할 수 있고, <b>내 예약 칸</b>을 클릭하면 취소됩니다 (본인 예약만 취소 가능, 추첨 확정 칸은 취소 불가). 이미 지난 시간대는 "종료"로 표시됩니다.';
+  else curNote = '이번 주 확정 스케줄 데이터가 없어 실시간 신청이 불가합니다. (지난주 시스템 미사용)';
+  return `
+    <div class="card">
+      <div class="flexrow" style="margin-bottom:10px"><h2 style="margin:0">일정</h2>${chips}</div>
+      <h3 style="margin-top:0">이번 주 (${weekLabel(c.votingWeek)}) 확정 스케줄</h3>
+      <p class="muted" style="margin-bottom:8px">${curNote}</p>
+      ${hasCurData || S.user ? gridHtml('thisweek') : '<p class="muted">이번 주 확정 스케줄 데이터가 없습니다. (지난주에 시스템 미사용 또는 데이터 없음)</p>'}
     </div>`;
 }
 function cellLabel(key) {
@@ -1010,9 +1047,9 @@ function cellLabel(key) {
 /* ---------------- 탭: 투표 ---------------- */
 function renderVote() {
   const c = cycle();
-  if (!S.user) return `<div class="card"><h2>토큰 투표</h2><p class="muted">투표하려면 먼저 우측 상단에서 멤버 로그인을 해주세요.</p></div>`;
+  if (!S.user) return `<div class="card"><h2>사전 투표 (토큰)</h2><p class="muted">투표하려면 먼저 우측 상단에서 멤버 로그인을 해주세요.</p></div>`;
   if (c.phase !== 'VOTING') {
-    return `<div class="card"><h2>토큰 투표</h2>
+    return `<div class="card"><h2>사전 투표 (토큰)</h2>
       <p class="muted">지금은 투표 기간이 아닙니다. 투표는 <b>매주 월요일 00:00 ~ 수요일 24:00</b>에 진행됩니다.
       다음 투표 시작: <b>${fmtDT(weekStartMs(c.votingWeek + 1))}</b></p>
       ${S.votes[S.user.id]?.length ? `<div class="note">이번 주 내 투표(마감됨): ${(S.votes[S.user.id]).map(cellLabel).join(', ')}</div>` : ''}</div>`;
@@ -1022,7 +1059,7 @@ function renderVote() {
   const saved = JSON.stringify([...(S.votes[S.user.id] || [])].sort()) === JSON.stringify([...pending].sort());
   const err = validateVoteSet(pending);
   return `<div class="card">
-    <h2>토큰 투표 — ${weekLabel(c.targetWeek)} 대상</h2>
+    <h2>사전 투표 (토큰) — ${weekLabel(c.targetWeek)} 대상</h2>
     <div class="flexrow" style="margin-bottom:8px">
       <span>남은 토큰:</span>
       <span class="tokens">${BATCHES.map((_, i) => `<span class="tok ${i < pending.length ? 'used' : ''}">${i < pending.length ? '✓' : '●'}</span>`).join('')}</span>
@@ -1112,7 +1149,7 @@ function renderResults() {
       시드는 마감된 투표 내용 자체로부터 결정되므로 누구도(관리자 포함) 추첨 결과를 조작하거나 미리 알 수 없으며, 모든 접속자의 브라우저가 결과를 독립적으로 재계산하여 위 배지로 일치 여부를 표시합니다.</p>`;
   }
   return `<div class="card">
-    <div class="flexrow"><h2 style="margin:0">추첨 결과</h2>
+    <div class="flexrow"><h2 style="margin:0">투표 결과</h2>
       <select id="selWeek" style="margin-left:auto;border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-family:inherit">
         ${weekOpts.map(w => `<option value="${w}" ${w === sel ? 'selected' : ''}>${weekLabel(w)}${w === c.targetWeek ? ' (다음 주)' : w === c.votingWeek ? ' (이번 주)' : ''}</option>`).join('')}
       </select></div>
@@ -1158,7 +1195,7 @@ function renderRules() {
 
   <h3>3. 주간 사이클 (모든 시각은 KST 기준, 서버가 강제)</h3>
   <ul>
-    <li><b>월 00:00 ~ 수 24:00</b> — 토큰 투표. 이 기간 중 자유롭게 수정/취소 가능.</li>
+    <li><b>월 00:00 ~ 수 24:00</b> — 사전 투표(토큰). 이 기간 중 자유롭게 수정/취소 가능.</li>
     <li><b>목 00:00</b> — 투표 마감. 이후 투표 데이터는 서버 규칙에 의해 영구 동결.</li>
     <li><b>목 12:00</b> — 추첨 결과 자동 발표 + 우선예약 시작.</li>
     <li><b>우선예약 종료 후 ~ 대상 주 일요일 24:00</b> — 전체 선착순 예약.</li>
@@ -1191,6 +1228,7 @@ function renderRules() {
     <li><b>우선예약</b>: Day에 토큰을 1개 이상 냈으나 Day에 한 번도 선정되지 못한 인원은 발표 직후 일정 시간(기본 60분, 관리자 설정) 동안 <b>단독으로</b> 예약 가능. 그 후 전체 오픈.</li>
     <li>예약은 서버에서 원자적으로 처리 — 동시에 눌러도 정확히 1명만 성공.</li>
     <li>본인 예약은 본인이 취소 가능 (취소 즉시 빈 슬롯으로 전환).</li>
+    <li><b>이번 주 실시간 신청</b>: 이미 확정된 이번 주 스케줄의 빈 칸도 <b>일정 탭(이번 주 보기)</b>에서 실시간 선착순 신청 가능 (해당 주 일요일 24시까지, 종료된 시간대 제외). 취소는 본인 예약만 가능하며, 추첨 확정 칸은 이번 주에는 취소 불가.</li>
     <li>Day 2배치 제한의 예약 단계 적용 여부는 연구실 정책에 따라 관리자가 설정 (기본: 미적용).</li>
     <li><b>관리자 운영 조치</b>: 관리자는 실시간 예약 탭에서 노쇼 정리·대리 조정 목적으로 모든 칸을 직접 관리할 수 있음 — 임의 멤버 이름으로 대리 예약, 타인 예약 취소, 타인 추첨 확정 취소(권리 상실 처리). 관리자 조치는 우선예약 창의 제한을 받지 않음.</li>
     <li>공용 구글캘린더는 이 시스템의 상태를 그대로 따라가므로(1분 내 자동 동기화), <b>캘린더에서 직접 수정하지 말고 반드시 앱에서 조정</b>할 것 (캘린더 수동 변경은 자동으로 원상복구됨).</li>
@@ -1293,11 +1331,12 @@ function openBootstrap() {
     catch (e) { toast(e.message, 'err'); }
   });
 }
-function openAdminBook(cellKey) {
+function openAdminBook(cellKey, week) {
+  const w = week ?? cycle().targetWeek;
   const actives = Object.values(S.members).filter(m => m.active !== false)
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   showModal(`
-    <h2>예약 — ${esc(cellLabel(cellKey))}</h2>
+    <h2>예약 — ${esc(cellLabel(cellKey))}${w === cycle().votingWeek ? ' (이번 주)' : ''}</h2>
     <p class="muted" style="margin-bottom:10px">관리자 권한으로 예약합니다. 본인 또는 다른 멤버를 지정할 수 있습니다.</p>
     <div class="field"><label>예약자</label><select id="adminBookMember">
       ${actives.map(m => `<option value="${m.id}" ${m.id === S.user.id ? 'selected' : ''}>${esc(m.name)}${m.id === S.user.id ? ' (본인)' : ''}</option>`).join('')}
@@ -1306,7 +1345,7 @@ function openAdminBook(cellKey) {
   document.querySelector('#btnAdminBook').addEventListener('click', async () => {
     const mid = document.querySelector('#adminBookMember').value;
     try {
-      await store.book(cellKey, mid);
+      await store.book(cellKey, mid, w);
       closeModal();
       toast(`${memberName(mid)}님 이름으로 예약되었습니다. (캘린더에 곧 반영)`, 'okk');
     } catch (e) { toast(/permission|exist/i.test(e.message) ? '방금 다른 예약이 먼저 들어갔습니다.' : '예약 실패: ' + e.message, 'err'); }
@@ -1357,23 +1396,30 @@ function bindMain() {
   document.querySelectorAll('[data-act="book"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell;
     const c = cycle();
-    if (S.user.isAdmin) { openAdminBook(key); return; } // 관리자: 우선창 제한 없이 대리 예약 모달
-    if (inPriorityWindow(c) && !S.results?.priorityMembers?.includes(S.user.id))
-      return toast('지금은 Day 탈락자 우선예약 시간입니다. 잠시 후 전체 오픈됩니다.', 'err');
-    if (S.config.bookingDayCapEnabled && isDaySlot(parseCell(key).slot)) {
-      const lotteryDay = Object.entries(S.results?.assignments || {}).filter(([k, m]) => m === S.user.id && isDaySlot(parseCell(k).slot) && !S.cancels[k]).length;
-      const bookedDay = Object.entries(S.bookings).filter(([k, b]) => b.memberId === S.user.id && isDaySlot(parseCell(k).slot)).length;
-      if (lotteryDay + bookedDay >= DAY_CAP) return toast('Day 시간대는 주당 최대 2배치까지입니다 (연구실 설정).', 'err');
+    const week = td.dataset.week ? parseInt(td.dataset.week, 10) : c.targetWeek;
+    const isCur = week === c.votingWeek;
+    if (S.user.isAdmin) { openAdminBook(key, week); return; } // 관리자: 우선창 제한 없이 대리 예약 모달
+    if (!isCur) { // 우선예약 창·Day 상한은 다음 주 예약 단계에만 적용
+      if (inPriorityWindow(c) && !S.results?.priorityMembers?.includes(S.user.id))
+        return toast('지금은 Day 탈락자 우선예약 시간입니다. 잠시 후 전체 오픈됩니다.', 'err');
+      if (S.config.bookingDayCapEnabled && isDaySlot(parseCell(key).slot)) {
+        const lotteryDay = Object.entries(S.results?.assignments || {}).filter(([k, m]) => m === S.user.id && isDaySlot(parseCell(k).slot) && !S.cancels[k]).length;
+        const bookedDay = Object.entries(S.bookings).filter(([k, b]) => b.memberId === S.user.id && isDaySlot(parseCell(k).slot)).length;
+        if (lotteryDay + bookedDay >= DAY_CAP) return toast('Day 시간대는 주당 최대 2배치까지입니다 (연구실 설정).', 'err');
+      }
+    } else if (now() >= slotEndMs(week, parseCell(key).slot)) {
+      return toast('이미 종료된 시간대입니다.', 'err');
     }
-    if (!confirm(`${cellLabel(key)} 슬롯을 예약할까요?`)) return;
-    try { await store.book(key); toast('예약 완료!', 'okk'); }
+    if (!confirm(`${isCur ? '[이번 주] ' : ''}${cellLabel(key)} 슬롯을 예약할까요?`)) return;
+    try { await store.book(key, null, week); toast('예약 완료!', 'okk'); }
     catch (e) { toast(/permission|exist/i.test(e.message) ? '한발 늦었습니다 — 방금 다른 분이 예약했습니다.' : '예약 실패: ' + e.message, 'err'); }
   }));
   // 관리자: 타인 예약 취소
   document.querySelectorAll('[data-act="admin-unbook"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell, owner = td.dataset.owner;
+    const week = td.dataset.week ? parseInt(td.dataset.week, 10) : cycle().targetWeek;
     if (!confirm(`[관리자 조치] ${memberName(owner)}님의 ${cellLabel(key)} 예약을 취소할까요?`)) return;
-    try { await store.unbook(key, cycle().targetWeek); toast('예약이 취소되었습니다. (캘린더에 곧 반영)', 'okk'); }
+    try { await store.unbook(key, week); toast('예약이 취소되었습니다. (캘린더에 곧 반영)', 'okk'); }
     catch (e) { toast(e.message, 'err'); }
   }));
   // 관리자: 타인 추첨 확정 취소
@@ -1391,10 +1437,13 @@ function bindMain() {
   }));
   document.querySelectorAll('[data-act="unbook"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell;
+    const week = td.dataset.week ? parseInt(td.dataset.week, 10) : cycle().targetWeek;
     if (!confirm(`${cellLabel(key)} 예약을 취소할까요?`)) return;
-    try { await store.unbook(key, cycle().targetWeek); toast('예약이 취소되었습니다.', 'okk'); }
+    try { await store.unbook(key, week); toast('예약이 취소되었습니다.', 'okk'); }
     catch (e) { toast(e.message, 'err'); }
   }));
+  // 일정 탭 주차 전환
+  document.querySelectorAll('[data-vw]').forEach(b => b.addEventListener('click', () => { S.viewWeek = b.dataset.vw; render(); }));
 
   // 결과 주차 선택
   $('#selWeek')?.addEventListener('change', e => { S.resultsWeek = parseInt(e.target.value, 10); render(); });

@@ -928,7 +928,7 @@ function makeDemoStore() {
     ],
     snspd: [1, 2, 3, 4].map(ch => ({ ch, range: ch <= 2 ? '900-1300 nm' : '', detFiber: ch === 1, ttl: ch === 1, ttlPower: false, updatedAt: Date.now() - 86400000 * ch, updatedBy: 'm' + ch })),
     powermeter: [1, 2, 3].map(no => ({ no, detector: no === 1 ? 'S120C' : '', position: no === 1 ? '샘플 앞' : '', updatedAt: Date.now() - 86400000 * no, updatedBy: 'm1' })),
-    extras: [{ id: 'e1', item: 'ND 1.0', location: '레이저 출력단 직후', updatedAt: Date.now() - 3600000 * 5, updatedBy: 'm4' }],
+    extras: [],
   };
   mem.remarks = [
     { tsMs: Date.now() - 3600000 * 20, memberId: 'm3', text: '633 nm 레이저 파워가 평소보다 10% 낮게 측정됨 — 컨트롤러 재부팅 후 정상. 참고 바랍니다.' },
@@ -1038,8 +1038,8 @@ async function maybeVerify() {
  * ===================================================================== */
 
 const TABS = [
-  ['cal', '📅 스케줄'], ['vote', '🗳️ 순위 투표'], ['coord', '💬 일정 조율'],
-  ['results', '🎲 배정 결과'], ['hw', '🛠 Hardware Log'], ['remark', '📝 Remark'], ['members', '👥 명단'], ['rules', '📖 규칙'], ['admin', '🔧 관리자'],
+  ['cal', '📅 일정'], ['vote', '🗳️ 사전 투표'], ['coord', '⚡ 실시간 예약'],
+  ['results', '🎲 투표 결과'], ['hw', '🛠 변경사항'], ['remark', '📝 특이사항'], ['members', '👥 명단'], ['rules', '📖 규칙'], ['admin', '🔧 관리자'],
 ];
 
 function render() {
@@ -1084,13 +1084,13 @@ function renderHeader() {
 function renderPhasebar() {
   const c = cycle();
   const P = c.phase;
-  const badge = P === 'VOTING' ? '<span class="badge b-accent">1단계 · 요일 순위 투표 진행중</span>'
+  const badge = P === 'VOTING' ? '<span class="badge b-accent">1단계 · 사전 투표 진행중</span>'
     : P === 'WAITING' ? '<span class="badge b-amber">2단계 · 투표 마감 — 배정 대기</span>'
     : '<span class="badge b-green">3단계 · 배정 확정 — 자유 조율 진행중</span>';
   const target = P === 'VOTING' ? c.voteClose : P === 'WAITING' ? c.announce : weekStartMs(c.targetWeek + 1);
   const targetLabel = P === 'VOTING' ? '투표 마감까지' : P === 'WAITING' ? '배정 발표까지' : '대상 주 종료까지';
   const steps = [
-    ['요일 순위 투표', '월 00:00 ~ 수 24:00 · 1/2/3순위 (선택)', P === 'VOTING' ? 'on' : 'done'],
+    ['사전 투표', '월 00:00 ~ 수 24:00 · 요일 1/2/3순위 (선택)', P === 'VOTING' ? 'on' : 'done'],
     ['마감·배정 대기', '목 00:00 ~ 12:00', P === 'WAITING' ? 'on' : (P === 'VOTING' ? '' : 'done')],
     ['발표 + 자유 조율', '목 12:00 발표 → 전원 실시간 수정·채팅 조율', P === 'BOOKING' ? 'on' : ''],
   ];
@@ -1184,7 +1184,7 @@ function renderCal() {
   }
   return `<div class="card">
     <div class="flexrow" style="margin-bottom:10px">
-      <h2 style="margin:0">주간 스케줄</h2>
+      <h2 style="margin:0">주간 일정</h2>
       <span class="weekchips">
         <button data-vw="cur" class="${S.viewWeek === 'cur' ? 'on' : ''}">이번 주 (${weekLabel(c.votingWeek)})</button>
         <button data-vw="next" class="${S.viewWeek === 'next' ? 'on' : ''}">다음 주 (${weekLabel(c.targetWeek)})</button>
@@ -1202,11 +1202,11 @@ function renderCal() {
 /* ---------------- 탭: 순위 투표 ---------------- */
 function renderVote() {
   const c = cycle();
-  if (!S.user) return `<div class="card"><h2>요일 순위 투표</h2><p class="muted">투표하려면 먼저 로그인해주세요.</p></div>`;
-  if (!S.user.optics) return `<div class="card"><h2>요일 순위 투표</h2><p class="muted">광학 스케줄 참여가 활성화되지 않은 계정입니다. 관리자에게 활성화를 요청하세요.</p></div>`;
+  if (!S.user) return `<div class="card"><h2>사전 투표 (요일 순위)</h2><p class="muted">투표하려면 먼저 로그인해주세요.</p></div>`;
+  if (!S.user.optics) return `<div class="card"><h2>사전 투표 (요일 순위)</h2><p class="muted">광학 스케줄 참여가 활성화되지 않은 계정입니다. 관리자에게 활성화를 요청하세요.</p></div>`;
   if (c.phase !== 'VOTING') {
     const my = S.votes[S.user.id];
-    return `<div class="card"><h2>요일 순위 투표</h2>
+    return `<div class="card"><h2>사전 투표 (요일 순위)</h2>
       <p class="muted">지금은 투표 기간이 아닙니다. 투표는 <b>매주 월 00:00 ~ 수 24:00</b>. 다음 시작: <b>${fmtDT(weekStartMs(c.votingWeek + 1))}</b></p>
       ${my ? `<div class="note">이번 주 내 투표(마감됨): ${['r1','r2','r3'].filter(k => my[k] !== undefined).map((k, i) => `${i + 1}순위 ${OPT_DAYS[my[k]]}`).join(', ')}</div>` : ''}</div>`;
   }
@@ -1228,7 +1228,7 @@ function renderVote() {
   }).join('');
   const picks = ['r1', 'r2', 'r3'].filter(k => p[k] !== undefined);
   return `<div class="card">
-    <h2>요일 순위 투표 — ${weekLabel(c.targetWeek)} 대상</h2>
+    <h2>사전 투표 (요일 순위) — ${weekLabel(c.targetWeek)} 대상</h2>
     <p class="muted" style="margin:6px 0 12px">원하는 요일을 누를 때마다 <b>1순위 → 2순위 → 3순위</b> 순서로 지정되고, 지정된 요일을 다시 누르면 해제됩니다 (아래 순위는 자동으로 당겨짐). 3개를 모두 채울 필요는 없으며, <b>적게 투표할수록 동순위 경쟁에서 우선</b>합니다.</p>
     <div class="flexrow" style="margin-bottom:10px">
       <span>내 투표: ${picks.length ? picks.map((k, i) => `<span class="badge b-accent">${i + 1}순위 ${OPT_DAYS[p[k]]}</span>`).join(' ') : '<span class="muted">없음</span>'}</span>
@@ -1256,7 +1256,7 @@ function renderCoord() {
   }).join('');
   return `<div class="card">
     <div class="flexrow" style="margin-bottom:10px">
-      <h2 style="margin:0">일정 조율 논의</h2>
+      <h2 style="margin:0">실시간 예약 · 일정 조율</h2>
       <span class="weekchips">
         <button data-vw="cur" class="${S.viewWeek === 'cur' ? 'on' : ''}">이번 주</button>
         <button data-vw="next" class="${S.viewWeek === 'next' ? 'on' : ''}">다음 주</button>
@@ -1328,14 +1328,14 @@ function renderResults() {
       <div class="flexrow" style="margin-bottom:10px">${vbadge}</div>
       <table class="list"><tr><th>요일</th><th>배정자 (00-24시 기본 배정)</th></tr>${rows}</table>
       <h3>아쉽게 배정받지 못한 인원</h3>
-      <p class="muted">${(r.unassignedMembers || []).length ? r.unassignedMembers.map(m => esc(memberName(m))).join(', ') + ' — 일정 조율 탭에서 협의해 시간을 나눠 쓸 수 있습니다.' : '없음 (투표자 전원 배정)'}</p>
+      <p class="muted">${(r.unassignedMembers || []).length ? r.unassignedMembers.map(m => esc(memberName(m))).join(', ') + ' — 실시간 예약 탭에서 협의해 시간을 나눠 쓸 수 있습니다.' : '없음 (투표자 전원 배정)'}</p>
       <h3>공정성 증빙</h3>
       <p class="muted" style="word-break:break-all">배정 기준: ① 무당첨자 우선 → ② 순위 → ③ 투표 수 적은 사람 → ④ 시드 무작위.
       시드(투표 데이터 SHA-256): <code class="k">${esc(r.seed || '')}</code><br>
       시드가 투표 내용 자체에서 결정되므로 누구도 결과를 조작·예측할 수 없으며, 모든 접속자가 독립 재검증합니다.</p>`;
   }
   return `<div class="card">
-    <div class="flexrow"><h2 style="margin:0">요일 배정 결과</h2>
+    <div class="flexrow"><h2 style="margin:0">투표 결과 (요일 배정)</h2>
       <select id="selWeek" style="margin-left:auto;border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-family:inherit">
         ${weekOpts.map(w => `<option value="${w}" ${w === sel ? 'selected' : ''}>${weekLabel(w)}${w === c.targetWeek ? ' (다음 주)' : w === c.votingWeek ? ' (이번 주)' : ''}</option>`).join('')}
       </select></div>
@@ -1402,13 +1402,6 @@ function renderHw() {
     <td>${txt('powermeter', i, 'position', r.position, 'Position')}</td>
     <td>${hwMeta(r)}</td></tr>`).join('');
 
-  const exRows = hw.extras.map((r, i) => `<tr>
-    <td>${txt('extras', i, 'item', r.item, '예: ND 0.5 / Pinhole 50um')}</td>
-    <td>${txt('extras', i, 'location', r.location, '어느 위치에? (주관식)')}</td>
-    <td>${hwMeta(r)}</td>
-    ${ed('extras') ? `<td><button class="btn sm danger" data-hwdel="extras.${i}">삭제(제거)</button></td>` : ''}</tr>`).join('')
-    || `<tr><td colspan="4" class="muted">추가 광학요소 없음.</td></tr>`;
-
   const logRows = S.hwLog.map(l => {
     const t = l.tsMs || (l.createdAt?.toMillis ? l.createdAt.toMillis() : 0);
     return `<tr><td class="meta" style="white-space:nowrap">${t ? optFmtDateDow(t) : '-'}</td>
@@ -1417,8 +1410,11 @@ function renderHw() {
   }).join('') || '<tr><td colspan="4" class="muted">아직 변경 이력이 없습니다.</td></tr>';
 
   return `<div class="card hw">
-    <h2>🛠 Hardware Log — 현재 장비 구성 현황판</h2>
+    <h2>🛠 변경사항 (Hardware Log) — 현재 장비 구성 현황판</h2>
     <p class="muted" style="margin:6px 0 4px">측정 전 반드시 확인하고, <b>부품을 추가·제거·변경하면 즉시 여기서 수정</b>하세요. 저장 시 변경 내용이 자동으로 기록되고 Slack 채널에 1분 내 공지됩니다.</p>
+    <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--red);font-weight:700">
+      ⚠ ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구
+    </div>
     ${canEdit ? '' : '<div class="note">수정하려면 광학 활성 멤버로 로그인하세요.</div>'}
 
     <h3>LASER ${editBtn('laser')} ${ed('laser') ? '<button class="btn sm" data-hwadd="laser">+ 파장 추가</button>' : ''}</h3>
@@ -1432,9 +1428,6 @@ function renderHw() {
 
     <h3>Powermeter ${editBtn('powermeter')}</h3>
     <table class="list"><tr><th>번호</th><th>Connected detector</th><th>Position</th><th>최종 변경</th></tr>${pmRows}</table>
-
-    <h3>기타 추가 요소 (ND / Pinhole / Filter 등) ${editBtn('extras')} ${ed('extras') ? '<button class="btn sm" data-hwadd="extras">+ 요소 추가</button>' : ''}</h3>
-    <table class="list"><tr><th>품목</th><th>위치</th><th>추가/변경</th>${ed('extras') ? '<th></th>' : ''}</tr>${exRows}</table>
 
     <h3>최근 변경 이력</h3>
     <div class="hwlog"><table class="list"><tr><th>일시</th><th>유저</th><th>구분</th><th>변경 내용</th></tr>${logRows}</table></div>
@@ -1497,7 +1490,7 @@ function renderRemark() {
       <td style="width:1%;white-space:nowrap">${mine ? `<button class="btn sm danger" data-remdel="${e.tsMs}|${esc(e.memberId)}">삭제</button>` : ''}</td></tr>`;
   }).join('') || '<tr><td colspan="4" class="muted">기록된 특이사항이 없습니다.</td></tr>';
   return `<div class="card">
-    <h2>📝 Remark — 특이사항 기록</h2>
+    <h2>📝 특이사항 기록</h2>
     <p class="muted" style="margin:6px 0 12px">측정·장비·실험실 관련 특이사항을 자유롭게 남기세요. 날짜와 이름은 자동 기록됩니다.
       <b>최근 10개만 보관</b>되며, 새 기록이 추가되면 가장 오래된 항목부터 자동 삭제됩니다.</p>
     ${canWrite ? `
@@ -1519,7 +1512,7 @@ function renderMembers() {
     <td>${m.active === true ? '<span class="badge b-accent">합성 활성</span>' : '<span class="badge b-gray">합성 비활성</span>'}</td>
     <td>${m.pinHash ? '<span class="badge b-green">등록 완료</span>' : '<span class="badge b-amber">미등록</span>'}</td></tr>`).join('');
   return `<div class="card"><h2>명단 (광학 활성 ${ms.filter(m => m.opticsActive === true).length}명)</h2>
-    <p class="muted" style="margin-bottom:8px">명단·PIN·기기 인증은 Synthesis Scheduler와 공유되며, 광학/합성 활성 여부는 별도로 관리됩니다. 광학 활성 멤버만 순위 투표·스케줄 수정·채팅·하드웨어 기록이 가능합니다.</p>
+    <p class="muted" style="margin-bottom:8px">명단·PIN·기기 인증은 Synthesis Scheduler와 공유되며, 광학/합성 활성 여부는 별도로 관리됩니다. 광학 활성 멤버만 사전 투표·일정 수정·채팅·변경사항 기록이 가능합니다.</p>
     <table class="list"><tr><th>이름</th><th>광학</th><th>합성</th><th>계정</th></tr>${rows}</table></div>`;
 }
 
@@ -1528,12 +1521,13 @@ function renderRules() {
 
   <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:#8a2530;font-size:14px">
     <b>⚠ 최우선 주의사항</b> — ① 확보한 시간을 못 쓰게 되면 <b>즉시 스케줄에서 비우고</b> 채팅으로 알리세요.
-    ② 부품(레이저·미러·SNSPD·파워미터·ND/핀홀/필터 등)을 추가·제거·변경하면 <b>즉시 Hardware Log에 기록</b>하세요. 다음 측정자의 시간과 데이터를 지키는 약속입니다.
+    ② 부품(레이저·미러·SNSPD·파워미터 등)을 추가·제거·변경하면 <b>즉시 변경사항 탭(Hardware Log)에 기록</b>하세요. 다음 측정자의 시간과 데이터를 지키는 약속입니다.
+    ③ <b style="color:var(--red)">ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구</b>가 원칙입니다.
   </div>
 
   <h3>1. 주간 사이클 (모든 시각 KST, 서버 강제)</h3>
   <ul>
-    <li><b>월 00:00 ~ 수 24:00</b> — 요일 순위 투표 (다음 주 대상). 기간 중 자유 수정/취소.</li>
+    <li><b>월 00:00 ~ 수 24:00</b> — 사전 투표(요일 순위, 다음 주 대상). 기간 중 자유 수정/취소.</li>
     <li><b>목 12:00</b> — 요일 배정 자동 발표 + Slack 공지. 이후 <b>전원 자유 조율</b> 시작.</li>
     <li>조율(스케줄 수정)은 발표 직후부터 <b>해당 주 일요일 24시까지</b> 계속 가능.</li>
   </ul>
@@ -1557,20 +1551,21 @@ function renderRules() {
   <h3>4. 자유 조율 (발표 후)</h3>
   <ul>
     <li>광학 활성 멤버 <b>전원</b>이 스케줄을 30분 단위로 수정 가능 (클릭 또는 드래그 → 사용자 지정/비우기).</li>
-    <li>수정 전 <b>일정 조율 논의 탭에서 채팅으로 협의</b>하는 것이 원칙. 미니 스케줄에서 바로 수정하면 즉시 전체 반영.</li>
-    <li>스케줄 탭과 일정 조율 탭의 <b>희망순위 표시 토글</b>로 각자의 1/2/3순위 희망을 반투명으로 확인 가능 — 조율 시 참고.</li>
+    <li>수정 전 <b>실시간 예약 탭에서 채팅으로 협의</b>하는 것이 원칙. 미니 스케줄에서 바로 수정하면 즉시 전체 반영.</li>
+    <li>일정 탭과 실시간 예약 탭의 <b>희망순위 표시 토글</b>로 각자의 1/2/3순위 희망을 반투명으로 확인 가능 — 조율 시 참고.</li>
     <li>변경은 1분 내 공용 구글캘린더에 자동 반영. <b>캘린더에서 직접 수정 금지</b> (자동 원상복구됨).</li>
   </ul>
 
-  <h3>5. Hardware Log 의무</h3>
+  <h3>5. 변경사항 (Hardware Log) 기록 의무</h3>
   <ul>
-    <li>측정 시작 전 현황판 확인, 구성 변경 시 즉시 기록 (LASER 컨트롤러/Turret Align, Turret Mirror, SNSPD 채널·연결 3종, Powermeter, ND/핀홀/필터 등).</li>
+    <li>측정 시작 전 현황판 확인, 구성 변경 시 즉시 기록 (LASER 컨트롤러/Turret Align, Turret Mirror, SNSPD 채널·연결 3종, Powermeter).</li>
+    <li><b style="color:var(--red)">ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구</b> (현황판 등록 대상이 아니며, 남겨두지 않는 것이 원칙).</li>
     <li>저장하면 변경 내용·일시(요일)·유저가 이력에 남고, Slack 채널에 1분 내 자동 공지됨.</li>
   </ul>
 
-  <h3>6. Remark (특이사항)</h3>
+  <h3>6. 특이사항 (Remark)</h3>
   <ul>
-    <li>측정·장비·실험실 관련 공유사항은 <b>Remark 탭</b>에 기록 (날짜·이름 자동 기록, 최근 10개만 보관 — 초과 시 오래된 것부터 자동 삭제).</li>
+    <li>측정·장비·실험실 관련 공유사항은 <b>특이사항 탭</b>에 기록 (날짜·이름 자동 기록, 최근 10개만 보관 — 초과 시 오래된 것부터 자동 삭제).</li>
   </ul>
 
   <h3>7. 시스템·공정성 보장</h3>
@@ -1605,7 +1600,7 @@ function renderAdmin() {
     <table class="list"><tr><th>이름</th><th>상태</th><th>조치</th></tr>${rows}</table>
     <div class="note">멤버 삭제·합성 활성 토글은 Synthesis Scheduler 관리자 탭 이용. 기존 합성 멤버는 여기서 "광학 활성화"만 눌러주면 같은 PIN으로 바로 참여 가능.</div>
   </div>
-  <div class="card"><h2>배정 결과 관리</h2>
+  <div class="card"><h2>투표 결과 관리</h2>
     <p class="muted" style="margin-bottom:8px">검증 불일치가 표시된 경우에만 사용. 삭제 후 자동 재생성되며 결정론적이므로 동일 투표에서는 동일 결과.</p>
     <button class="btn danger" id="btnDelResults">이번 사이클(${weekLabel(c.targetWeek)}) 결과 삭제 후 재생성</button>
   </div>`;
