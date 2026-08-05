@@ -134,8 +134,9 @@
   .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
 
   /* ---- toast ---- */
+  /* pointer-events:none — 토스트가 떠 있는 동안 그 아래 스케줄 칸 클릭이 먹히지 않던 문제 방지 */
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99;
-           display: flex; flex-direction: column; gap: 8px; align-items: center; }
+           display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
   .toastmsg { background: #1c2333; color: #fff; border-radius: 10px; padding: 10px 18px;
               font-size: 13.5px; box-shadow: 0 8px 30px rgba(0,0,0,.3); animation: pop .2s; max-width: 90vw; }
   .toastmsg.err { background: var(--red); }
@@ -178,6 +179,10 @@
   .cal .cell .lbl { position: absolute; top: 0; left: 3px; right: 2px; font-size: 10px; font-weight: 700;
                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 1; pointer-events: none; }
   .cal.mini .cell .lbl { font-size: 9.5px; left: 2px; }
+  /* 관리자 지정 일정(Repair·외부인 방문측정) — 사선 빗금으로 '예약 불가' 를 시각적으로 구분 */
+  .cal .cell.admblock { background-image: repeating-linear-gradient(45deg,
+                          rgba(0,0,0,.055) 0 4px, rgba(0,0,0,0) 4px 8px); cursor: not-allowed; }
+  .cal[data-admedit="1"] .cell.admblock { cursor: pointer; }
   /* 희망순위 오버레이 칩 */
   .rankchips { min-height: 0; display: flex; flex-direction: column; gap: 2px; padding: 3px 2px;
                background: #fbfcfe; border-top: 1px dashed var(--line); }
@@ -202,6 +207,7 @@
                      background: var(--accent); color: #fff; font-weight: 800; font-size: 13px;
                      display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
   .daycard.picked { border-color: var(--accent); background: var(--accent-soft); }
+  .daycard.fullblocked { border-color: var(--red); background: var(--red-soft); }
   /* ---- 조율 채팅 ---- */
   .coord { display: grid; grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 1fr); gap: 14px; }
   @media (max-width: 860px) { .coord { grid-template-columns: 1fr; } }
@@ -538,6 +544,63 @@ function optFmtDateDow(ms) {
   return `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}(${dow}) ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 
+/* =====================================================================
+ * 관리자 전용 블록 (Repair / 외부인 방문측정)
+ * ---------------------------------------------------------------------
+ * 30분 슬롯의 '소유자' 값으로 멤버ID 대신 특수 문자열을 사용한다.
+ *   형식: '!' + kind + ('|' + memo)      예) '!repair', '!visit|A대 김OO'
+ * Firestore 자동생성 ID는 영숫자뿐이므로 '!' 접두는 멤버ID와 절대 충돌하지 않는다.
+ * 이 값은 optEffectiveSchedule 의 '최상위 레이어'로 적용되어 추첨 배정·자유
+ * 조율 결과를 모두 덮는다 → 당첨자는 관리자 블록을 제외한 나머지 시간만 사용.
+ * ===================================================================== */
+const OPT_ADMIN_MARK = '!';
+const OPT_ADMIN_KINDS = [
+  { code: 'repair', label: 'Repair' },
+  { code: 'visit', label: '외부인 방문측정' },
+];
+function optIsAdminOwner(v) { return typeof v === 'string' && v.charAt(0) === OPT_ADMIN_MARK; }
+/* 메모 정제: 캘린더 태그([WOS|…]) 및 값 구분자와 충돌하는 문자 제거 + 길이 제한 */
+function optAdminMemoClean(memo) {
+  return String(memo == null ? '' : memo).replace(/[\[\]|\r\n\t]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+}
+function optAdminOwner(kind, memo) {
+  const m = optAdminMemoClean(memo);
+  return OPT_ADMIN_MARK + kind + (m ? '|' + m : '');
+}
+function optAdminParse(v) {
+  if (!optIsAdminOwner(v)) return null;
+  const body = v.slice(1);
+  const i = body.indexOf('|');
+  const code = i < 0 ? body : body.slice(0, i);
+  const memo = i < 0 ? '' : body.slice(i + 1);
+  const k = OPT_ADMIN_KINDS.filter(function (x) { return x.code === code; })[0];
+  return { code: code, kind: k ? k.label : code, memo: memo };
+}
+function optAdminLabel(v) {
+  const p = optAdminParse(v);
+  return p ? p.kind + (p.memo ? ' · ' + p.memo : '') : '';
+}
+/* 관리자 블록 문서에서 요일별 슬롯 배열(48) 추출. '' 또는 미기재 = 블록 없음 */
+function optAdminSlotArr(adminDocs, day) {
+  const slots = ((adminDocs || {})[String(day)] || {}).slots || {};
+  const arr = new Array(OPT_SLOTS_PER_DAY);
+  for (let s = 0; s < OPT_SLOTS_PER_DAY; s++) {
+    const v = slots[String(s)];
+    arr[s] = (v === undefined || v === null || v === '') ? null : v;
+  }
+  return arr;
+}
+/* 요일의 관리자 블록을 연속 구간으로 병합 → [{start, end, owner}] */
+function optAdminBlocksOfDay(adminDocs, day) { return optMergeBlocks(optAdminSlotArr(adminDocs, day)); }
+/* 요일 중 관리자 블록이 덮지 않은 30분 슬롯 수 (0이면 당첨자 가용 시간 없음) */
+function optFreeSlotCount(adminDocs, day) {
+  return optAdminSlotArr(adminDocs, day).filter(function (v) { return v === null; }).length;
+}
+/* 슬롯 구간 라벨: end 는 미포함 인덱스 */
+function optRangeLabel(start, end) {
+  return optSlotLabel(start) + '~' + (end >= OPT_SLOTS_PER_DAY ? '24:00' : optSlotLabel(end));
+}
+
 /* ---- 투표 canonical 직렬화 ----
  * votesByMember = { memberId: {r1: dayIdx, r2?: dayIdx, r3?: dayIdx} } */
 function optCanonicalVotesJson(votesByMember) {
@@ -620,16 +683,20 @@ function computeOpticsLottery(votesByMember) {
   return { seed, dayAssign, unassignedMembers, canonical, dayContenders };
 }
 
-/* ---- 유효 스케줄 계산: 기본 요일 배정 + 30분 단위 수정본(override) ----
+/* ---- 유효 스케줄 계산: 기본 요일 배정 + 30분 단위 수정본(override) + 관리자 블록 ----
  * scheduleDocs: {dayIdx(string): {slots: {slotIdx(string): memberId|""}}}
- * 반환: day -> [48] 배열 (memberId | null)                                   */
-function optEffectiveSchedule(dayAssign, scheduleDocs) {
+ * adminDocs   : {dayIdx(string): {slots: {slotIdx(string): '!kind|memo'|""}}}  (선택)
+ * 우선순위(높은 쪽이 이김): 관리자 블록 > 자유 조율 override > 요일 기본 배정
+ * 반환: day -> [48] 배열 (memberId | '!kind…' | null)                          */
+function optEffectiveSchedule(dayAssign, scheduleDocs, adminDocs) {
   const eff = {};
   for (let day = 0; day < 7; day++) {
     const base = (dayAssign || {})[String(day)] || null;
     const slots = ((scheduleDocs || {})[String(day)] || {}).slots || {};
+    const adm = optAdminSlotArr(adminDocs, day);
     const arr = new Array(OPT_SLOTS_PER_DAY);
     for (let s = 0; s < OPT_SLOTS_PER_DAY; s++) {
+      if (adm[s] !== null) { arr[s] = adm[s]; continue; }   // 관리자 블록이 최우선
       const ov = slots[String(s)];
       arr[s] = ov === undefined ? base : (ov === '' ? null : ov);
     }
@@ -659,6 +726,9 @@ if (typeof module !== 'undefined' && module.exports) {
     OPT_DAYS, OPT_SLOTS_PER_DAY, optSlotLabel, optDayLabel, optFmtDateDow,
     optCanonicalVotesJson, optValidateVote, computeOpticsLottery,
     optEffectiveSchedule, optMergeBlocks, optPushRemark,
+    OPT_ADMIN_MARK, OPT_ADMIN_KINDS, optIsAdminOwner, optAdminMemoClean,
+    optAdminOwner, optAdminParse, optAdminLabel, optAdminSlotArr,
+    optAdminBlocksOfDay, optFreeSlotCount, optRangeLabel,
   });
 }
 
@@ -683,6 +753,8 @@ const S = {
   curResults: null,         // opticsResults(votingWeek = 이번 주)
   sched: {},                // targetWeek: day(string) -> {slots}
   curSched: {},             // votingWeek
+  adm: {},                  // targetWeek 관리자 블록: day(string) -> {slots}
+  curAdm: {},               // votingWeek 관리자 블록
   chat: [],
   hw: null,                 // opticsHardware/current
   hwLog: [],
@@ -704,12 +776,28 @@ const pinHashOf = (memberId, pin) => sha256Hex(memberId + '|' + pin);
 const canonMap = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k]]));
 function cycle() { return phaseOf(now()); }
 
-/* 멤버별 고정 색상 (정렬된 id 순서 기반 → 모든 기기에서 동일) */
+/* 멤버별 고정 색상 (정렬된 id 순서 기반 → 모든 기기에서 동일)
+ * 관리자 블록(!repair/!visit)은 멤버 색상과 확실히 구분되는 고정 색을 사용한다. */
 function memberColor(id) {
+  if (optIsAdminOwner(id)) {
+    const p = optAdminParse(id);
+    return p && p.code === 'visit'
+      ? { bg: '#e6e2f7', fg: '#4b3a8f' }   // 외부인 방문측정 (보라)
+      : { bg: '#f3ded8', fg: '#8a2f1c' };  // Repair (벽돌)
+  }
   const ids = Object.keys(S.members).sort();
   const i = Math.max(0, ids.indexOf(id));
   const h = (i * 137.508) % 360; // golden angle
   return { bg: `hsl(${h},70%,86%)`, fg: `hsl(${h},65%,30%)` };
+}
+/* 슬롯 소유자 표시명: 멤버는 이름, 관리자 블록은 'Repair · 메모' */
+function ownerLabel(o) { return optIsAdminOwner(o) ? optAdminLabel(o) : memberName(o); }
+/* 해당 주의 관리자 블록 문서 묶음 */
+function admOf(weekIdx) { const c = cycle(); return weekIdx === c.targetWeek ? S.adm : (weekIdx === c.votingWeek ? S.curAdm : {}); }
+/* 관리자가 이 주에 블록을 등록/해제할 수 있는가 (이번 주 ~ 다음 주) */
+function canAdminBlock(weekIdx) {
+  const c = cycle();
+  return !!(S.user?.isAdmin && (weekIdx === c.votingWeek || weekIdx === c.targetWeek));
 }
 
 function toast(msg, cls = '') {
@@ -780,6 +868,12 @@ function makeFirestoreStore() {
     on(db.collection('opticsSchedule').where('week', '==', c.votingWeek), snap => {
       const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.curSched = m; render();
     });
+    on(db.collection('opticsAdminBlocks').where('week', '==', c.targetWeek), snap => {
+      const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.adm = m; render();
+    });
+    on(db.collection('opticsAdminBlocks').where('week', '==', c.votingWeek), snap => {
+      const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.curAdm = m; render();
+    });
     on(db.collection('opticsChat').orderBy('createdAt', 'desc').limit(120), snap => {
       const arr = []; snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
       S.chat = arr.reverse(); renderChatLogOnly() || render();
@@ -790,7 +884,7 @@ function makeFirestoreStore() {
     });
     on(db.doc('opticsRemarks/log'), d => { S.remarks = d.exists ? (d.data().entries || []) : []; render(); });
   }
-  setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.sched = {}; S.curSched = {}; S.pendingRanks = null; resubscribe(); } }, 30000);
+  setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.sched = {}; S.curSched = {}; S.adm = {}; S.curAdm = {}; S.pendingRanks = null; resubscribe(); } }, 30000);
 
   async function fetchWeekVotes(week) {
     const snap = await db.collection('opticsVotes').where('week', '==', week).get();
@@ -849,6 +943,12 @@ function makeFirestoreStore() {
       for (const [k, v] of Object.entries(changes)) payload.slots[k] = v;
       await db.doc(`opticsSchedule/${week}_${day}`).set(payload, { merge: true });
     },
+    /* 관리자 전용 블록 일괄 수정: changes = {slotIdx: '!kind|memo' | ""(해제)} */
+    async setAdminBlock(week, day, changes) {
+      const payload = { week, day, slots: {} };
+      for (const [k, v] of Object.entries(changes)) payload.slots[k] = v;
+      await db.doc(`opticsAdminBlocks/${week}_${day}`).set(payload, { merge: true });
+    },
     async sendChat(text) {
       await db.collection('opticsChat').add({
         memberId: S.user.id, text, week: cycle().targetWeek, createdAt: FV.serverTimestamp(),
@@ -889,12 +989,14 @@ function makeFirestoreStore() {
       });
     },
     async loadHistory(week) {
-      const [rd, votes, ssnap] = await Promise.all([
+      const [rd, votes, ssnap, asnap] = await Promise.all([
         db.doc('opticsResults/' + week).get(), fetchWeekVotes(week),
         db.collection('opticsSchedule').where('week', '==', week).get(),
+        db.collection('opticsAdminBlocks').where('week', '==', week).get(),
       ]);
       const sched = {}; ssnap.forEach(d => { const x = d.data(); sched[String(x.day)] = x; });
-      return { results: rd.exists ? rd.data() : null, votes, sched };
+      const adm = {}; asnap.forEach(d => { const x = d.data(); adm[String(x.day)] = x; });
+      return { results: rd.exists ? rd.data() : null, votes, sched, adm };
     },
     admin: {
       addMember: (name) => db.collection('members').add({ name, pinHash: null, uids: [], isAdmin: false, active: false, opticsActive: true, createdAt: FV.serverTimestamp() }),
@@ -909,7 +1011,7 @@ function makeFirestoreStore() {
 
 /* ---------------- 데모 저장소 ---------------- */
 function makeDemoStore() {
-  const mem = { members: {}, votes: {}, results: {}, sched: {}, chat: [], hw: null, hwLog: [], remarks: [] };
+  const mem = { members: {}, votes: {}, results: {}, sched: {}, adm: {}, chat: [], hw: null, hwLog: [], remarks: [] };
   ['김데모', '이샘플', '박예시', '최가상', '정테스트', '한체험'].forEach((n, i) => {
     mem.members['m' + i] = { id: 'm' + i, name: n, pinHash: null, uids: [], isAdmin: i === 0, active: true, opticsActive: true };
   });
@@ -948,6 +1050,8 @@ function makeDemoStore() {
     S.curResults = mem.results[c.votingWeek] || null;
     S.sched = JSON.parse(JSON.stringify(mem.sched[c.targetWeek] || {}));
     S.curSched = JSON.parse(JSON.stringify(mem.sched[c.votingWeek] || {}));
+    S.adm = JSON.parse(JSON.stringify(mem.adm[c.targetWeek] || {}));
+    S.curAdm = JSON.parse(JSON.stringify(mem.adm[c.votingWeek] || {}));
     S.chat = [...mem.chat];
     S.hw = mem.hw ? JSON.parse(JSON.stringify(mem.hw)) : null;
     S.hwLog = [...mem.hwLog];
@@ -984,6 +1088,11 @@ function makeDemoStore() {
       const doc = w[String(day)] = w[String(day)] || { week, day, slots: {} };
       Object.assign(doc.slots, changes); pushState();
     },
+    async setAdminBlock(week, day, changes) {
+      const w = mem.adm[week] = mem.adm[week] || {};
+      const doc = w[String(day)] = w[String(day)] || { week, day, slots: {} };
+      Object.assign(doc.slots, changes); pushState();
+    },
     async sendChat(text) { mem.chat.push({ id: 'c' + Math.random(), memberId: S.user.id, text, createdAt: Date.now() }); pushState(); },
     async clearChat() { mem.chat = []; pushState(); },
     async saveHardware(current, section, summary) {
@@ -1000,7 +1109,7 @@ function makeDemoStore() {
       pushState();
     },
     async loadHistory(week) {
-      return { results: mem.results[week] || null, votes: mem.votes[week] || {}, sched: mem.sched[week] || {} };
+      return { results: mem.results[week] || null, votes: mem.votes[week] || {}, sched: mem.sched[week] || {}, adm: mem.adm[week] || {} };
     },
     admin: {
       addMember: async (name) => { const id = 'm' + Math.random().toString(36).slice(2, 8); mem.members[id] = { id, name, pinHash: null, uids: [], isAdmin: false, active: false, opticsActive: true }; pushState(); },
@@ -1076,7 +1185,8 @@ function renderHeader() {
     if (mode === 'wait') S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 9 - Date.now();
     if (mode === 'book') { S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 12.5 - Date.now(); S.viewWeek = 'next'; }
     S.results = null; S.verify = null;
-    if (store._demo) store._demo.mem.results = {}; // 데모: 국면 전환 시 결과 재계산 유도
+    // 데모: 국면 전환 시 '대상 주' 결과만 비워 재계산 유도 (이번 주 확정 스케줄은 보존)
+    if (store._demo) delete store._demo.mem.results[c2.targetWeek];
     store._demo?.pushState();
   }));
 }
@@ -1117,21 +1227,28 @@ function calCtx(weekIdx) {
     weekIdx,
     results: isNext ? S.results : S.curResults,
     sched: isNext ? S.sched : S.curSched,
+    adm: isNext ? S.adm : S.curAdm,
     votes: isNext ? S.votes : null,
   };
 }
 function calendarHtml(weekIdx, mini) {
   const ctx = calCtx(weekIdx);
   const dayAssign = ctx.results?.dayAssign || {};
-  const eff = optEffectiveSchedule(dayAssign, ctx.sched);
+  const eff = optEffectiveSchedule(dayAssign, ctx.sched, ctx.adm);
   const canEdit = !!(S.user && (S.user.optics || S.user.isAdmin) && editableWeek(weekIdx) && ctx.results);
-  const cellCls = canEdit ? 'cell editable' : 'cell';
+  // 관리자는 발표 전(투표 기간)에도 Repair·방문측정 블록을 잡을 수 있어야 함
+  const admEdit = canAdminBlock(weekIdx);
+  const cellCls = (canEdit || admEdit) ? 'cell editable' : 'cell';
 
-  // 헤더
+  // 헤더 (요일 당첨자 + 관리자 블록으로 인한 가용시간 표시)
   let hd = `<div class="hd"></div>`;
   for (let d = 0; d < 7; d++) {
     const owner = dayAssign[String(d)];
-    hd += `<div class="hd">${OPT_DAYS[d]}<small>${fmtDate(optDayDate(weekIdx, d))}${owner ? ' · ' + esc(memberName(owner)) : ''}</small></div>`;
+    const free = optFreeSlotCount(ctx.adm, d);
+    const blocked = free < OPT_SLOTS_PER_DAY;
+    const admNote = !blocked ? ''
+      : (free === 0 ? ' · <b style="color:var(--red)">관리자 점유(종일)</b>' : ` · <b style="color:#8a2f1c">관리자 ${(OPT_SLOTS_PER_DAY - free) / 2}h</b>`);
+    hd += `<div class="hd">${OPT_DAYS[d]}<small>${fmtDate(optDayDate(weekIdx, d))}${owner ? ' · ' + esc(memberName(owner)) : ''}${admNote}</small></div>`;
   }
   // 희망순위 오버레이 행
   let ov = '';
@@ -1156,14 +1273,34 @@ function calendarHtml(weekIdx, mini) {
     body += `<div class="tl">${tlab}</div>`;
     for (let d = 0; d < 7; d++) {
       const o = eff[d][s];
+      const isAdm = optIsAdminOwner(o);
       const runStart = o !== null && (s === 0 || eff[d][s - 1] !== o);
       let style = '';
       if (o) { const col = memberColor(o); style = ` style="background:${col.bg}"`; }
-      const lbl = runStart ? `<span class="lbl" style="color:${o ? memberColor(o).fg : ''}">${esc(memberName(o))}</span>` : '';
-      body += `<div class="${cellCls}${hour ? ' hour' : ''}" data-day="${d}" data-slot="${s}" data-week="${weekIdx}"${style}>${lbl}</div>`;
+      const lbl = runStart ? `<span class="lbl" style="color:${o ? memberColor(o).fg : ''}">${isAdm ? '🔒 ' : ''}${esc(ownerLabel(o))}</span>` : '';
+      body += `<div class="${cellCls}${hour ? ' hour' : ''}${isAdm ? ' admblock' : ''}" data-day="${d}" data-slot="${s}" data-week="${weekIdx}"${isAdm ? ' data-adm="1"' : ''}${style}>${lbl}</div>`;
     }
   }
-  return `<div class="calwrap"><div class="cal${mini ? ' mini' : ''}" data-calweek="${weekIdx}" data-editable="${canEdit ? 1 : 0}">${hd}${ov}${body}</div></div>`;
+  return `<div class="calwrap"><div class="cal${mini ? ' mini' : ''}" data-calweek="${weekIdx}" data-editable="${(canEdit || admEdit) ? 1 : 0}" data-canedit="${canEdit ? 1 : 0}" data-admedit="${admEdit ? 1 : 0}">${hd}${ov}${body}</div></div>`;
+}
+
+/* 해당 주의 관리자 블록 요약 HTML (요일별 구간 나열). 없으면 '' */
+function admSummaryHtml(weekIdx, adm) {
+  const parts = [];
+  for (let d = 0; d < 7; d++) {
+    const blocks = optAdminBlocksOfDay(adm, d);
+    if (!blocks.length) continue;
+    const free = optFreeSlotCount(adm, d);
+    parts.push(`<li><b>${OPT_DAYS[d]} (${fmtDate(optDayDate(weekIdx, d))})</b> — ` +
+      blocks.map(b => `<span class="badge b-red">${esc(optAdminLabel(b.owner))} ${optRangeLabel(b.start, b.end)}</span>`).join(' ') +
+      (free === 0 ? ' <b style="color:var(--red)">→ 이 요일은 종일 사용 불가 (당첨자 가용 시간 없음)</b>' : ` <span class="muted">→ 나머지 ${free / 2}시간은 정상 사용 가능</span>`) +
+      '</li>');
+  }
+  if (!parts.length) return '';
+  return `<div class="note" style="border:1.5px solid var(--red);background:var(--red-soft)">
+    <b>🔒 관리자 지정 일정 (Repair · 외부인 방문측정)</b> — 아래 시간대는 <b>예약·조율 대상에서 제외</b>됩니다.
+    요일 당첨자도 이 시간을 제외한 나머지 시간만 사용합니다.
+    <ul style="margin:6px 0 0 18px">${parts.join('')}</ul></div>`;
 }
 
 /* ---------------- 탭: 스케줄 ---------------- */
@@ -1182,6 +1319,9 @@ function renderCal() {
   } else {
     note = S.user ? '이 주는 수정 가능 기간이 아닙니다.' : '수정하려면 로그인하세요.';
   }
+  if (canAdminBlock(w)) {
+    note += ' <b>[관리자]</b> 발표 전이라도 칸을 클릭·드래그해 <b>Repair / 외부인 방문측정</b> 블록을 지정할 수 있습니다.';
+  }
   return `<div class="card">
     <div class="flexrow" style="margin-bottom:10px">
       <h2 style="margin:0">주간 일정</h2>
@@ -1195,6 +1335,7 @@ function renderCal() {
       </label>
     </div>
     <p class="muted" style="margin-bottom:10px">${note}</p>
+    ${admSummaryHtml(w, ctx.adm)}
     ${calendarHtml(w, false)}
   </div>`;
 }
@@ -1220,10 +1361,17 @@ function renderVote() {
   const cards = Array.from({ length: 7 }, (_, d) => {
     const mine = myRankOfDay(d);
     const a = agg[d];
-    return `<div class="daycard ${mine ? 'picked' : ''}" data-votday="${d}">
+    // 관리자 블록(Repair/방문측정)은 투표 시점에 반드시 보여야 함 — 당첨돼도 그 시간은 못 씀
+    const blocks = optAdminBlocksOfDay(S.adm, d);
+    const free = optFreeSlotCount(S.adm, d);
+    const admHtml = !blocks.length ? ''
+      : `<div class="agg" style="color:#8a2f1c;line-height:1.5">🔒 ${blocks.map(b => esc(optAdminLabel(b.owner)) + '<br>' + optRangeLabel(b.start, b.end)).join('<br>')}
+         ${free === 0 ? '<br><b style="color:var(--red)">종일 사용 불가</b>' : `<br><span class="muted">가용 ${free / 2}h</span>`}</div>`;
+    return `<div class="daycard ${mine ? 'picked' : ''}${free === 0 ? ' fullblocked' : ''}" data-votday="${d}">
       ${mine ? `<span class="myrank">${'①②③'[mine - 1]}</span>` : ''}
       <b>${OPT_DAYS[d]}</b><div class="date">${fmtDate(optDayDate(c.targetWeek, d))}</div>
       <div class="agg">${a[0] + a[1] + a[2] ? `①${a[0]} ②${a[1]} ③${a[2]}` : '지원 없음'}</div>
+      ${admHtml}
     </div>`;
   }).join('');
   const picks = ['r1', 'r2', 'r3'].filter(k => p[k] !== undefined);
@@ -1234,6 +1382,7 @@ function renderVote() {
       <span>내 투표: ${picks.length ? picks.map((k, i) => `<span class="badge b-accent">${i + 1}순위 ${OPT_DAYS[p[k]]}</span>`).join(' ') : '<span class="muted">없음</span>'}</span>
       <span style="margin-left:auto" class="${saved ? 'muted' : 'verify-bad'}">${saved ? '저장됨 ✓' : '변경사항 있음 — 저장 필요!'}</span>
     </div>
+    ${admSummaryHtml(c.targetWeek, S.adm)}
     <div class="daycards">${cards}</div>
     <div class="flexrow" style="margin-top:14px">
       <button class="btn primary" id="btnSaveVote" ${saved ? 'disabled' : ''}>투표 저장</button>
@@ -1266,7 +1415,8 @@ function renderCoord() {
         희망순위 표시 <span class="rankchip rc1" style="opacity:1">①1순위</span><span class="rankchip rc2" style="opacity:1">②2순위</span><span class="rankchip rc3" style="opacity:1">③3순위</span>
       </label>
     </div>
-    <p class="muted" style="margin-bottom:10px">미니 스케줄에서 바로 수정 → 즉시 반영${S.overlay ? ' · 희망순위는 다음 주 스케줄에서만 표시됩니다' : ''}</p>
+    <p class="muted" style="margin-bottom:10px">미니 스케줄에서 바로 수정 → 즉시 반영${S.overlay ? ' · 희망순위는 다음 주 스케줄에서만 표시됩니다' : ''} · 🔒 표시 구간은 관리자 지정 일정으로 예약·조율 불가</p>
+    ${admSummaryHtml(w, calCtx(w).adm)}
     <div class="coord">
       <div>${calendarHtml(w, true)}</div>
       <div class="chatbox">
@@ -1300,7 +1450,7 @@ function renderResults() {
   for (let w = c.targetWeek; w >= c.targetWeek - 8; w--) weekOpts.push(w);
   const sel = S.resultsWeek ?? c.targetWeek;
   const isCurrent = sel === c.targetWeek;
-  const data = isCurrent ? { results: S.results, votes: S.votes } : S.histCache[sel];
+  const data = isCurrent ? { results: S.results, votes: S.votes, adm: S.adm } : S.histCache[sel];
   let body = '';
   if (!isCurrent && !data) {
     body = '<p class="muted">불러오는 중...</p>';
@@ -1319,14 +1469,22 @@ function renderResults() {
     const vbadge = verify == null ? '<span class="badge b-gray">검증 중...</span>'
       : verify.ok ? '<span class="badge b-green">✓ 검증 완료 — 투표 데이터로부터 재계산한 결과와 일치</span>'
       : '<span class="badge b-red">⚠ 검증 불일치 — 관리자에게 결과 재생성을 요청하세요</span>';
+    const adm = data.adm || {};
     const rows = Array.from({ length: 7 }, (_, d) => {
       const m = (r.dayAssign || {})[String(d)];
+      const blocks = optAdminBlocksOfDay(adm, d);
+      const free = optFreeSlotCount(adm, d);
+      const admCell = !blocks.length ? '<span class="muted">–</span>'
+        : blocks.map(b => `<span class="badge b-red">${esc(optAdminLabel(b.owner))} ${optRangeLabel(b.start, b.end)}</span>`).join(' ')
+          + (free === 0 ? ' <b style="color:var(--red)">가용 시간 없음</b>' : ` <span class="muted">(가용 ${free / 2}h)</span>`);
       return `<tr><td>${OPT_DAYS[d]} (${fmtDate(optDayDate(sel, d))})</td>
-        <td>${m ? '<b>' + esc(memberName(m)) + '</b>' : '<span class="muted">미배정 — 자유 조율 가능</span>'}</td></tr>`;
+        <td>${m ? '<b>' + esc(memberName(m)) + '</b>' : '<span class="muted">미배정 — 자유 조율 가능</span>'}</td>
+        <td>${admCell}</td></tr>`;
     }).join('');
     body = `
       <div class="flexrow" style="margin-bottom:10px">${vbadge}</div>
-      <table class="list"><tr><th>요일</th><th>배정자 (00-24시 기본 배정)</th></tr>${rows}</table>
+      <table class="list"><tr><th>요일</th><th>배정자 (기본 배정)</th><th>관리자 지정 일정</th></tr>${rows}</table>
+      <p class="muted" style="margin-top:6px">요일 배정자는 <b>관리자 지정 일정(Repair·외부인 방문측정)을 제외한 나머지 시간</b>을 사용합니다. 관리자 블록은 추첨 알고리즘과 무관한 별도 레이어이므로 위 검증 결과에 영향을 주지 않습니다.</p>
       <h3>아쉽게 배정받지 못한 인원</h3>
       <p class="muted">${(r.unassignedMembers || []).length ? r.unassignedMembers.map(m => esc(memberName(m))).join(', ') + ' — 실시간 예약 탭에서 협의해 시간을 나눠 쓸 수 있습니다.' : '없음 (투표자 전원 배정)'}</p>
       <h3>공정성 증빙</h3>
@@ -1556,19 +1714,30 @@ function renderRules() {
     <li>변경은 1분 내 공용 구글캘린더에 자동 반영. <b>캘린더에서 직접 수정 금지</b> (자동 원상복구됨).</li>
   </ul>
 
-  <h3>5. 변경사항 (Hardware Log) 기록 의무</h3>
+  <h3>5. 관리자 지정 일정 (Repair / 외부인 방문측정)</h3>
+  <ul>
+    <li>장비 수리(<b>Repair</b>)나 <b>외부인 방문측정</b>처럼 연구실 전체가 비켜야 하는 일정은 <b>관리자 계정만</b> 등록할 수 있음. 스케줄에는 개인 이름 대신 <b>사유(+선택 메모)</b>가 🔒 표시와 함께 나타남.</li>
+    <li>등록은 «일정»·«실시간 예약» 탭의 캘린더에서 칸 클릭·드래그 → 배정 대상에서 🔒 항목 선택. <b>투표 기간·발표 전에도 등록 가능</b>하며 대상은 이번 주·다음 주.</li>
+    <li>관리자 지정 구간은 <b>사전 투표 화면(요일 카드)·실시간 예약·투표 결과 탭에 모두 표시</b>되므로, 투표 전에 미리 확인하고 요일을 고를 것.</li>
+    <li><b>우선순위: 관리자 지정 &gt; 자유 조율 &gt; 요일 기본 배정.</b> 즉 어떤 요일에 관리자 지정 일정이 있으면, 그 요일 <b>당첨자는 지정 구간을 제외한 나머지 시간만</b> 사용함. 일반 멤버는 이 구간을 수정·예약할 수 없음.</li>
+    <li>요일 전체(00-24시)가 지정되면 그 요일 당첨자의 가용 시간은 0이 되며, 화면에 <b>"가용 시간 없음"</b> 경고가 표시됨 (추첨 자체는 정상 진행 — 배정 알고리즘·시드 검증에는 영향 없음).</li>
+    <li>해제는 관리자 탭의 «관리자 지정 일정» 목록 또는 캘린더 팝업의 "🔓 관리자 지정 해제"로 수행. 해제 즉시 원래 배정·조율 상태로 복귀.</li>
+    <li>구글캘린더에는 <b>[광학] Repair</b> / <b>[광학] 외부인 방문측정</b> 형태로 자동 등록됨 (1분 내 동기화).</li>
+  </ul>
+
+  <h3>6. 변경사항 (Hardware Log) 기록 의무</h3>
   <ul>
     <li>측정 시작 전 현황판 확인, 구성 변경 시 즉시 기록 (LASER 컨트롤러/Turret Align, Turret Mirror, SNSPD 채널·연결 3종, Powermeter).</li>
     <li><b style="color:var(--red)">ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구</b> (현황판 등록 대상이 아니며, 남겨두지 않는 것이 원칙).</li>
     <li>저장하면 변경 내용·일시(요일)·유저가 이력에 남고, Slack 채널에 1분 내 자동 공지됨.</li>
   </ul>
 
-  <h3>6. 특이사항 (Remark)</h3>
+  <h3>7. 특이사항 (Remark)</h3>
   <ul>
     <li>측정·장비·실험실 관련 공유사항은 <b>특이사항 탭</b>에 기록 (날짜·이름 자동 기록, 최근 10개만 보관 — 초과 시 오래된 것부터 자동 삭제).</li>
   </ul>
 
-  <h3>7. 시스템·공정성 보장</h3>
+  <h3>8. 시스템·공정성 보장</h3>
   <ul>
     <li>마감시각·본인확인(PIN+기기)·투표 형식은 서버 보안규칙이 강제 — 브라우저 조작으로 우회 불가.</li>
     <li>배정 결과는 생성 후 수정 불가, 모든 접속자가 재계산 검증 (결과 탭 배지).</li>
@@ -1600,10 +1769,39 @@ function renderAdmin() {
     <table class="list"><tr><th>이름</th><th>상태</th><th>조치</th></tr>${rows}</table>
     <div class="note">멤버 삭제·합성 활성 토글은 Synthesis Scheduler 관리자 탭 이용. 기존 합성 멤버는 여기서 "광학 활성화"만 눌러주면 같은 PIN으로 바로 참여 가능.</div>
   </div>
+  ${renderAdminBlocksPanel(c)}
   <div class="card"><h2>투표 결과 관리</h2>
     <p class="muted" style="margin-bottom:8px">검증 불일치가 표시된 경우에만 사용. 삭제 후 자동 재생성되며 결정론적이므로 동일 투표에서는 동일 결과.</p>
     <button class="btn danger" id="btnDelResults">이번 사이클(${weekLabel(c.targetWeek)}) 결과 삭제 후 재생성</button>
   </div>`;
+}
+
+/* 관리자 지정 일정(Repair / 외부인 방문측정) 등록·해제 패널 */
+function renderAdminBlocksPanel(c) {
+  const weeks = [{ w: c.votingWeek, label: '이번 주' }, { w: c.targetWeek, label: '다음 주' }];
+  const lists = weeks.map(({ w, label }) => {
+    const adm = w === c.targetWeek ? S.adm : S.curAdm;
+    const rows = [];
+    for (let d = 0; d < 7; d++) {
+      optAdminBlocksOfDay(adm, d).forEach(b => {
+        rows.push(`<tr>
+          <td>${OPT_DAYS[d]} (${fmtDate(optDayDate(w, d))})</td>
+          <td><span class="badge b-red">${esc(optAdminLabel(b.owner))}</span></td>
+          <td>${optRangeLabel(b.start, b.end)}</td>
+          <td><button class="btn sm danger" data-admdel="${w}|${d}|${b.start}|${b.end}">해제</button></td></tr>`);
+      });
+    }
+    return `<h3 style="margin-bottom:6px">${label} (${weekLabel(w)})</h3>` + (rows.length
+      ? `<table class="list"><tr><th>날짜</th><th>사유</th><th>시간</th><th>조치</th></tr>${rows.join('')}</table>`
+      : '<p class="muted">등록된 관리자 지정 일정이 없습니다.</p>');
+  }).join('');
+  return `<div class="card"><h2>관리자 지정 일정 (Repair / 외부인 방문측정)</h2>
+    <p class="muted" style="margin-bottom:10px">
+      등록은 <b>«일정» 또는 «실시간 예약» 탭의 캘린더에서 칸을 클릭·드래그</b> → 배정 대상에서 🔒 Repair / 🔒 외부인 방문측정 선택 (메모 선택 입력).
+      투표 기간·발표 전에도 등록할 수 있으며, 등록 즉시 사전 투표 화면·실시간 예약 화면·구글캘린더에 반영됩니다.
+      이 블록은 <b>요일 당첨자와 자유 조율 결과를 모두 덮으므로</b>, 당첨자는 블록을 제외한 나머지 시간만 사용하게 됩니다.
+      대상 주는 이번 주·다음 주로 제한됩니다(서버 규칙).</p>
+    ${lists}</div>`;
 }
 
 /* ---------------- 로그인 모달 ---------------- */
@@ -1638,36 +1836,83 @@ function showModal(html) {
 function closeModal() { $('#modalRoot').innerHTML = ''; }
 
 /* ---------------- 셀 편집 팝업 (클릭/드래그 공통) ---------------- */
-function openCellPop(weekIdx, day, s0, s1, x, y) {
+function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
   document.querySelector('.cellpop')?.remove();
+  const o = opt || {};
+  const canEdit = o.canEdit !== false;               // 일반 조율(멤버 배정) 가능 여부
+  const admEdit = !!o.admEdit;                       // 관리자 블록 지정 가능 여부
+  const adm = admOf(weekIdx);
+  // 선택 구간에 이미 걸려 있는 관리자 블록
+  const admArr = optAdminSlotArr(adm, day);
+  let hasAdm = false;
+  for (let s = s0; s <= s1; s++) if (admArr[s] !== null) hasAdm = true;
+
   const list = Object.values(S.members).filter(m => m.opticsActive === true)
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   const div = document.createElement('div');
   div.className = 'cellpop';
-  div.innerHTML = `
-    <h4>${OPT_DAYS[day]} ${optSlotLabel(s0)} ~ ${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}</h4>
-    <div class="field"><label>배정 대상</label><select id="popMember">
+  const memberOpts = canEdit ? `
       ${S.user?.optics ? `<option value="${S.user.id}">${esc(S.user.name)} (본인)</option>` : ''}
       ${list.filter(m => !S.user || m.id !== S.user.id).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}
-      <option value="">(비우기)</option>
-    </select></div>
+      <option value="">(비우기)</option>` : '';
+  const admOpts = admEdit ? `<optgroup label="관리자 지정 (예약 불가 구간)">
+      ${OPT_ADMIN_KINDS.map(k => `<option value="${OPT_ADMIN_MARK}${k.code}">🔒 ${esc(k.label)}</option>`).join('')}
+      ${hasAdm ? '<option value="__admclear__">🔓 관리자 지정 해제</option>' : ''}
+    </optgroup>` : '';
+  div.innerHTML = `
+    <h4>${OPT_DAYS[day]} ${optSlotLabel(s0)} ~ ${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}</h4>
+    ${hasAdm && !admEdit ? '<p class="muted" style="color:#8a2f1c;margin:0 0 8px">🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.</p>' : ''}
+    <div class="field"><label>배정 대상</label><select id="popMember">${memberOpts}${admOpts}</select></div>
+    <div class="field" id="popMemoWrap" style="display:none"><label>메모 (선택)</label>
+      <input id="popMemo" maxlength="40" placeholder="예: A대 김○○ 측정"></div>
     <div class="flexrow">
       <button class="btn primary sm" id="popApply">적용</button>
-      <button class="btn sm" id="popClear">비우기</button>
+      ${canEdit ? '<button class="btn sm" id="popClear">비우기</button>' : ''}
       <button class="btn sm" id="popClose">닫기</button>
     </div>`;
   document.body.appendChild(div);
-  const W = div.offsetWidth || 230, H = div.offsetHeight || 170;
-  div.style.left = Math.min(x, window.innerWidth - W - 10) + 'px';
-  div.style.top = Math.min(y, window.innerHeight - H - 10) + 'px';
-  const apply = async (mid) => {
+  /* 메모 입력칸이 나타나면 팝업 높이가 커지므로 그때마다 위치를 다시 잡는다
+   * (그렇지 않으면 '적용' 버튼이 화면 밖으로 밀려나 눌리지 않음) */
+  const place = () => {
+    const W = div.offsetWidth || 230, H = div.offsetHeight || 170;
+    div.style.left = Math.max(6, Math.min(x, window.innerWidth - W - 10)) + 'px';
+    div.style.top = Math.max(6, Math.min(y, window.innerHeight - H - 10)) + 'px';
+  };
+  place();
+
+  const sel = div.querySelector('#popMember');
+  const memoWrap = div.querySelector('#popMemoWrap');
+  const syncMemo = () => { memoWrap.style.display = optIsAdminOwner(sel.value) ? '' : 'none'; place(); };
+  sel.addEventListener('change', syncMemo); syncMemo();
+
+  /* 일반 조율 적용 — 관리자 블록 구간은 덮어쓸 수 없음 */
+  const applySched = async (mid) => {
+    if (hasAdm) return toast('관리자 지정 일정(Repair·외부인 방문측정) 구간은 수정할 수 없습니다.', 'err');
     const changes = {};
     for (let s = s0; s <= s1; s++) changes[String(s)] = mid;
     try { await store.setSlots(weekIdx, day, changes); div.remove(); }
     catch (e) { toast('수정 실패: ' + e.message, 'err'); }
   };
-  div.querySelector('#popApply').addEventListener('click', () => apply(div.querySelector('#popMember').value));
-  div.querySelector('#popClear').addEventListener('click', () => apply(''));
+  /* 관리자 블록 지정/해제 */
+  const applyAdm = async (value) => {
+    const changes = {};
+    for (let s = s0; s <= s1; s++) changes[String(s)] = value;
+    try {
+      await store.setAdminBlock(weekIdx, day, changes);
+      div.remove();
+      toast(value === '' ? '관리자 지정이 해제되었습니다.' : '관리자 지정 일정이 등록되었습니다. (캘린더에 곧 반영)', 'okk');
+    } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+  };
+  div.querySelector('#popApply').addEventListener('click', () => {
+    const v = sel.value;
+    if (v === '__admclear__') return applyAdm('');
+    if (optIsAdminOwner(v)) {
+      const p = optAdminParse(v);
+      return applyAdm(optAdminOwner(p.code, div.querySelector('#popMemo').value));
+    }
+    applySched(v);
+  });
+  div.querySelector('#popClear')?.addEventListener('click', () => applySched(''));
   div.querySelector('#popClose').addEventListener('click', () => div.remove());
 }
 
@@ -1681,6 +1926,7 @@ function bindMain() {
   // 캘린더 드래그/클릭 (Pointer Events; 터치 포함)
   document.querySelectorAll('.cal[data-editable="1"]').forEach(cal => {
     const weekIdx = parseInt(cal.dataset.calweek, 10);
+    const popOpt = { canEdit: cal.dataset.canedit === '1', admEdit: cal.dataset.admedit === '1' };
     cal.addEventListener('pointerdown', e => {
       const cell = e.target.closest('.cell');
       if (!cell) return;
@@ -1701,7 +1947,7 @@ function bindMain() {
       if (!S.drag) return;
       const d = S.drag; S.drag = null;
       const s0 = Math.min(d.s0, d.s1), s1 = Math.max(d.s0, d.s1);
-      openCellPop(d.weekIdx, d.day, s0, s1, e.clientX + 6, e.clientY + 6);
+      openCellPop(d.weekIdx, d.day, s0, s1, e.clientX + 6, e.clientY + 6, popOpt);
     });
   });
   document.addEventListener('pointerup', () => { if (S.drag) S.drag = null; }, { once: true });
@@ -1831,6 +2077,15 @@ function bindMain() {
         if (confirm(`${m.name}을(를) ${m.isAdmin ? '관리자에서 해제' : '관리자로 지정'}할까요?`)) await store.admin.setAdmin(id, !m.isAdmin);
       }
     } catch (e) { toast(e.message, 'err'); }
+  }));
+  // 관리자 지정 일정 해제
+  document.querySelectorAll('[data-admdel]').forEach(b => b.addEventListener('click', async () => {
+    const [w, d, s0, s1] = b.dataset.admdel.split('|').map(Number);
+    if (!confirm(`${OPT_DAYS[d]} ${optRangeLabel(s0, s1)} 관리자 지정 일정을 해제할까요?\n해제하면 해당 시간은 요일 당첨자·자유 조율 대상으로 즉시 복귀합니다.`)) return;
+    const changes = {};
+    for (let s = s0; s < s1; s++) changes[String(s)] = '';
+    try { await store.setAdminBlock(w, d, changes); toast('해제되었습니다. (캘린더에 곧 반영)', 'okk'); }
+    catch (e) { toast('해제 실패: ' + e.message, 'err'); }
   }));
   $('#btnDelResults')?.addEventListener('click', async () => {
     if (!confirm('이번 사이클 배정 결과를 삭제하고 재생성할까요?')) return;

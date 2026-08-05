@@ -134,8 +134,9 @@
   .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
 
   /* ---- toast ---- */
+  /* pointer-events:none — 토스트가 떠 있는 동안 그 아래 예약 칸 클릭이 먹히지 않던 문제 방지 */
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99;
-           display: flex; flex-direction: column; gap: 8px; align-items: center; }
+           display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
   .toastmsg { background: #1c2333; color: #fff; border-radius: 10px; padding: 10px 18px;
               font-size: 13.5px; box-shadow: 0 8px 30px rgba(0,0,0,.3); animation: pop .2s; max-width: 90vw; }
   .toastmsg.err { background: var(--red); }
@@ -647,10 +648,10 @@ function makeFirestoreStore() {
     async unbook(cellKey, week) {
       await db.doc(`bookings/${week}_${cellKey}`).delete();
     },
-    async cancelAssignment(cellKey, memberId) {
-      const c = cycle();
-      await db.doc(`cancellations/${c.targetWeek}_${cellKey}`).set({
-        week: c.targetWeek, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
+    async cancelAssignment(cellKey, memberId, week) {
+      const w = week ?? cycle().targetWeek;
+      await db.doc(`cancellations/${w}_${cellKey}`).set({
+        week: w, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
       });
     },
     async loadHistory(week) {
@@ -700,6 +701,19 @@ function makeDemoStore() {
     m4: ['D0-1', 'N1-1', 'W2-4'], m5: ['D1-3', 'W0-1', 'W1-2', 'N3-4'],
   };
   mem.votes[c0.targetWeek] = demoVotes;
+  // 이번 주(진행 중인 주) 확정 스케줄 — 일정 탭 '이번 주' 보기의 실시간 신청·취소 데모용
+  const curDemoVotes = {
+    m1: ['D0-1', 'N0-1', 'W0-1'], m2: ['D0-3', 'W0-2'], m3: ['D2-1', 'N1-3', 'W1-2'],
+    m4: ['D3-2', 'W1-1'], m5: ['D1-4', 'N2-2', 'W2-3'],
+  };
+  mem.votes[c0.votingWeek] = curDemoVotes;
+  {
+    const rc = computeLottery(curDemoVotes);
+    mem.results[c0.votingWeek] = {
+      week: c0.votingWeek, seed: rc.seed, assignments: rc.assignments,
+      priorityMembers: rc.priorityMembers, votesJson: rc.canonical, createdAt: Date.now(),
+    };
+  }
 
   function pushState() {
     const c = cycle();
@@ -760,10 +774,10 @@ function makeDemoStore() {
       pushState();
     },
     async unbook(cellKey, week) { delete (mem.bookings[week] || {})[cellKey]; pushState(); },
-    async cancelAssignment(cellKey, memberId) {
-      const c = cycle();
-      (mem.cancels[c.targetWeek] = mem.cancels[c.targetWeek] || {})[cellKey] =
-        { week: c.targetWeek, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
+    async cancelAssignment(cellKey, memberId, week) {
+      const w = week ?? cycle().targetWeek;
+      (mem.cancels[w] = mem.cancels[w] || {})[cellKey] =
+        { week: w, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
       pushState();
     },
     async loadHistory(week) {
@@ -856,7 +870,8 @@ function renderHeader() {
     if (mode === 'wait') S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 9 - Date.now();  // 목 09시
     if (mode === 'book') { S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 12.5 - Date.now(); S.viewWeek = 'next'; } // 목 12:30
     S.results = null; S.verify = null;
-    if (store._demo) store._demo.mem.results = {}; // 데모: 국면 전환 시 결과 재계산 유도
+    // 데모: 국면 전환 시 '대상 주' 결과만 비워 재계산 유도 (이번 주 확정 스케줄은 보존)
+    if (store._demo) delete store._demo.mem.results[c2.targetWeek];
     store._demo?.pushState();
   }));
 }
@@ -937,15 +952,21 @@ function gridHtml(mode) {
         if (cntOthers > 0 && !pending.has(key)) inner = `<span class="tag">현재 ${cntOthers}명</span>` + `<span class="cnt">${cnt}</span>`;
       } else {
         const st = cellState(key, ctx);
+        // 이번 주 보기: 이미 지나간 시간대는 어떤 조작도 불가
+        const ended = isThis && now() >= slotEndMs(wk, sd.key);
         if (st.type === 'lottery') {
           cls += ' lottery' + (S.user && st.member === S.user.id ? ' minewin' : '');
           inner = `${esc(memberName(st.member))}<span class="tag">추첨 확정</span>`;
-          if (mode === 'book' && S.user && st.member === S.user.id && !isThis) {
-            cls += ' clickable'; click = ` data-cell="${key}" data-act="cancelwin"`;
+          // 확정 취소 가능 구간: 다음 주 예약 탭 + 이번 주 일정 탭(종료 전 슬롯)
+          const canCancelWin = (mode === 'book' && !isThis) || (isThis && !ended);
+          if (canCancelWin && S.user && st.member === S.user.id) {
+            cls += ' clickable'; click = ` data-cell="${key}" data-act="cancelwin" data-week="${wk}"`;
             inner += '<span class="tag">(클릭해 확정 취소)</span>';
-          } else if (mode === 'book' && S.user?.isAdmin && !isThis) {
-            cls += ' clickable'; click = ` data-cell="${key}" data-act="admin-cancelwin" data-owner="${st.member}"`;
+          } else if (canCancelWin && S.user?.isAdmin) {
+            cls += ' clickable'; click = ` data-cell="${key}" data-act="admin-cancelwin" data-owner="${st.member}" data-week="${wk}"`;
             inner += '<span class="tag">(관리자: 확정 취소)</span>';
+          } else if (ended) {
+            inner += '<span class="tag">종료</span>';
           }
         } else if (st.type === 'booked') {
           cls += ' booked' + (S.user && st.member === S.user.id ? ' minewin' : '');
@@ -958,7 +979,6 @@ function gridHtml(mode) {
           } else if ((mode === 'status') && c.phase === 'BOOKING') {
             cls += ' empty-book'; inner = '빈 슬롯';
           } else if (isThis) {
-            const ended = now() >= slotEndMs(wk, sd.key);
             if (ended) { cls += ' disabled'; inner = '<span class="tag">종료</span>'; }
             else if (S.user && curBookable) { cls += ' empty-book clickable'; inner = '신청 가능'; click = ` data-cell="${key}" data-act="book" data-week="${wk}"`; }
             else { cls += ' empty-book'; inner = '빈 슬롯'; }
@@ -1028,7 +1048,7 @@ function renderDash() {
   const hasCurData = S.curResults || Object.keys(S.curBookings).length;
   let curNote;
   if (!S.user) curNote = '이번 주 확정 스케줄입니다. 로그인하면 빈 칸을 실시간으로 신청할 수 있습니다.';
-  else if (S.curResults) curNote = '<b>빈 칸(점선)을 클릭해 즉시 신청</b>할 수 있고, <b>내 예약 칸</b>을 클릭하면 취소됩니다 (본인 예약만 취소 가능, 추첨 확정 칸은 취소 불가). 이미 지난 시간대는 "종료"로 표시됩니다.';
+  else if (S.curResults) curNote = '<b>빈 칸(점선)을 클릭해 즉시 신청</b>할 수 있고, <b>내 칸</b>을 클릭하면 취소됩니다 — <b>실시간 예약뿐 아니라 추첨 확정 칸도 취소 가능</b>합니다. 취소한 칸은 즉시 빈 슬롯이 되어 누구나 선착순으로 신청할 수 있습니다 (확정 취소는 되돌릴 수 없음). 이미 지난 시간대는 "종료"로 표시됩니다.';
   else curNote = '이번 주 확정 스케줄 데이터가 없어 실시간 신청이 불가합니다. (지난주 시스템 미사용)';
   return `
     <div class="card">
@@ -1175,7 +1195,8 @@ function renderRules() {
   <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:#8a2530;font-size:14px">
     <b>⚠ 최우선 주의사항</b> — 확보한 시간(추첨 확정·실시간 예약)에 사용이 불가능해진 경우,
     다른 멤버가 그 시간을 쓸 수 있도록 <b>최대한 빨리 시스템에서 직접 취소</b>해 주세요.
-    (실시간 예약 탭에서 본인 칸 클릭 → 취소. 방치는 전체 장비 가동률 손실로 이어집니다.)
+    (다음 주는 «실시간 예약» 탭, <b>이번 주는 «일정» 탭(이번 주 보기)</b>에서 본인 칸 클릭 → 취소.
+    방치는 전체 장비 가동률 손실로 이어집니다.)
   </div>
 
   <h3>1. 토큰 제도</h3>
@@ -1228,7 +1249,8 @@ function renderRules() {
     <li><b>우선예약</b>: Day에 토큰을 1개 이상 냈으나 Day에 한 번도 선정되지 못한 인원은 발표 직후 일정 시간(기본 60분, 관리자 설정) 동안 <b>단독으로</b> 예약 가능. 그 후 전체 오픈.</li>
     <li>예약은 서버에서 원자적으로 처리 — 동시에 눌러도 정확히 1명만 성공.</li>
     <li>본인 예약은 본인이 취소 가능 (취소 즉시 빈 슬롯으로 전환).</li>
-    <li><b>이번 주 실시간 신청</b>: 이미 확정된 이번 주 스케줄의 빈 칸도 <b>일정 탭(이번 주 보기)</b>에서 실시간 선착순 신청 가능 (해당 주 일요일 24시까지, 종료된 시간대 제외). 취소는 본인 예약만 가능하며, 추첨 확정 칸은 이번 주에는 취소 불가.</li>
+    <li><b>이번 주 실시간 신청</b>: 이미 확정된 이번 주 스케줄의 빈 칸도 <b>일정 탭(이번 주 보기)</b>에서 실시간 선착순 신청 가능 (해당 주 일요일 24시까지, 종료된 시간대 제외).</li>
+    <li><b>이번 주 내 칸 취소</b>: 일정 탭(이번 주 보기)에서 <b>본인의 실시간 예약뿐 아니라 추첨 확정 칸도 취소</b>할 수 있음. 취소한 칸은 즉시 빈 슬롯으로 전환되어 <b>전원이 선착순으로 신청</b> 가능. 추첨 확정 취소는 다음 주와 마찬가지로 <b>권리가 영구히 상실</b>되며 되돌릴 수 없음(토큰 미반환). 이미 종료된 시간대는 취소 불가.</li>
     <li>Day 2배치 제한의 예약 단계 적용 여부는 연구실 정책에 따라 관리자가 설정 (기본: 미적용).</li>
     <li><b>관리자 운영 조치</b>: 관리자는 실시간 예약 탭에서 노쇼 정리·대리 조정 목적으로 모든 칸을 직접 관리할 수 있음 — 임의 멤버 이름으로 대리 예약, 타인 예약 취소, 타인 추첨 확정 취소(권리 상실 처리). 관리자 조치는 우선예약 창의 제한을 받지 않음.</li>
     <li>공용 구글캘린더는 이 시스템의 상태를 그대로 따라가므로(1분 내 자동 동기화), <b>캘린더에서 직접 수정하지 말고 반드시 앱에서 조정</b>할 것 (캘린더 수동 변경은 자동으로 원상복구됨).</li>
@@ -1425,14 +1447,18 @@ function bindMain() {
   // 관리자: 타인 추첨 확정 취소
   document.querySelectorAll('[data-act="admin-cancelwin"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell, owner = td.dataset.owner;
-    if (!confirm(`[관리자 조치] ${memberName(owner)}님의 ${cellLabel(key)} 추첨 확정을 취소할까요?\n\n⚠ 권리가 영구히 상실되며 되돌릴 수 없습니다. 칸은 빈 슬롯으로 전환됩니다.`)) return;
-    try { await store.cancelAssignment(key, owner); toast('확정이 취소되었습니다. (캘린더에 곧 반영)', 'okk'); }
+    const week = td.dataset.week ? parseInt(td.dataset.week, 10) : cycle().targetWeek;
+    const isCur = week === cycle().votingWeek;
+    if (!confirm(`[관리자 조치] ${isCur ? '[이번 주] ' : ''}${memberName(owner)}님의 ${cellLabel(key)} 추첨 확정을 취소할까요?\n\n⚠ 권리가 영구히 상실되며 되돌릴 수 없습니다. 칸은 빈 슬롯으로 전환됩니다.`)) return;
+    try { await store.cancelAssignment(key, owner, week); toast('확정이 취소되었습니다. (캘린더에 곧 반영)', 'okk'); }
     catch (e) { toast(e.message, 'err'); }
   }));
   document.querySelectorAll('[data-act="cancelwin"]').forEach(td => td.addEventListener('click', async () => {
     const key = td.dataset.cell;
-    if (!confirm(`${cellLabel(key)} 칸의 추첨 확정을 취소할까요?\n\n⚠ 취소 즉시 권리가 영구히 상실되며 되돌릴 수 없습니다.\n- 사용한 토큰은 반환되지 않습니다.\n- 이 칸은 빈 슬롯으로 전환되어 누구나 실시간 예약할 수 있게 됩니다.`)) return;
-    try { await store.cancelAssignment(key); toast('추첨 확정이 취소되었습니다. 해당 칸은 실시간 예약이 가능합니다.', 'okk'); }
+    const week = td.dataset.week ? parseInt(td.dataset.week, 10) : cycle().targetWeek;
+    const isCur = week === cycle().votingWeek;
+    if (!confirm(`${isCur ? '[이번 주] ' : ''}${cellLabel(key)} 칸의 추첨 확정을 취소할까요?\n\n⚠ 취소 즉시 권리가 영구히 상실되며 되돌릴 수 없습니다.\n- 사용한 토큰은 반환되지 않습니다.\n- 이 칸은 빈 슬롯으로 전환되어 누구나 선착순으로 신청할 수 있게 됩니다.`)) return;
+    try { await store.cancelAssignment(key, null, week); toast('추첨 확정이 취소되었습니다. 해당 칸은 선착순 신청이 가능합니다.', 'okk'); }
     catch (e) { toast('취소 실패: ' + e.message, 'err'); }
   }));
   document.querySelectorAll('[data-act="unbook"]').forEach(td => td.addEventListener('click', async () => {
