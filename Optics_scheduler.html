@@ -1721,7 +1721,7 @@ function renderRules() {
     <li>관리자 지정 구간은 <b>사전 투표 화면(요일 카드)·실시간 예약·투표 결과 탭에 모두 표시</b>되므로, 투표 전에 미리 확인하고 요일을 고를 것.</li>
     <li><b>우선순위: 관리자 지정 &gt; 자유 조율 &gt; 요일 기본 배정.</b> 즉 어떤 요일에 관리자 지정 일정이 있으면, 그 요일 <b>당첨자는 지정 구간을 제외한 나머지 시간만</b> 사용함. 일반 멤버는 이 구간을 수정·예약할 수 없음.</li>
     <li>요일 전체(00-24시)가 지정되면 그 요일 당첨자의 가용 시간은 0이 되며, 화면에 <b>"가용 시간 없음"</b> 경고가 표시됨 (추첨 자체는 정상 진행 — 배정 알고리즘·시드 검증에는 영향 없음).</li>
-    <li>해제는 관리자 탭의 «관리자 지정 일정» 목록 또는 캘린더 팝업의 "🔓 관리자 지정 해제"로 수행. 해제 즉시 원래 배정·조율 상태로 복귀.</li>
+    <li><b>수정·해제(관리자)</b>: 등록한 구간을 다시 클릭·드래그하면 현재 종류·메모가 채워진 채로 열림 — 바꿔서 «적용»하면 갱신, "🔓 관리자 지정 해제"를 고르면 원래 배정으로 복귀, 멤버 이름·«비우기»를 고르면 확인 후 지정 해제와 배정 변경이 함께 처리됨. 구간 축소는 줄일 부분만 드래그해 해제. 관리자 탭의 «관리자 지정 일정» 목록에서도 구간 단위로 해제 가능.</li>
     <li>구글캘린더에는 <b>[광학] Repair</b> / <b>[광학] 외부인 방문측정</b> 형태로 자동 등록됨 (1분 내 동기화).</li>
   </ul>
 
@@ -1797,8 +1797,11 @@ function renderAdminBlocksPanel(c) {
   }).join('');
   return `<div class="card"><h2>관리자 지정 일정 (Repair / 외부인 방문측정)</h2>
     <p class="muted" style="margin-bottom:10px">
-      등록은 <b>«일정» 또는 «실시간 예약» 탭의 캘린더에서 칸을 클릭·드래그</b> → 배정 대상에서 🔒 Repair / 🔒 외부인 방문측정 선택 (메모 선택 입력).
-      투표 기간·발표 전에도 등록할 수 있으며, 등록 즉시 사전 투표 화면·실시간 예약 화면·구글캘린더에 반영됩니다.
+      <b>등록</b>: «일정» 또는 «실시간 예약» 탭의 캘린더에서 칸을 클릭·드래그 → 배정 대상에서 🔒 Repair / 🔒 외부인 방문측정 선택 (메모 선택 입력).
+      투표 기간·발표 전에도 등록할 수 있으며, 등록 즉시 사전 투표 화면·실시간 예약 화면·구글캘린더에 반영됩니다.<br>
+      <b>수정</b>: 같은 방식으로 그 구간을 다시 클릭·드래그하면 현재 종류·메모가 채워진 상태로 열립니다 — 바꿔서 «적용»하면 갱신,
+      🔓 «관리자 지정 해제»를 고르면 원래 배정으로 복귀, 멤버 이름이나 «비우기»를 고르면 확인 후 지정 해제와 배정 변경이 함께 처리됩니다.
+      구간을 줄이려면 줄이려는 부분만 드래그해 해제하면 됩니다. 아래 표의 «해제» 버튼으로도 구간 단위 해제가 가능합니다.<br>
       이 블록은 <b>요일 당첨자와 자유 조율 결과를 모두 덮으므로</b>, 당첨자는 블록을 제외한 나머지 시간만 사용하게 됩니다.
       대상 주는 이번 주·다음 주로 제한됩니다(서버 규칙).</p>
     ${lists}</div>`;
@@ -1846,6 +1849,13 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
   const admArr = optAdminSlotArr(adm, day);
   let hasAdm = false;
   for (let s = s0; s <= s1; s++) if (admArr[s] !== null) hasAdm = true;
+  // 구간 전체가 '같은' 관리자 블록이면 현재 종류·메모를 미리 채워 그대로 수정할 수 있게 한다
+  let curAdm = null;
+  if (hasAdm) {
+    let uniform = true;
+    for (let s = s0; s <= s1; s++) if (admArr[s] !== admArr[s0]) uniform = false;
+    if (uniform && admArr[s0]) curAdm = optAdminParse(admArr[s0]);
+  }
 
   const list = Object.values(S.members).filter(m => m.opticsActive === true)
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -1856,15 +1866,20 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
       ${list.filter(m => !S.user || m.id !== S.user.id).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}
       <option value="">(비우기)</option>` : '';
   const admOpts = admEdit ? `<optgroup label="관리자 지정 (예약 불가 구간)">
-      ${OPT_ADMIN_KINDS.map(k => `<option value="${OPT_ADMIN_MARK}${k.code}">🔒 ${esc(k.label)}</option>`).join('')}
+      ${OPT_ADMIN_KINDS.map(k => `<option value="${OPT_ADMIN_MARK}${k.code}"${curAdm && curAdm.code === k.code ? ' selected' : ''}>🔒 ${esc(k.label)}</option>`).join('')}
       ${hasAdm ? '<option value="__admclear__">🔓 관리자 지정 해제</option>' : ''}
     </optgroup>` : '';
+  const notice = !hasAdm ? ''
+    : admEdit
+      ? `<p class="muted" style="color:#8a2f1c;margin:0 0 8px">🔒 현재 <b>${esc(curAdm ? optAdminLabel(admArr[s0]) : '관리자 지정 일정')}</b> 구간입니다.
+         종류·메모를 바꿔 저장하거나 <b>🔓 해제</b>할 수 있고, <b>멤버를 지정하거나 비우면 관리자 지정이 함께 해제</b>됩니다.</p>`
+      : '<p class="muted" style="color:#8a2f1c;margin:0 0 8px">🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.</p>';
   div.innerHTML = `
     <h4>${OPT_DAYS[day]} ${optSlotLabel(s0)} ~ ${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}</h4>
-    ${hasAdm && !admEdit ? '<p class="muted" style="color:#8a2f1c;margin:0 0 8px">🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.</p>' : ''}
+    ${notice}
     <div class="field"><label>배정 대상</label><select id="popMember">${memberOpts}${admOpts}</select></div>
     <div class="field" id="popMemoWrap" style="display:none"><label>메모 (선택)</label>
-      <input id="popMemo" maxlength="40" placeholder="예: A대 김○○ 측정"></div>
+      <input id="popMemo" maxlength="40" placeholder="예: A대 김○○ 측정" value="${esc(curAdm ? curAdm.memo : '')}"></div>
     <div class="flexrow">
       <button class="btn primary sm" id="popApply">적용</button>
       ${canEdit ? '<button class="btn sm" id="popClear">비우기</button>' : ''}
@@ -1885,13 +1900,27 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
   const syncMemo = () => { memoWrap.style.display = optIsAdminOwner(sel.value) ? '' : 'none'; place(); };
   sel.addEventListener('change', syncMemo); syncMemo();
 
-  /* 일반 조율 적용 — 관리자 블록 구간은 덮어쓸 수 없음 */
+  /* 일반 조율 적용.
+   * 관리자 블록이 걸린 구간은 일반 멤버가 덮어쓸 수 없다.
+   * 관리자는 가능하되, 블록이 최상위 레이어라 그냥 덮어쓰면 화면에 반영되지 않으므로
+   * 확인 후 '관리자 지정 해제 → 배정 기록'을 한 번에 수행한다. */
   const applySched = async (mid) => {
-    if (hasAdm) return toast('관리자 지정 일정(Repair·외부인 방문측정) 구간은 수정할 수 없습니다.', 'err');
+    if (hasAdm) {
+      if (!admEdit) return toast('관리자 지정 일정(Repair·외부인 방문측정) 구간은 수정할 수 없습니다. 관리자에게 요청하세요.', 'err');
+      if (!confirm('이 구간에는 관리자 지정 일정(Repair·외부인 방문측정)이 있습니다.\n\n관리자 지정을 해제하고 선택한 내용으로 바꿀까요?')) return;
+    }
     const changes = {};
     for (let s = s0; s <= s1; s++) changes[String(s)] = mid;
-    try { await store.setSlots(weekIdx, day, changes); div.remove(); }
-    catch (e) { toast('수정 실패: ' + e.message, 'err'); }
+    try {
+      if (hasAdm) {
+        const clear = {};
+        for (let s = s0; s <= s1; s++) clear[String(s)] = '';
+        await store.setAdminBlock(weekIdx, day, clear);
+      }
+      await store.setSlots(weekIdx, day, changes);
+      div.remove();
+      if (hasAdm) toast('관리자 지정을 해제하고 배정을 변경했습니다. (캘린더에 곧 반영)', 'okk');
+    } catch (e) { toast('수정 실패: ' + e.message, 'err'); }
   };
   /* 관리자 블록 지정/해제 */
   const applyAdm = async (value) => {
