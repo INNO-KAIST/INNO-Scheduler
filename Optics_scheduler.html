@@ -896,6 +896,15 @@ function makeFirestoreStore() {
     });
     on(db.doc('opticsRemarks/log'), d => { S.remarks = d.exists ? (d.data().entries || []) : []; render(); });
   }
+  /* 캘린더 봇 변경 감지용 리비전 — 캘린더에 영향을 주는 쓰기마다 1 증가.
+   * 봇은 매분 이 문서 1건만 읽고 값이 그대로면 스케줄 전체 재조회를 건너뛴다
+   * (Firestore 무료 읽기 한도 보호). 실패해도 사용자 동작을 막지 않으며,
+   * 봇의 10분 안전 재동기화가 누락을 자가 치유한다. */
+  function bumpSync() {
+    return db.doc('syncMeta/wos').set({ rev: FV.increment(1) }, { merge: true })
+      .catch(e => console.warn('syncMeta bump 실패(무시됨):', e.message));
+  }
+
   setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.sched = {}; S.curSched = {}; S.adm = {}; S.curAdm = {}; S.pendingRanks = null; resubscribe(); } }, 30000);
 
   async function fetchWeekVotes(week) {
@@ -940,6 +949,7 @@ function makeFirestoreStore() {
           unassignedMembers: r.unassignedMembers, votesJson: r.canonical,
           createdAt: FV.serverTimestamp(), createdByUid: S.uid,
         });
+        bumpSync();
         toast('요일 배정 결과가 확정·발표되었습니다.', 'okk');
       } catch (e) { if (!/permission|already/i.test(e.message)) console.error(e); }
       finally { S.ensuring = false; }
@@ -954,12 +964,14 @@ function makeFirestoreStore() {
       const payload = { week, day, slots: {} };
       for (const [k, v] of Object.entries(changes)) payload.slots[k] = v;
       await db.doc(`opticsSchedule/${week}_${day}`).set(payload, { merge: true });
+      bumpSync();
     },
     /* 관리자 전용 블록 일괄 수정: changes = {slotIdx: '!kind|memo' | ""(해제)} */
     async setAdminBlock(week, day, changes) {
       const payload = { week, day, slots: {} };
       for (const [k, v] of Object.entries(changes)) payload.slots[k] = v;
       await db.doc(`opticsAdminBlocks/${week}_${day}`).set(payload, { merge: true });
+      bumpSync();
     },
     async sendChat(text) {
       await db.collection('opticsChat').add({
@@ -1016,14 +1028,15 @@ function makeFirestoreStore() {
       setAdmin: (id, isAdmin) => db.doc('members/' + id).update({ isAdmin }),
       resetPin: (id) => db.doc('members/' + id).update({ pinHash: null }),
       resetDevices: (id) => db.doc('members/' + id).update({ uids: [] }),
-      deleteResults: (week) => db.doc('opticsResults/' + week).delete(),
+      deleteResults: (week) => db.doc('opticsResults/' + week).delete().then(bumpSync),
     },
   };
 }
 
 /* ---------------- 데모 저장소 ---------------- */
 function makeDemoStore() {
-  const mem = { members: {}, votes: {}, results: {}, sched: {}, adm: {}, chat: [], hw: null, hwLog: [], remarks: [] };
+  const mem = { members: {}, votes: {}, results: {}, sched: {}, adm: {}, chat: [], hw: null, hwLog: [], remarks: [], syncRev: 0 };
+  const bumpSync = () => { mem.syncRev++; };
   ['김데모', '이샘플', '박예시', '최가상', '정테스트', '한체험'].forEach((n, i) => {
     mem.members['m' + i] = { id: 'm' + i, name: n, pinHash: null, uids: [], isAdmin: i === 0, active: true, opticsActive: true };
   });
@@ -1089,6 +1102,7 @@ function makeDemoStore() {
       if (mem.results[c.targetWeek] || now() < c.announce) return;
       const r = computeOpticsLottery(mem.votes[c.targetWeek] || {});
       mem.results[c.targetWeek] = { week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign, unassignedMembers: r.unassignedMembers, votesJson: r.canonical };
+      bumpSync();
       toast('(데모) 요일 배정 결과가 확정·발표되었습니다.', 'okk'); pushState();
     },
     async verifyResults(week, doc) {
@@ -1098,12 +1112,12 @@ function makeDemoStore() {
     async setSlots(week, day, changes) {
       const w = mem.sched[week] = mem.sched[week] || {};
       const doc = w[String(day)] = w[String(day)] || { week, day, slots: {} };
-      Object.assign(doc.slots, changes); pushState();
+      Object.assign(doc.slots, changes); bumpSync(); pushState();
     },
     async setAdminBlock(week, day, changes) {
       const w = mem.adm[week] = mem.adm[week] || {};
       const doc = w[String(day)] = w[String(day)] || { week, day, slots: {} };
-      Object.assign(doc.slots, changes); pushState();
+      Object.assign(doc.slots, changes); bumpSync(); pushState();
     },
     async sendChat(text) { mem.chat.push({ id: 'c' + Math.random(), memberId: S.user.id, text, createdAt: Date.now() }); pushState(); },
     async clearChat() { mem.chat = []; pushState(); },
@@ -1129,7 +1143,7 @@ function makeDemoStore() {
       setAdmin: async (id, v) => { mem.members[id].isAdmin = v; pushState(); },
       resetPin: async (id) => { mem.members[id].pinHash = null; pushState(); },
       resetDevices: async (id) => { mem.members[id].uids = []; pushState(); },
-      deleteResults: async (week) => { delete mem.results[week]; pushState(); },
+      deleteResults: async (week) => { delete mem.results[week]; bumpSync(); pushState(); },
     },
     _demo: { pushState, mem },
   };

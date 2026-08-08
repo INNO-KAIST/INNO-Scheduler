@@ -577,6 +577,15 @@ function makeFirestoreStore() {
     });
   }
 
+  /* 캘린더 봇 변경 감지용 리비전.
+   * 캘린더에 영향을 주는 쓰기마다 1씩 올린다. GAS 봇은 매분 이 문서 '1건만' 읽고
+   * 값이 그대로면 예약·결과 전체 재조회를 건너뛴다 (Firestore 무료 읽기 한도 보호).
+   * 실패해도 사용자 동작을 막지 않는다 — 봇의 안전 재동기화(10분)가 보완한다. */
+  function bumpSync() {
+    return db.doc('syncMeta/wss').set({ rev: FV.increment(1) }, { merge: true })
+      .catch(e => console.warn('syncMeta bump 실패(무시됨):', e.message));
+  }
+
   /* 주가 바뀌면(월요일 00시 통과) 리스너 재구성 */
   setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.bookings = {}; S.cancels = {}; S.curCancels = {}; S.pendingCells = null; resubscribe(); } }, 30000);
 
@@ -627,6 +636,7 @@ function makeFirestoreStore() {
           priorityMembers: r.priorityMembers, votesJson: r.canonical,
           createdAt: FV.serverTimestamp(), createdByUid: S.uid,
         });
+        bumpSync();
         toast('추첨 결과가 확정·발표되었습니다.', 'okk');
       } catch (e) {
         if (!/permission|already/i.test(e.message)) console.error(e);
@@ -644,15 +654,18 @@ function makeFirestoreStore() {
       await db.doc(`bookings/${w}_${cellKey}`).set({
         week: w, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
       });
+      bumpSync();
     },
     async unbook(cellKey, week) {
       await db.doc(`bookings/${week}_${cellKey}`).delete();
+      bumpSync();
     },
     async cancelAssignment(cellKey, memberId, week) {
       const w = week ?? cycle().targetWeek;
       await db.doc(`cancellations/${w}_${cellKey}`).set({
         week: w, cellKey, memberId: memberId || S.user.id, uid: S.uid, createdAt: FV.serverTimestamp(),
       });
+      bumpSync();
     },
     async loadHistory(week) {
       const [rd, votes, bsnap, csnap] = await Promise.all([
@@ -680,7 +693,7 @@ function makeFirestoreStore() {
       resetDevices: (id) => db.doc('members/' + id).update({ uids: [] }),
       removeMember: (id) => db.doc('members/' + id).delete(),
       saveConfig: (cfg) => db.doc('config/app').set(cfg, { merge: true }),
-      deleteResults: (week) => db.doc('results/' + week).delete(),
+      deleteResults: (week) => db.doc('results/' + week).delete().then(bumpSync),
     },
   };
 }
@@ -690,7 +703,9 @@ function makeDemoStore() {
   const mem = {
     members: {}, votes: {}, results: {}, bookings: {}, cancels: {},
     config: { priorityWindowMin: 60, bookingDayCapEnabled: false },
+    syncRev: 0, // 봇 변경 감지 리비전 (실서비스의 syncMeta/wss 에 대응)
   };
+  const bumpSync = () => { mem.syncRev++; };
   ['김데모', '이샘플', '박예시', '최가상', '정테스트', '한체험'].forEach((n, i) => {
     mem.members['m' + i] = { id: 'm' + i, name: n, pinHash: null, uids: [], isAdmin: i === 0, active: true };
   });
@@ -760,6 +775,7 @@ function makeDemoStore() {
         week: c.targetWeek, seed: r.seed, assignments: r.assignments,
         priorityMembers: r.priorityMembers, votesJson: r.canonical, createdAt: Date.now(),
       };
+      bumpSync();
       toast('(데모) 추첨 결과가 확정·발표되었습니다.', 'okk'); pushState();
     },
     async verifyResults(week, doc) {
@@ -771,14 +787,14 @@ function makeDemoStore() {
       const b = mem.bookings[w] = mem.bookings[w] || {};
       if (b[cellKey]) throw new Error('이미 예약된 슬롯입니다.');
       b[cellKey] = { week: w, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
-      pushState();
+      bumpSync(); pushState();
     },
-    async unbook(cellKey, week) { delete (mem.bookings[week] || {})[cellKey]; pushState(); },
+    async unbook(cellKey, week) { delete (mem.bookings[week] || {})[cellKey]; bumpSync(); pushState(); },
     async cancelAssignment(cellKey, memberId, week) {
       const w = week ?? cycle().targetWeek;
       (mem.cancels[w] = mem.cancels[w] || {})[cellKey] =
         { week: w, cellKey, memberId: memberId || S.user.id, createdAt: Date.now() };
-      pushState();
+      bumpSync(); pushState();
     },
     async loadHistory(week) {
       return { results: mem.results[week] || null, votes: mem.votes[week] || {}, bookings: mem.bookings[week] || {}, cancels: mem.cancels[week] || {} };
@@ -797,7 +813,7 @@ function makeDemoStore() {
       resetDevices: async (id) => { mem.members[id].uids = []; pushState(); },
       removeMember: async (id) => { delete mem.members[id]; pushState(); },
       saveConfig: async (cfg) => { Object.assign(mem.config, cfg); pushState(); },
-      deleteResults: async (week) => { delete mem.results[week]; pushState(); },
+      deleteResults: async (week) => { delete mem.results[week]; bumpSync(); pushState(); },
     },
     _demo: { pushState, mem },
   };
