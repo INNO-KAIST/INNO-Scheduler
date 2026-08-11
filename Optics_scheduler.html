@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Weekly Optics Scheduler</title>
-<!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지) -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%20%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%237048b6'/%3E%20%3Crect%20x='1.5'%20y='13.8'%20width='29'%20height='4.4'%20rx='2.2'%20fill='%23ffffff'%20opacity='.62'/%3E%20%3Ccircle%20cx='16'%20cy='16'%20r='8'%20fill='%237048b6'/%3E%20%3Ccircle%20cx='16'%20cy='16'%20r='7.6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3.2'/%3E%20%3Ccircle%20cx='16'%20cy='16'%20r='2.8'%20fill='%23ffffff'/%3E%20%3C/svg%3E">
-<meta name="theme-color" content="#7048b6">
+<!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지)
+     그라디언트 id 는 파일마다 고유해야 함 — 여러 SVG 를 한 문서에 인라인하면 url(#id) 가 뒤섞임 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cdefs%3E%3ClinearGradient%20id='go'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23a21caf'/%3E%3Cstop%20offset='.5'%20stop-color='%23db2777'/%3E%3Cstop%20offset='1'%20stop-color='%23fb7185'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='32'%20height='32'%20rx='7.4'%20fill='url(%23go)'/%3E%3Crect%20x='1.4'%20y='13.9'%20width='29.2'%20height='4.2'%20rx='2.1'%20fill='%23ffffff'%20opacity='.62'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='8'%20fill='url(%23go)'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='7.6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3.2'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='2.8'%20fill='%23ffffff'/%3E%3Cpath%20d='M0%207.4A7.4%207.4%200%200%201%207.4%200h17.2A7.4%207.4%200%200%201%2032%207.4V13C24%2017.5%208%2017.5%200%2011.5Z'%20fill='%23ffffff'%20opacity='.14'/%3E%3Crect%20x='.7'%20y='.7'%20width='30.6'%20height='30.6'%20rx='6.9'%20fill='none'%20stroke='%23ffffff'%20stroke-width='1.1'%20opacity='.22'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#db2777">
 <style>
   :root {
     --bg: #f4f6fa; --card: #ffffff; --line: #e3e8f0; --text: #1c2333; --sub: #6b7690;
