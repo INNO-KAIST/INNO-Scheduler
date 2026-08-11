@@ -250,6 +250,68 @@
   .weekchips button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
                       padding: 5px 14px; font-size: 13px; font-weight: 600; color: var(--sub); }
   .weekchips button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  /* =====================================================================
+   * 모바일 최적화 (폰 세로 기준). 아래 규칙이 없으면 관리자/명단/하드웨어 표가
+   * 뷰포트를 밀어내 페이지 전체가 가로로 잘리는 문제가 발생한다.
+   * ===================================================================== */
+  /* 표·캘린더의 좌우 스크롤 가능 여부를 가장자리 그림자로 알림 (background-attachment: local 트릭) */
+  .gridwrap, .calwrap, .hwlog {
+    background-image: linear-gradient(to right, var(--card) 30%, rgba(255,255,255,0)),
+                      linear-gradient(to left,  var(--card) 30%, rgba(255,255,255,0)),
+                      radial-gradient(farthest-side at 0 50%, rgba(20,30,60,.16), rgba(0,0,0,0)),
+                      radial-gradient(farthest-side at 100% 50%, rgba(20,30,60,.16), rgba(0,0,0,0));
+    background-position: 0 0, 100% 0, 0 0, 100% 0;
+    background-repeat: no-repeat;
+    background-size: 32px 100%, 32px 100%, 13px 100%, 13px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 12px 11px 72px; }
+    .card { padding: 14px 13px; }
+    .logo { font-size: 18px; }
+    .phasebar { padding: 12px 13px; }
+
+    /* iOS 사파리는 16px 미만 입력에 포커스하면 화면을 확대해버린다 → 확대 방지 */
+    input, select, textarea { font-size: 16px !important; }
+
+    /* 터치 타깃 최소 크기 확보 (WCAG 권장 44px 에 근접) */
+    .btn { padding: 10px 14px; }
+    .btn.sm { padding: 8px 12px; font-size: 13px; }
+
+    /* ---- 표를 카드형으로 전환 : 가로 잘림의 근본 해결 ----
+     * 헤더행은 숨기고, 각 셀 앞에 원래 열 이름(data-label, 렌더 후 JS가 자동 부착)을 붙인다. */
+    table.list { display: block; font-size: 13.5px; }
+    table.list tbody { display: block; }
+    table.list tr { display: block; border: 1px solid var(--line); border-radius: 11px;
+                    background: #fbfcfe; padding: 9px 11px; margin-bottom: 8px; }
+    table.list tr:first-child { display: none; }          /* th 헤더행 */
+    table.list td { display: flex; align-items: baseline; gap: 10px;
+                    border: none; padding: 3px 0; word-break: break-word; }
+    table.list td[data-label]::before {
+      content: attr(data-label); flex: 0 0 88px; color: var(--sub);
+      font-size: 11.5px; font-weight: 700; line-height: 1.5;
+      word-break: keep-all;                    /* 한글이 단어 중간에서 끊기지 않게 */
+    }
+    table.list td > * { min-width: 0; }
+    /* 버튼이 여러 개 들어가는 '조치' 열은 줄바꿈 허용 */
+    table.list td { flex-wrap: wrap; }
+    table.list tr:last-child td { border-bottom: none; }
+  }
+
+  @media (max-width: 860px) {
+    .chatbox { height: 420px; }                            /* 폰에서 채팅이 화면을 다 먹지 않도록 */
+    .cal.mini .cell { height: 15px; }                      /* 미니 표 터치 정확도 확보 */
+  }
+  @media (max-width: 560px) {
+    .cal { min-width: 620px; grid-template-columns: 38px repeat(7, minmax(80px, 1fr)); }
+    .cal .hd { font-size: 11px; }
+    .cal .hd small { font-size: 9px; }
+    .daycards { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
+    .daycard { padding: 10px 6px; }
+    .daycard b { font-size: 15px; }
+  }
 </style>
 </head>
 <body>
@@ -1189,8 +1251,41 @@ function render() {
   const fn = { cal: renderCal, vote: renderVote, coord: renderCoord, results: renderResults,
                hw: renderHw, remark: renderRemark, members: renderMembers, rules: renderRules, admin: renderAdmin }[S.tab];
   $('#main').innerHTML = fn ? fn() : '';
+  stampTableLabels($('#main'));   // 모바일 카드형 표 라벨
+  scrollActiveTabIntoView();
   bindMain();
 }
+/* ---------------- 모바일 대응 공통 후처리 ---------------- */
+/* 표의 헤더(th) 텍스트를 각 td 에 data-label 로 복사해 둔다.
+ * 좁은 화면(<=560px)에서는 CSS 가 헤더행을 숨기고 이 라벨을 셀 앞에 붙여
+ * 표를 '카드형'으로 바꾼다 — 이 처리가 없으면 표가 뷰포트를 밀어내 화면이 가로로 잘린다.
+ * 렌더 결과에 일괄 적용하므로 표를 새로 추가해도 자동으로 따라온다. */
+function stampTableLabels(root) {
+  (root || document).querySelectorAll('table.list').forEach(t => {
+    const head = t.rows[0];
+    if (!head) return;
+    const labels = [...head.cells].map(c => c.textContent.trim());
+    for (let r = 1; r < t.rows.length; r++) {
+      [...t.rows[r].cells].forEach((td, i) => {
+        // colspan 안내행이나 헤더가 빈 열은 라벨을 붙이지 않는다
+        if (td.colSpan > 1) { td.removeAttribute('data-label'); return; }
+        if (labels[i]) td.setAttribute('data-label', labels[i]);
+      });
+    }
+  });
+}
+/* 선택된 탭이 가로 스크롤 밖에 있으면 보이도록 당겨온다 (탭이 많은 폰 화면 대응).
+ * scrollIntoView 는 페이지 세로 스크롤까지 건드릴 수 있어 scrollLeft 를 직접 계산한다. */
+function scrollActiveTabIntoView() {
+  const nav = document.querySelector('nav.tabs');
+  const on = nav && nav.querySelector('button.on');
+  if (!nav || !on) return;
+  // offsetLeft 는 offsetParent(여기선 body) 기준이라 탭 바 내부 좌표와 어긋난다 → 실제 사각형으로 계산
+  const nr = nav.getBoundingClientRect(), br = on.getBoundingClientRect();
+  const delta = (br.left - nr.left) - (nav.clientWidth - br.width) / 2;  // 가운데로 오도록
+  nav.scrollLeft = Math.max(0, Math.min(nav.scrollLeft + delta, nav.scrollWidth - nav.clientWidth));
+}
+
 
 function renderHeader() {
   const c = cycle();
