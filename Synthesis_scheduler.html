@@ -209,6 +209,11 @@
       word-break: keep-all;                    /* 한글이 단어 중간에서 끊기지 않게 */
     }
     table.list td > * { min-width: 0; }
+    /* 셀 값 전체를 하나의 열로 정렬. white-space:normal 이 반드시 필요하다 —
+     * 일부 td 는 데스크톱 표 정렬용으로 nowrap 을 갖고 있는데, 값이 래퍼 안의
+     * 인라인 콘텐츠가 되면 그 nowrap 때문에 버튼들이 줄바꿈되지 않아 화면을 밀어낸다. */
+    table.list td, table.list td .cellval { white-space: normal; }
+    table.list td > .cellval { flex: 1 1 0; min-width: 0; display: block; }
     /* 버튼이 여러 개 들어가는 '조치' 열은 줄바꿈 허용 */
     table.list td { flex-wrap: wrap; }
     table.list tr:last-child td { border-bottom: none; }
@@ -933,6 +938,14 @@ function stampTableLabels(root) {
     const labels = [...head.cells].map(c => c.textContent.trim());
     for (let r = 1; r < t.rows.length; r++) {
       [...t.rows[r].cells].forEach((td, i) => {
+        // 셀 내용을 하나의 래퍼로 묶는다. 모바일에서 td 가 flex 가 되면 자식 노드가
+        // 각각 flex 아이템이 되어 <br> 줄바꿈이나 인라인 배치가 깨지기 때문.
+        if (!td.firstElementChild || td.childNodes.length > 1 || !td.firstElementChild.classList.contains('cellval')) {
+          const w = document.createElement('span');
+          w.className = 'cellval';
+          while (td.firstChild) w.appendChild(td.firstChild);
+          td.appendChild(w);
+        }
         // colspan 안내행이나 헤더가 빈 열은 라벨을 붙이지 않는다
         if (td.colSpan > 1) { td.removeAttribute('data-label'); return; }
         if (labels[i]) td.setAttribute('data-label', labels[i]);

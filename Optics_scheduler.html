@@ -212,7 +212,7 @@
              border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.22); padding: 12px; width: 230px; }
   .cellpop h4 { font-size: 13px; margin-bottom: 8px; }
   /* ---- 투표 요일 카드 ---- */
-  .daycards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .daycards { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
   .daycard { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 10px; text-align: center;
              cursor: pointer; background: #fbfcfe; transition: .12s; position: relative; }
   .daycard:hover { border-color: var(--accent); transform: translateY(-1px); }
@@ -224,6 +224,29 @@
                      display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
   .daycard.picked { border-color: var(--accent); background: var(--accent-soft); }
   .daycard.fullblocked { border-color: var(--red); background: var(--red-soft); }
+  /* ---- 투표 요일 카드의 시간대(분기) 칩 ---- */
+  .daycard { padding-bottom: 10px; }
+  .dayhit { cursor: pointer; border-radius: 8px; padding: 2px 0; }
+  .dayhit:hover { background: rgba(59,91,219,.06); }
+  /* 2×4 가 아니라 2×2 — 요일 카드 폭(약 120px)에서 '새벽' 같은 라벨이 세로로 쪼개지지 않도록 */
+  .qchips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-top: 8px; }
+  .qchip { position: relative; border: 1.5px solid var(--line); background: #fff; border-radius: 8px;
+           padding: 5px 4px; font-family: inherit; font-size: 11px; line-height: 1.2; color: var(--sub);
+           display: flex; flex-direction: column; align-items: center; gap: 0; transition: .12s;
+           white-space: nowrap; }
+  .qchip:hover { border-color: var(--accent); color: var(--accent); }
+  .qchip .qk { font-weight: 700; font-size: 11.5px; }
+  .qchip .qr { font-size: 9.5px; opacity: .8; }
+  .qchip .qn { position: absolute; top: -6px; right: -4px; background: var(--amber); color: #fff;
+               border-radius: 999px; font-size: 9.5px; font-weight: 700; padding: 0 5px; }
+  .qchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .qchip.on .qr { opacity: .85; }
+  .qsum { margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--accent); }
+  .daycard.picked .qchip:not(.on) { background: #fbfcfe; }
+  @media (max-width: 560px) {
+    .qchip { padding: 7px 2px; font-size: 11.5px; }   /* 터치 타깃 확보 */
+    .qchip .qr { font-size: 9px; }
+  }
   /* ---- 조율 채팅 ---- */
   .coord { display: grid; grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 1fr); gap: 14px; }
   @media (max-width: 860px) { .coord { grid-template-columns: 1fr; } }
@@ -295,6 +318,11 @@
       word-break: keep-all;                    /* 한글이 단어 중간에서 끊기지 않게 */
     }
     table.list td > * { min-width: 0; }
+    /* 셀 값 전체를 하나의 열로 정렬. white-space:normal 이 반드시 필요하다 —
+     * 일부 td 는 데스크톱 표 정렬용으로 nowrap 을 갖고 있는데, 값이 래퍼 안의
+     * 인라인 콘텐츠가 되면 그 nowrap 때문에 버튼들이 줄바꿈되지 않아 화면을 밀어낸다. */
+    table.list td, table.list td .cellval { white-space: normal; }
+    table.list td > .cellval { flex: 1 1 0; min-width: 0; display: block; }
     /* 버튼이 여러 개 들어가는 '조치' 열은 줄바꿈 허용 */
     table.list td { flex-wrap: wrap; }
     table.list tr:last-child td { border-bottom: none; }
@@ -623,6 +651,82 @@ function optFmtDateDow(ms) {
 }
 
 /* =====================================================================
+ * 하루 4분할 (Quarter) — 투표 단위
+ * Q1 새벽 00-06 / Q2 오전 06-12 / Q3 오후 12-18 / Q4 저녁 18-24
+ * 30분 슬롯 기준으로 각 분기는 12칸을 차지한다 (12 × 30분 = 6시간).
+ * ===================================================================== */
+const OPT_QUARTERS = [
+  { q: 1, key: 'Q1', label: '새벽', range: '00-06' },
+  { q: 2, key: 'Q2', label: '오전', range: '06-12' },
+  { q: 3, key: 'Q3', label: '오후', range: '12-18' },
+  { q: 4, key: 'Q4', label: '저녁', range: '18-24' },
+];
+const OPT_SLOTS_PER_QUARTER = OPT_SLOTS_PER_DAY / 4; // 12
+const OPT_ALL_QUARTERS = [1, 2, 3, 4];
+
+function optQuarterLabel(q) {
+  const x = OPT_QUARTERS.filter(function (o) { return o.q === q; })[0];
+  return x ? x.key + ' ' + x.label + '(' + x.range + ')' : 'Q' + q;
+}
+/* 분기 목록 → '00-12시' 처럼 연속 구간을 합친 짧은 표기 */
+function optQuartersLabel(qs) {
+  const sorted = (qs || []).slice().sort(function (a, b) { return a - b; });
+  if (!sorted.length) return '';
+  if (sorted.length === 4) return '종일';
+  const parts = [];
+  let st = sorted[0], prev = sorted[0];
+  for (let i = 1; i <= sorted.length; i++) {
+    const cur = sorted[i];
+    if (cur === prev + 1) { prev = cur; continue; }
+    parts.push(String((st - 1) * 6).padStart(2, '0') + '-' + String(prev * 6).padStart(2, '0'));
+    st = cur; prev = cur;
+  }
+  return parts.join(', ') + '시';
+}
+
+/* ---- 투표 항목 정규화 ----
+ * 신형: {d: 요일idx, q: [1,2]}   구형(하위호환): 요일idx 숫자 하나 = 하루 전체
+ * 반환 {d, q(정렬·중복제거된 1~4)} 또는 null */
+function optNormRank(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'number') {
+    return Number.isInteger(v) && v >= 0 && v <= 6 ? { d: v, q: OPT_ALL_QUARTERS.slice() } : null;
+  }
+  if (typeof v !== 'object' || !Number.isInteger(v.d) || v.d < 0 || v.d > 6) return null;
+  let q = Array.isArray(v.q) ? v.q : OPT_ALL_QUARTERS;
+  q = q.filter(function (x) { return Number.isInteger(x) && x >= 1 && x <= 4; });
+  q = q.filter(function (x, i) { return q.indexOf(x) === i; }).sort(function (a, b) { return a - b; });
+  if (!q.length) return null;
+  return { d: v.d, q: q };
+}
+/* 분기 소유 맵 {"1":mid,…} → 48슬롯 배열 */
+function optQuarterSlots(qmap) {
+  const arr = new Array(OPT_SLOTS_PER_DAY).fill(null);
+  for (let k = 1; k <= 4; k++) {
+    const mid = (qmap || {})[String(k)];
+    if (!mid) continue;
+    for (let s = (k - 1) * OPT_SLOTS_PER_QUARTER; s < k * OPT_SLOTS_PER_QUARTER; s++) arr[s] = mid;
+  }
+  return arr;
+}
+/* 결과 문서 → 요일별 48슬롯 '기본 배정' 배열.
+ * quarterAssign 이 있으면 분기 단위로, 없으면(구버전 결과) dayAssign 으로 하루 전체. */
+function optBaseSlots(results) {
+  const r = results || {};
+  // dayAssign 맵을 그대로 넘겨준 옛 호출도 계속 지원 (키가 "0"~"6" 뿐이면 dayAssign 으로 간주)
+  const isRawDayAssign = r.dayAssign === undefined && r.quarterAssign === undefined;
+  const da = isRawDayAssign ? r : (r.dayAssign || {});
+  const qa = isRawDayAssign ? null : r.quarterAssign;
+  const out = {};
+  for (let day = 0; day < 7; day++) {
+    if (qa && qa[String(day)]) { out[day] = optQuarterSlots(qa[String(day)]); continue; }
+    const mid = da[String(day)] || null;
+    out[day] = new Array(OPT_SLOTS_PER_DAY).fill(mid);
+  }
+  return out;
+}
+
+/* =====================================================================
  * 관리자 전용 블록 (Repair / 외부인 방문측정)
  * ---------------------------------------------------------------------
  * 30분 슬롯의 '소유자' 값으로 멤버ID 대신 특수 문자열을 사용한다.
@@ -687,7 +791,15 @@ function optCanonicalVotesJson(votesByMember) {
   for (const id of ids) {
     const v = votesByMember[id] || {};
     const o = {};
-    for (const k of ['r1', 'r2', 'r3']) if (v[k] !== undefined && v[k] !== null) o[k] = v[k];
+    for (const k of ['r1', 'r2', 'r3']) {
+      const n = optNormRank(v[k]);
+      if (!n) continue;
+      // ★ 하위호환: '종일' 지원은 구버전과 똑같이 요일 숫자 하나로 직렬화한다.
+      //   그래야 시간대 기능 도입 전에 발표된 결과(및 과거 주차)의 시드가 그대로 재현되어
+      //   전원 재검증에서 '검증 불일치' 오탐이 나지 않는다.
+      //   시간대를 일부만 고른 투표가 하나라도 있으면 그 항목만 {d,q} 로 들어간다.
+      o[k] = n.q.length === 4 ? n.d : { d: n.d, q: n.q };
+    }
     obj[id] = o;
   }
   return JSON.stringify(obj);
@@ -697,9 +809,13 @@ function optCanonicalVotesJson(votesByMember) {
 function optValidateVote(ranks) {
   const keys = Object.keys(ranks || {});
   for (const k of keys) if (!['r1', 'r2', 'r3'].includes(k)) return '형식 오류';
-  const vals = keys.map(k => ranks[k]);
-  for (const v of vals) if (!Number.isInteger(v) || v < 0 || v > 6) return '유효하지 않은 요일';
-  if (new Set(vals).size !== vals.length) return '같은 요일을 중복 순위로 투표할 수 없습니다.';
+  const days = [];
+  for (const k of keys) {
+    const n = optNormRank(ranks[k]);
+    if (!n) return '유효하지 않은 요일 또는 시간대';
+    days.push(n.d);
+  }
+  if (new Set(days).size !== days.length) return '같은 요일을 중복 순위로 투표할 수 없습니다.';
   // 순위는 1부터 연속 (r2가 있으면 r1도, r3가 있으면 r2도)
   if ((ranks.r2 !== undefined && ranks.r1 === undefined) || (ranks.r3 !== undefined && ranks.r2 === undefined))
     return '순위는 1순위부터 순서대로 지정해야 합니다.';
@@ -707,14 +823,25 @@ function optValidateVote(ranks) {
 }
 
 /* =====================================================================
- * 결정론적 요일 배정
- * 정렬 기준(중요, 이 순서대로):
+ * 결정론적 배정 (분기 단위)
+ * ---------------------------------------------------------------------
+ * 1단계 — 요일 대표 선정 (기존 규칙 그대로, 지원 시간대와 무관하게 동일 경쟁)
  *   ① 현재까지 당첨 수가 적은 사람 (무당첨자 절대 우선)
  *   ② 해당 요일에 대한 순위가 높은(숫자가 작은) 사람
  *   ③ 전체 투표 수가 적은 사람 (더 간절함)
  *   ④ 시드 기반 무작위 (시드 = 마감된 전체 투표의 SHA-256 → 조작 불가·전원 검증 가능)
- * 요일 처리 순서는 월→일 고정 (당첨 수 갱신이 다음 요일에 반영됨)
- * 한 사람이 여러 요일에 당첨될 수 있음 (단 ①에 의해 무당첨자가 항상 우선)
+ *   → 대표는 자기가 지원한 분기만 가져간다 (종일 지원이면 하루 전체).
+ *
+ * 2단계 — 빈 분기 채우기 (요청 사양)
+ *   대표가 쓰지 않고 남은 분기에 '자기 지원 분기 전체가 온전히 들어가는' 사람이 있으면
+ *   같은 기준(①~④)으로 뽑아 추가 배정한다. 더 들어갈 사람이 없을 때까지 반복.
+ *   부분만 겹치는 사람은 넣지 않는다 (쪼개서 억지로 끼우지 않음).
+ *   예) A=Q1Q2, B=Q3Q4, C=Q2Q3 가 같은 요일 동일 순위로 경쟁 →
+ *       C가 대표면 Q1·Q4만 남아 아무도 못 들어가므로 C 단독,
+ *       A가 대표면 Q3Q4가 비므로 B가 그대로 들어가 A+B 배정.
+ *
+ * 당첨 수(wins)는 '시간을 받은 요일 수' 로 세며 2단계 배정도 1회로 계산한다
+ * (그래야 ①무당첨자 우선이 실제 사용 기회 기준으로 작동).
  * ===================================================================== */
 function computeOpticsLottery(votesByMember) {
   const canonical = optCanonicalVotesJson(votesByMember);
@@ -724,41 +851,83 @@ function computeOpticsLottery(votesByMember) {
   const memberIds = Object.keys(votesByMember).sort();
   const voteCount = {};       // mid -> 투표한 순위 수 (1~3)
   const rankOf = {};          // mid -> {dayIdx: rank}
+  const quartOf = {};         // mid -> {dayIdx: [분기…]}
   for (const mid of memberIds) {
     const v = votesByMember[mid] || {};
-    rankOf[mid] = {};
+    rankOf[mid] = {}; quartOf[mid] = {};
     let n = 0;
-    [['r1', 1], ['r2', 2], ['r3', 3]].forEach(([k, r]) => {
-      if (v[k] !== undefined && v[k] !== null) { rankOf[mid][v[k]] = r; n++; }
+    [['r1', 1], ['r2', 2], ['r3', 3]].forEach(function (pair) {
+      const nm = optNormRank(v[pair[0]]);
+      if (!nm) return;
+      rankOf[mid][nm.d] = pair[1];
+      quartOf[mid][nm.d] = nm.q;
+      n++;
     });
     voteCount[mid] = n;
   }
 
-  const wins = {};            // mid -> 당첨 수
-  const dayAssign = {};       // dayIdx(string) -> memberId
-  const dayContenders = {};   // dayIdx -> [{mid, rank}] (결과 표시용)
+  const wins = {};            // mid -> 시간을 받은 요일 수
+  const dayAssign = {};       // dayIdx(string) -> 대표 memberId (표시·하위호환용)
+  const quarterAssign = {};   // dayIdx(string) -> { "1": mid, … }  실제 소유
+  const dayContenders = {};   // dayIdx -> [{mid, rank, q}] (결과 표시용)
+
+  /* 후보 목록에서 ①~④ 기준 최소 튜플을 뽑는다 (동률이면 시드 난수) */
+  function pick(cands) {
+    let best = null;
+    for (const c of cands) {
+      const w = wins[c.mid] || 0;
+      if (!best || w < best.w
+          || (w === best.w && (c.rank < best.rank
+          || (c.rank === best.rank && voteCount[c.mid] < best.v)))) {
+        best = { mid: c.mid, w: w, rank: c.rank, v: voteCount[c.mid] };
+      }
+    }
+    const tied = cands.filter(function (c) {
+      return (wins[c.mid] || 0) === best.w && c.rank === best.rank && voteCount[c.mid] === best.v;
+    });
+    return tied.length === 1 ? tied[0] : tied[Math.floor(rng() * tied.length)];
+  }
 
   for (let day = 0; day < 7; day++) {
     const cands = memberIds
-      .filter(mid => rankOf[mid][day] !== undefined)
-      .map(mid => ({ mid, rank: rankOf[mid][day], w: wins[mid] || 0, v: voteCount[mid] }));
-    dayContenders[day] = cands.map(c => ({ mid: c.mid, rank: c.rank }));
+      .filter(function (mid) { return rankOf[mid][day] !== undefined; })
+      .map(function (mid) { return { mid: mid, rank: rankOf[mid][day], q: quartOf[mid][day] }; });
+    dayContenders[day] = cands.map(function (c) { return { mid: c.mid, rank: c.rank, q: c.q.slice() }; });
     if (!cands.length) continue;
-    // 최소 튜플 (w, rank, v)
-    let best = null;
-    for (const c of cands) {
-      if (!best || c.w < best.w || (c.w === best.w && (c.rank < best.rank || (c.rank === best.rank && c.v < best.v)))) best = c;
+
+    const owner = {};                       // 분기 -> mid
+    const taken = {};                       // 이미 배정된 mid
+    const remaining = cands.slice();
+
+    // 1단계: 대표
+    const first = pick(remaining);
+    first.q.forEach(function (q) { owner[q] = first.mid; });
+    taken[first.mid] = true;
+    wins[first.mid] = (wins[first.mid] || 0) + 1;
+    dayAssign[String(day)] = first.mid;
+
+    // 2단계: 남은 분기에 '통째로' 들어갈 수 있는 사람을 반복해서 채움
+    for (;;) {
+      const fits = cands.filter(function (c) {
+        if (taken[c.mid]) return false;
+        return c.q.every(function (q) { return owner[q] === undefined; });
+      });
+      if (!fits.length) break;
+      const nx = pick(fits);
+      nx.q.forEach(function (q) { owner[q] = nx.mid; });
+      taken[nx.mid] = true;
+      wins[nx.mid] = (wins[nx.mid] || 0) + 1;
     }
-    const tied = cands.filter(c => c.w === best.w && c.rank === best.rank && c.v === best.v);
-    const winner = tied.length === 1 ? tied[0].mid : tied[Math.floor(rng() * tied.length)].mid;
-    dayAssign[String(day)] = winner;
-    wins[winner] = (wins[winner] || 0) + 1;
+
+    const qmap = {};
+    for (let k = 1; k <= 4; k++) if (owner[k]) qmap[String(k)] = owner[k];
+    quarterAssign[String(day)] = qmap;
   }
 
-  // 1표 이상 투표했으나 아무 요일도 당첨되지 못한 인원 (참고 표시용)
-  const unassignedMembers = memberIds.filter(mid => voteCount[mid] > 0 && !(wins[mid] > 0));
+  // 1표 이상 투표했으나 어떤 시간대도 받지 못한 인원 (참고 표시용)
+  const unassignedMembers = memberIds.filter(function (mid) { return voteCount[mid] > 0 && !(wins[mid] > 0); });
 
-  return { seed, dayAssign, unassignedMembers, canonical, dayContenders };
+  return { seed, dayAssign, quarterAssign, unassignedMembers, canonical, dayContenders };
 }
 
 /* ---- 유효 스케줄 계산: 기본 요일 배정 + 30분 단위 수정본(override) + 관리자 블록 ----
@@ -766,17 +935,18 @@ function computeOpticsLottery(votesByMember) {
  * adminDocs   : {dayIdx(string): {slots: {slotIdx(string): '!kind|memo'|""}}}  (선택)
  * 우선순위(높은 쪽이 이김): 관리자 블록 > 자유 조율 override > 요일 기본 배정
  * 반환: day -> [48] 배열 (memberId | '!kind…' | null)                          */
-function optEffectiveSchedule(dayAssign, scheduleDocs, adminDocs) {
+function optEffectiveSchedule(resultsOrDayAssign, scheduleDocs, adminDocs) {
+  const baseSlots = optBaseSlots(resultsOrDayAssign);   // 분기 배정 → 48슬롯 (구형 dayAssign 도 수용)
   const eff = {};
   for (let day = 0; day < 7; day++) {
-    const base = (dayAssign || {})[String(day)] || null;
+    const base = baseSlots[day];
     const slots = ((scheduleDocs || {})[String(day)] || {}).slots || {};
     const adm = optAdminSlotArr(adminDocs, day);
     const arr = new Array(OPT_SLOTS_PER_DAY);
     for (let s = 0; s < OPT_SLOTS_PER_DAY; s++) {
       if (adm[s] !== null) { arr[s] = adm[s]; continue; }   // 관리자 블록이 최우선
       const ov = slots[String(s)];
-      arr[s] = ov === undefined ? base : (ov === '' ? null : ov);
+      arr[s] = ov === undefined ? base[s] : (ov === '' ? null : ov);
     }
     eff[day] = arr;
   }
@@ -803,6 +973,8 @@ if (typeof module !== 'undefined' && module.exports) {
   Object.assign(module.exports, {
     OPT_DAYS, OPT_SLOTS_PER_DAY, optSlotLabel, optDayLabel, optFmtDateDow,
     optCanonicalVotesJson, optValidateVote, computeOpticsLottery,
+    OPT_QUARTERS, OPT_ALL_QUARTERS, OPT_SLOTS_PER_QUARTER, optQuarterLabel, optQuartersLabel,
+    optNormRank, optQuarterSlots, optBaseSlots,
     optEffectiveSchedule, optMergeBlocks, optPushRemark,
     OPT_ADMIN_MARK, OPT_ADMIN_KINDS, optIsAdminOwner, optAdminMemoClean,
     optAdminOwner, optAdminParse, optAdminLabel, optAdminSlotArr,
@@ -852,6 +1024,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const memberName = id => S.members[id]?.name || '(알 수 없음)';
 const pinHashOf = (memberId, pin) => sha256Hex(memberId + '|' + pin);
 const canonMap = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k]]));
+/* quarterAssign 은 2단 중첩 맵이라 키 정렬을 두 번 해야 Firestore 반환 순서와 무관해진다 */
+const canonQuarters = o => Object.keys(o || {}).sort().map(d => [d, canonMap((o || {})[d])]);
 function cycle() { return phaseOf(now()); }
 
 /* 멤버별 고정 색상 (정렬된 id 순서 기반 → 모든 기기에서 동일)
@@ -1011,7 +1185,7 @@ function makeFirestoreStore() {
         const v = await fetchWeekVotes(c.targetWeek);
         const r = computeOpticsLottery(v);
         await db.doc('opticsResults/' + c.targetWeek).set({
-          week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign,
+          week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign, quarterAssign: r.quarterAssign,
           unassignedMembers: r.unassignedMembers, votesJson: r.canonical,
           createdAt: FV.serverTimestamp(), createdByUid: S.uid,
         });
@@ -1023,7 +1197,10 @@ function makeFirestoreStore() {
     async verifyResults(week, doc) {
       const v = await fetchWeekVotes(week);
       const r = computeOpticsLottery(v);
-      return { ok: r.seed === doc.seed && canonMap(r.dayAssign) === canonMap(doc.dayAssign), recomputed: r };
+      // 시간대 배정까지 재계산 결과와 일치해야 검증 통과 (구버전 결과 문서는 dayAssign 만 비교)
+      const qOk = doc.quarterAssign === undefined
+        || JSON.stringify(canonQuarters(r.quarterAssign)) === JSON.stringify(canonQuarters(doc.quarterAssign));
+      return { ok: r.seed === doc.seed && canonMap(r.dayAssign) === canonMap(doc.dayAssign) && qOk, recomputed: r };
     },
     /* 30분 슬롯 일괄 수정: changes = {slotIdx: memberId|""} */
     async setSlots(week, day, changes) {
@@ -1108,7 +1285,11 @@ function makeDemoStore() {
   });
   const c0 = phaseOf(Date.now());
   mem.votes[c0.targetWeek] = {
-    m1: { r1: 0, r2: 1 }, m2: { r1: 1 }, m3: { r1: 1, r2: 2, r3: 3 }, m4: { r1: 5, r2: 6 }, m5: { r1: 0, r2: 2 },
+    m1: { r1: { d: 0, q: [1, 2] }, r2: 1 },      // 월 새벽+오전만
+    m2: { r1: 1 },
+    m3: { r1: 1, r2: 2, r3: 3 },
+    m4: { r1: 5, r2: 6 },
+    m5: { r1: { d: 0, q: [3, 4] }, r2: 2 },      // 월 오후+저녁만 → m1 과 겹치지 않아 둘 다 배정
   };
   mem.hw = {
     laser: [
@@ -1167,13 +1348,15 @@ function makeDemoStore() {
       const c = cycle();
       if (mem.results[c.targetWeek] || now() < c.announce) return;
       const r = computeOpticsLottery(mem.votes[c.targetWeek] || {});
-      mem.results[c.targetWeek] = { week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign, unassignedMembers: r.unassignedMembers, votesJson: r.canonical };
+      mem.results[c.targetWeek] = { week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign, quarterAssign: r.quarterAssign, unassignedMembers: r.unassignedMembers, votesJson: r.canonical };
       bumpSync();
       toast('(데모) 요일 배정 결과가 확정·발표되었습니다.', 'okk'); pushState();
     },
     async verifyResults(week, doc) {
       const r = computeOpticsLottery(mem.votes[week] || {});
-      return { ok: r.seed === doc.seed && canonMap(r.dayAssign) === canonMap(doc.dayAssign), recomputed: r };
+      const qOk = doc.quarterAssign === undefined
+        || JSON.stringify(canonQuarters(r.quarterAssign)) === JSON.stringify(canonQuarters(doc.quarterAssign));
+      return { ok: r.seed === doc.seed && canonMap(r.dayAssign) === canonMap(doc.dayAssign) && qOk, recomputed: r };
     },
     async setSlots(week, day, changes) {
       const w = mem.sched[week] = mem.sched[week] || {};
@@ -1267,6 +1450,14 @@ function stampTableLabels(root) {
     const labels = [...head.cells].map(c => c.textContent.trim());
     for (let r = 1; r < t.rows.length; r++) {
       [...t.rows[r].cells].forEach((td, i) => {
+        // 셀 내용을 하나의 래퍼로 묶는다. 모바일에서 td 가 flex 가 되면 자식 노드가
+        // 각각 flex 아이템이 되어 <br> 줄바꿈이나 인라인 배치가 깨지기 때문.
+        if (!td.firstElementChild || td.childNodes.length > 1 || !td.firstElementChild.classList.contains('cellval')) {
+          const w = document.createElement('span');
+          w.className = 'cellval';
+          while (td.firstChild) w.appendChild(td.firstChild);
+          td.appendChild(w);
+        }
         // colspan 안내행이나 헤더가 빈 열은 라벨을 붙이지 않는다
         if (td.colSpan > 1) { td.removeAttribute('data-label'); return; }
         if (labels[i]) td.setAttribute('data-label', labels[i]);
@@ -1359,7 +1550,7 @@ function calCtx(weekIdx) {
 function calendarHtml(weekIdx, mini) {
   const ctx = calCtx(weekIdx);
   const dayAssign = ctx.results?.dayAssign || {};
-  const eff = optEffectiveSchedule(dayAssign, ctx.sched, ctx.adm);
+  const eff = optEffectiveSchedule(ctx.results || {}, ctx.sched, ctx.adm);
   const canEdit = !!(S.user && (S.user.optics || S.user.isAdmin) && editableWeek(weekIdx) && ctx.results);
   // 관리자는 발표 전(투표 기간)에도 Repair·방문측정 블록을 잡을 수 있어야 함
   const admEdit = canAdminBlock(weekIdx);
@@ -1368,12 +1559,16 @@ function calendarHtml(weekIdx, mini) {
   // 헤더 (요일 당첨자 + 관리자 블록으로 인한 가용시간 표시)
   let hd = `<div class="hd"></div>`;
   for (let d = 0; d < 7; d++) {
-    const owner = dayAssign[String(d)];
+    const qa = (ctx.results && ctx.results.quarterAssign && ctx.results.quarterAssign[String(d)]) || null;
+    const owners = qa ? [...new Set(Object.values(qa))] : (dayAssign[String(d)] ? [dayAssign[String(d)]] : []);
+    const owner = owners.length === 1 ? owners[0] : null;
     const free = optFreeSlotCount(ctx.adm, d);
     const blocked = free < OPT_SLOTS_PER_DAY;
     const admNote = !blocked ? ''
       : (free === 0 ? ' · <b style="color:var(--red)">관리자 점유(종일)</b>' : ` · <b style="color:#8a2f1c">관리자 ${(OPT_SLOTS_PER_DAY - free) / 2}h</b>`);
-    hd += `<div class="hd">${OPT_DAYS[d]}<small>${fmtDate(optDayDate(weekIdx, d))}${owner ? ' · ' + esc(memberName(owner)) : ''}${admNote}</small></div>`;
+    const ownerNote = owner ? ' · ' + esc(memberName(owner))
+      : (owners.length > 1 ? ' · ' + esc(owners.map(memberName).join('/')) : '');
+    hd += `<div class="hd">${OPT_DAYS[d]}<small>${fmtDate(optDayDate(weekIdx, d))}${ownerNote}${admNote}</small></div>`;
   }
   // 희망순위 오버레이 행
   let ov = '';
@@ -1384,7 +1579,10 @@ function calendarHtml(weekIdx, mini) {
       let chips = '';
       for (const [mid, r] of Object.entries(votes)) {
         [['r1', 1], ['r2', 2], ['r3', 3]].forEach(([k, n]) => {
-          if (r[k] === d) chips += `<span class="rankchip rc${n}">${'①②③'[n - 1]} ${esc(memberName(mid))}</span>`;
+          const nm = optNormRank(r[k]);
+          if (!nm || nm.d !== d) return;
+          const qt = nm.q.length === 4 ? '' : ' ' + optQuartersLabel(nm.q);
+          chips += `<span class="rankchip rc${n}">${'①②③'[n - 1]} ${esc(memberName(mid))}${esc(qt)}</span>`;
         });
       }
       ov += `<div class="rankchips">${chips || '<span class="muted" style="font-size:10px">-</span>'}</div>`;
@@ -1469,43 +1667,76 @@ function renderCal() {
 /* ---------------- 탭: 순위 투표 ---------------- */
 function renderVote() {
   const c = cycle();
-  if (!S.user) return `<div class="card"><h2>사전 투표 (요일 순위)</h2><p class="muted">투표하려면 먼저 로그인해주세요.</p></div>`;
-  if (!S.user.optics) return `<div class="card"><h2>사전 투표 (요일 순위)</h2><p class="muted">광학 스케줄 참여가 활성화되지 않은 계정입니다. 관리자에게 활성화를 요청하세요.</p></div>`;
+  if (!S.user) return `<div class="card"><h2>사전 투표 (요일 · 시간대)</h2><p class="muted">투표하려면 먼저 로그인해주세요.</p></div>`;
+  if (!S.user.optics) return `<div class="card"><h2>사전 투표 (요일 · 시간대)</h2><p class="muted">광학 스케줄 참여가 활성화되지 않은 계정입니다. 관리자에게 활성화를 요청하세요.</p></div>`;
   if (c.phase !== 'VOTING') {
     const my = S.votes[S.user.id];
-    return `<div class="card"><h2>사전 투표 (요일 순위)</h2>
+    const mine = ['r1', 'r2', 'r3'].map(k => optNormRank((my || {})[k])).filter(Boolean);
+    return `<div class="card"><h2>사전 투표 (요일 · 시간대)</h2>
       <p class="muted">지금은 투표 기간이 아닙니다. 투표는 <b>매주 월 00:00 ~ 수 24:00</b>. 다음 시작: <b>${fmtDT(weekStartMs(c.votingWeek + 1))}</b></p>
-      ${my ? `<div class="note">이번 주 내 투표(마감됨): ${['r1','r2','r3'].filter(k => my[k] !== undefined).map((k, i) => `${i + 1}순위 ${OPT_DAYS[my[k]]}`).join(', ')}</div>` : ''}</div>`;
+      ${mine.length ? `<div class="note">이번 주 내 투표(마감됨): ${mine.map((n, i) => `${i + 1}순위 ${OPT_DAYS[n.d]} <b>${optQuartersLabel(n.q)}</b>`).join(', ')}</div>` : ''}</div>`;
   }
   if (S.pendingRanks === null) S.pendingRanks = { ...(S.votes[S.user.id] || {}) };
   const p = S.pendingRanks;
-  const saved = JSON.stringify(S.votes[S.user.id] || {}) === JSON.stringify(p);
-  const myRankOfDay = d => { for (const [k, n] of [['r1', 1], ['r2', 2], ['r3', 3]]) if (p[k] === d) return n; return 0; };
-  // 요일별 집계
+  const norm = k => optNormRank(p[k]);
+  const saved = optCanonicalVotesJson({ x: S.votes[S.user.id] || {} }) === optCanonicalVotesJson({ x: p });
+  const myPick = d => {           // 이 요일이 몇 순위이고 어떤 분기를 골랐는지
+    for (const [k, n] of [['r1', 1], ['r2', 2], ['r3', 3]]) {
+      const v = norm(k);
+      if (v && v.d === d) return { rank: n, q: v.q };
+    }
+    return null;
+  };
+  // 요일별 순위 집계 + 분기별 지원자 수 (남들이 어느 시간대를 원하는지 보고 고를 수 있게)
   const agg = Array.from({ length: 7 }, () => [0, 0, 0]);
-  for (const r of Object.values(S.votes)) [['r1', 0], ['r2', 1], ['r3', 2]].forEach(([k, i]) => { if (r[k] !== undefined) agg[r[k]][i]++; });
+  const qAgg = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+  for (const r of Object.values(S.votes)) {
+    [['r1', 0], ['r2', 1], ['r3', 2]].forEach(([k, i]) => {
+      const n = optNormRank(r[k]);
+      if (!n) return;
+      agg[n.d][i]++;
+      n.q.forEach(q => qAgg[n.d][q - 1]++);
+    });
+  }
   const cards = Array.from({ length: 7 }, (_, d) => {
-    const mine = myRankOfDay(d);
+    const pick = myPick(d);
     const a = agg[d];
     // 관리자 블록(Repair/방문측정)은 투표 시점에 반드시 보여야 함 — 당첨돼도 그 시간은 못 씀
     const blocks = optAdminBlocksOfDay(S.adm, d);
     const free = optFreeSlotCount(S.adm, d);
     const admHtml = !blocks.length ? ''
-      : `<div class="agg" style="color:#8a2f1c;line-height:1.5">🔒 ${blocks.map(b => esc(optAdminLabel(b.owner)) + '<br>' + optRangeLabel(b.start, b.end)).join('<br>')}
-         ${free === 0 ? '<br><b style="color:var(--red)">종일 사용 불가</b>' : `<br><span class="muted">가용 ${free / 2}h</span>`}</div>`;
-    return `<div class="daycard ${mine ? 'picked' : ''}${free === 0 ? ' fullblocked' : ''}" data-votday="${d}">
-      ${mine ? `<span class="myrank">${'①②③'[mine - 1]}</span>` : ''}
-      <b>${OPT_DAYS[d]}</b><div class="date">${fmtDate(optDayDate(c.targetWeek, d))}</div>
-      <div class="agg">${a[0] + a[1] + a[2] ? `①${a[0]} ②${a[1]} ③${a[2]}` : '지원 없음'}</div>
+      : `<div class="agg" style="color:#8a2f1c;line-height:1.5">🔒 ${blocks.map(b => esc(optAdminLabel(b.owner)) + ' ' + optRangeLabel(b.start, b.end)).join('<br>')}
+         ${free === 0 ? '<br><b style="color:var(--red)">종일 사용 불가</b>' : ''}</div>`;
+    // 분기 칩: 고른 요일이면 내 선택 표시, 아니면 눌러서 '그 시간대만' 바로 지원
+    const qs = OPT_QUARTERS.map(o => {
+      const on = pick && pick.q.indexOf(o.q) >= 0;
+      const cnt = qAgg[d][o.q - 1];
+      return `<button class="qchip${on ? ' on' : ''}" data-votq="${d}|${o.q}"
+        title="${o.key} ${o.label} ${o.range}시${cnt ? ` · 현재 ${cnt}명 지원` : ''}">
+        <span class="qk">${o.label}</span><span class="qr">${o.range}</span>
+        ${cnt ? `<span class="qn">${cnt}</span>` : ''}</button>`;
+    }).join('');
+    return `<div class="daycard ${pick ? 'picked' : ''}${free === 0 ? ' fullblocked' : ''}">
+      ${pick ? `<span class="myrank">${'①②③'[pick.rank - 1]}</span>` : ''}
+      <div class="dayhit" data-votday="${d}">
+        <b>${OPT_DAYS[d]}</b><div class="date">${fmtDate(optDayDate(c.targetWeek, d))}</div>
+        <div class="agg">${a[0] + a[1] + a[2] ? `①${a[0]} ②${a[1]} ③${a[2]}` : '지원 없음'}</div>
+      </div>
+      <div class="qchips">${qs}</div>
+      ${pick ? `<div class="qsum">${esc(optQuartersLabel(pick.q))}</div>` : ''}
       ${admHtml}
     </div>`;
   }).join('');
-  const picks = ['r1', 'r2', 'r3'].filter(k => p[k] !== undefined);
+  const picks = ['r1', 'r2', 'r3'].map(norm).filter(Boolean);
   return `<div class="card">
-    <h2>사전 투표 (요일 순위) — ${weekLabel(c.targetWeek)} 대상</h2>
-    <p class="muted" style="margin:6px 0 12px">원하는 요일을 누를 때마다 <b>1순위 → 2순위 → 3순위</b> 순서로 지정되고, 지정된 요일을 다시 누르면 해제됩니다 (아래 순위는 자동으로 당겨짐). 3개를 모두 채울 필요는 없으며, <b>적게 투표할수록 동순위 경쟁에서 우선</b>합니다.</p>
+    <h2>사전 투표 (요일 · 시간대) — ${weekLabel(c.targetWeek)} 대상</h2>
+    <p class="muted" style="margin:6px 0 12px">
+      요일 이름을 누르면 <b>그 요일 종일</b>로 1순위 → 2순위 → 3순위 순서로 지정됩니다 (다시 누르면 해제, 아래 순위는 자동으로 당겨짐).<br>
+      하루 전체가 필요 없다면 <b>새벽 / 오전 / 오후 / 저녁</b> 칩을 눌러 원하는 시간대만 남기세요 — 칩을 바로 누르면 <b>그 시간대만</b> 지원됩니다.
+      배정도 그 시간대 단위로 이뤄지므로, 필요 없는 시간을 나중에 취소할 필요가 없습니다.<br>
+      3개를 모두 채울 필요는 없으며, <b>적게 투표할수록 동순위 경쟁에서 우선</b>합니다. 칩의 작은 숫자는 현재 그 시간대 지원자 수입니다.</p>
     <div class="flexrow" style="margin-bottom:10px">
-      <span>내 투표: ${picks.length ? picks.map((k, i) => `<span class="badge b-accent">${i + 1}순위 ${OPT_DAYS[p[k]]}</span>`).join(' ') : '<span class="muted">없음</span>'}</span>
+      <span>내 투표: ${picks.length ? picks.map((n, i) => `<span class="badge b-accent">${i + 1}순위 ${OPT_DAYS[n.d]} ${esc(optQuartersLabel(n.q))}</span>`).join(' ') : '<span class="muted">없음</span>'}</span>
       <span style="margin-left:auto" class="${saved ? 'muted' : 'verify-bad'}">${saved ? '저장됨 ✓' : '변경사항 있음 — 저장 필요!'}</span>
     </div>
     ${admSummaryHtml(c.targetWeek, S.adm)}
@@ -1598,24 +1829,40 @@ function renderResults() {
       : '<span class="badge b-red">⚠ 검증 불일치 — 관리자에게 결과 재생성을 요청하세요</span>';
     const adm = data.adm || {};
     const rows = Array.from({ length: 7 }, (_, d) => {
+      const qa = (r.quarterAssign || {})[String(d)];
       const m = (r.dayAssign || {})[String(d)];
+      // 분기별 소유자를 사람 단위로 묶어 '이샘플 00-12시' 처럼 표기
+      let who;
+      if (qa && Object.keys(qa).length) {
+        const byMid = {};
+        for (let k = 1; k <= 4; k++) if (qa[String(k)]) (byMid[qa[String(k)]] = byMid[qa[String(k)]] || []).push(k);
+        const parts = Object.keys(byMid).sort((a, b) => Math.min(...byMid[a]) - Math.min(...byMid[b]))
+          .map(mid => `<b>${esc(memberName(mid))}</b> <span class="muted">${esc(optQuartersLabel(byMid[mid]))}</span>`);
+        const usedQ = Object.keys(qa).length;
+        who = parts.join('<br>') + (usedQ < 4 ? `<br><span class="muted">나머지 시간은 비어 있음 — 자유 조율 가능</span>` : '');
+      } else if (m) {
+        who = '<b>' + esc(memberName(m)) + '</b> <span class="muted">종일</span>';
+      } else {
+        who = '<span class="muted">미배정 — 자유 조율 가능</span>';
+      }
       const blocks = optAdminBlocksOfDay(adm, d);
       const free = optFreeSlotCount(adm, d);
       const admCell = !blocks.length ? '<span class="muted">–</span>'
         : blocks.map(b => `<span class="badge b-red">${esc(optAdminLabel(b.owner))} ${optRangeLabel(b.start, b.end)}</span>`).join(' ')
           + (free === 0 ? ' <b style="color:var(--red)">가용 시간 없음</b>' : ` <span class="muted">(가용 ${free / 2}h)</span>`);
       return `<tr><td>${OPT_DAYS[d]} (${fmtDate(optDayDate(sel, d))})</td>
-        <td>${m ? '<b>' + esc(memberName(m)) + '</b>' : '<span class="muted">미배정 — 자유 조율 가능</span>'}</td>
+        <td>${who}</td>
         <td>${admCell}</td></tr>`;
     }).join('');
     body = `
       <div class="flexrow" style="margin-bottom:10px">${vbadge}</div>
-      <table class="list"><tr><th>요일</th><th>배정자 (기본 배정)</th><th>관리자 지정 일정</th></tr>${rows}</table>
-      <p class="muted" style="margin-top:6px">요일 배정자는 <b>관리자 지정 일정(Repair·외부인 방문측정)을 제외한 나머지 시간</b>을 사용합니다. 관리자 블록은 추첨 알고리즘과 무관한 별도 레이어이므로 위 검증 결과에 영향을 주지 않습니다.</p>
+      <table class="list"><tr><th>요일</th><th>배정 (시간대별)</th><th>관리자 지정 일정</th></tr>${rows}</table>
+      <p class="muted" style="margin-top:6px">배정은 <b>새벽/오전/오후/저녁 4개 시간대 단위</b>로 이뤄집니다. 대표가 지원하지 않은 시간대에 <b>다른 지원자의 희망 시간대가 통째로 들어가면 그 사람도 함께 배정</b>됩니다.
+      배정자는 <b>관리자 지정 일정(Repair·외부인 방문측정)을 제외한 나머지 시간</b>을 사용합니다. 관리자 블록은 추첨 알고리즘과 무관한 별도 레이어이므로 위 검증 결과에 영향을 주지 않습니다.</p>
       <h3>아쉽게 배정받지 못한 인원</h3>
       <p class="muted">${(r.unassignedMembers || []).length ? r.unassignedMembers.map(m => esc(memberName(m))).join(', ') + ' — 실시간 예약 탭에서 협의해 시간을 나눠 쓸 수 있습니다.' : '없음 (투표자 전원 배정)'}</p>
       <h3>공정성 증빙</h3>
-      <p class="muted" style="word-break:break-all">배정 기준: ① 무당첨자 우선 → ② 순위 → ③ 투표 수 적은 사람 → ④ 시드 무작위.
+      <p class="muted" style="word-break:break-all">배정 기준: ① 무당첨자 우선 → ② 순위 → ③ 투표 수 적은 사람 → ④ 시드 무작위. (대표 선정 후 남은 시간대에 대해 같은 기준으로 추가 배정)
       시드(투표 데이터 SHA-256): <code class="k">${esc(r.seed || '')}</code><br>
       시드가 투표 내용 자체에서 결정되므로 누구도 결과를 조작·예측할 수 없으며, 모든 접속자가 독립 재검증합니다.</p>`;
   }
@@ -1820,7 +2067,8 @@ function renderRules() {
   <h3>2. 투표 방식</h3>
   <ul>
     <li>1인당 <b>1/2/3순위 요일</b>을 투표 (반드시 3개를 채울 필요 없음, 같은 요일 중복 불가).</li>
-    <li>적게 투표할수록 동순위 경쟁에서 유리함 (아래 배정 기준 ③).</li>
+    <li><b>요일마다 필요한 시간대만 고를 수 있음</b> — 하루는 <b>새벽(00-06) / 오전(06-12) / 오후(12-18) / 저녁(18-24)</b> 4개 구간으로 나뉜다. 요일 이름을 누르면 <b>종일</b>, 시간대 칩을 누르면 <b>그 구간만</b> 지원. 필요 없는 시간을 받아 나중에 취소할 필요가 없다.</li>
+    <li>적게 투표할수록 동순위 경쟁에서 유리함 (아래 배정 기준 ③). 지원 시간대의 길이는 경쟁에 <b>영향을 주지 않는다</b> — 짧게 지원한다고 유리하거나 불리하지 않음.</li>
   </ul>
 
   <h3>3. 요일 배정 기준 (목 12:00, 이 순서대로 판정)</h3>
@@ -1830,7 +2078,13 @@ function renderRules() {
     <li>③ 동순위면 <b>전체 투표 수가 적은</b> 사람 우선 (더 간절함).</li>
     <li>④ 그래도 같으면 <b>시드 기반 무작위 추첨</b> (시드 = 마감된 전체 투표의 SHA-256 → 조작·예측 불가, 전원 재검증).</li>
     <li>요일은 월→일 순서로 처리하며, 당첨 누적은 다음 요일 판정에 즉시 반영됨. 경쟁이 없으면 한 사람이 여러 요일 배정 가능.</li>
-    <li>배정 시 해당 요일 <b>00-24시 전체</b>가 통째로 배정됨. 미배정 요일은 빈 상태로 시작.</li>
+    <li><b>대표는 자기가 지원한 시간대만</b> 가져감 (종일 지원이면 하루 전체).</li>
+    <li><b>빈 시간대 추가 배정</b>: 대표가 쓰지 않고 남은 구간에 <b>다른 지원자의 희망 시간대가 통째로 들어가면</b> 그 사람도 같은 기준(①~④)으로 함께 배정된다. 더 들어갈 사람이 없을 때까지 반복. <b>일부만 겹치면 넣지 않는다</b>(쪼개서 억지로 끼우지 않음).<br>
+        예) A=새벽+오전, B=오후+저녁, C=오전+오후 가 같은 요일 동일 순위로 경쟁 →
+        <b>C가 대표면</b> 새벽·저녁만 남아 아무도 통째로 못 들어가므로 C 단독,
+        <b>A가 대표면</b> 오후+저녁이 비므로 B가 그대로 들어가 A와 B 둘 다 배정.</li>
+    <li>추가 배정도 <b>'당첨 1회'로 계산</b>되므로, 그 주 다른 요일 판정에서 무당첨자에게 밀린다 (①이 실제 사용 기회 기준으로 작동).</li>
+    <li>아무도 지원하지 않은 시간대는 <b>빈 상태</b>로 남으며 자유 조율로 누구나 쓸 수 있음.</li>
   </ul>
 
   <h3>4. 자유 조율 (발표 후)</h3>
@@ -2121,20 +2375,49 @@ function bindMain() {
   });
   document.addEventListener('pointerup', () => { if (S.drag) S.drag = null; hideDragTip(); }, { once: true });
 
-  // 투표
-  document.querySelectorAll('[data-votday]').forEach(card => card.addEventListener('click', () => {
-    const d = +card.dataset.votday;
-    const p = S.pendingRanks || {};
-    const cur = ['r1', 'r2', 'r3'].find(k => p[k] === d);
-    if (cur) { // 해제 + 하위 순위 당김
-      const vals = ['r1', 'r2', 'r3'].filter(k => k !== cur && p[k] !== undefined).map(k => p[k]);
-      S.pendingRanks = {};
-      vals.forEach((v, i) => S.pendingRanks['r' + (i + 1)] = v);
-    } else {
-      const slot = ['r1', 'r2', 'r3'].find(k => p[k] === undefined);
-      if (!slot) return toast('순위는 최대 3개까지입니다. 기존 순위를 해제 후 지정하세요.', 'err');
-      S.pendingRanks = { ...p, [slot]: d };
-    }
+  // 투표 — 요일 이름을 누르면 '종일', 시간대 칩을 누르면 그 칩만 (또는 토글)
+  /* 순위는 지정 순서대로 r1→r2→r3 로 채워지고, 해제 시 아래 순위가 당겨진다. */
+  const rankKeys = ['r1', 'r2', 'r3'];
+  const pickedKeyOfDay = d => rankKeys.find(k => { const n = optNormRank((S.pendingRanks || {})[k]); return n && n.d === d; });
+  const compact = obj => {                       // 빈 자리 없이 r1부터 다시 채움
+    const vals = rankKeys.map(k => obj[k]).filter(v => v !== undefined && v !== null);
+    const out = {};
+    vals.forEach((v, i) => { out[rankKeys[i]] = v; });
+    return out;
+  };
+  const setDay = (d, quarters) => {              // 지정/갱신
+    const p = { ...(S.pendingRanks || {}) };
+    const k = pickedKeyOfDay(d);
+    if (k) { p[k] = { d, q: quarters }; S.pendingRanks = p; return true; }
+    const slot = rankKeys.find(x => p[x] === undefined || p[x] === null);
+    if (!slot) { toast('순위는 최대 3개까지입니다. 기존 순위를 해제 후 지정하세요.', 'err'); return false; }
+    p[slot] = { d, q: quarters };
+    S.pendingRanks = p;
+    return true;
+  };
+  const clearDay = d => {
+    const k = pickedKeyOfDay(d);
+    if (!k) return;
+    const p = { ...(S.pendingRanks || {}) };
+    delete p[k];
+    S.pendingRanks = compact(p);
+  };
+  document.querySelectorAll('[data-votday]').forEach(el => el.addEventListener('click', () => {
+    const d = +el.dataset.votday;
+    if (pickedKeyOfDay(d) !== undefined) clearDay(d);   // 이미 고른 요일 → 해제
+    else if (!setDay(d, OPT_ALL_QUARTERS.slice())) return;
+    render();
+  }));
+  document.querySelectorAll('[data-votq]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    const [ds, qs] = el.dataset.votq.split('|');
+    const d = +ds, q = +qs;
+    const k = pickedKeyOfDay(d);
+    if (k === undefined) { if (setDay(d, [q])) render(); return; }   // 안 고른 요일 → 그 시간대만 지원
+    const cur = optNormRank(S.pendingRanks[k]).q;
+    const next = cur.includes(q) ? cur.filter(x => x !== q) : cur.concat(q).sort((a, b) => a - b);
+    if (!next.length) clearDay(d);                                   // 전부 해제 = 요일 해제
+    else setDay(d, next);
     render();
   }));
   $('#btnSaveVote')?.addEventListener('click', async () => {
