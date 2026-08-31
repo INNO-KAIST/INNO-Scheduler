@@ -699,6 +699,17 @@ function optNormRank(v) {
   if (!q.length) return null;
   return { d: v.d, q: q };
 }
+/* 투표 묶음 {r1,r2,r3} 을 전부 신형 {d,q} 로 정규화 (유효하지 않은 항목은 제거).
+ * 저장 직전과 편집 상태 초기화 시 반드시 통과시킬 것 — 구버전에서 저장된 숫자 형식이
+ * 그대로 다시 전송되면 서버 규칙(신형 형식 검사)에 걸려 'Missing or insufficient permissions' 가 난다. */
+function optNormRanks(ranks) {
+  const out = {};
+  ['r1', 'r2', 'r3'].forEach(function (k) {
+    const n = optNormRank((ranks || {})[k]);
+    if (n) out[k] = { d: n.d, q: n.q };
+  });
+  return out;
+}
 /* 분기 소유 맵 {"1":mid,…} → 48슬롯 배열 */
 function optQuarterSlots(qmap) {
   const arr = new Array(OPT_SLOTS_PER_DAY).fill(null);
@@ -974,7 +985,7 @@ if (typeof module !== 'undefined' && module.exports) {
     OPT_DAYS, OPT_SLOTS_PER_DAY, optSlotLabel, optDayLabel, optFmtDateDow,
     optCanonicalVotesJson, optValidateVote, computeOpticsLottery,
     OPT_QUARTERS, OPT_ALL_QUARTERS, OPT_SLOTS_PER_QUARTER, optQuarterLabel, optQuartersLabel,
-    optNormRank, optQuarterSlots, optBaseSlots,
+    optNormRank, optNormRanks, optQuarterSlots, optBaseSlots,
     optEffectiveSchedule, optMergeBlocks, optPushRemark,
     OPT_ADMIN_MARK, OPT_ADMIN_KINDS, optIsAdminOwner, optAdminMemoClean,
     optAdminOwner, optAdminParse, optAdminLabel, optAdminSlotArr,
@@ -1109,7 +1120,7 @@ function makeFirestoreStore() {
     on(db.collection('opticsVotes').where('week', '==', c.targetWeek), snap => {
       const v = {}; snap.forEach(d => { const x = d.data(); v[x.memberId] = x.ranks || {}; });
       S.votes = v;
-      if (S.pendingRanks === null && S.user && v[S.user.id]) S.pendingRanks = { ...v[S.user.id] };
+      if (S.pendingRanks === null && S.user && v[S.user.id]) S.pendingRanks = optNormRanks(v[S.user.id]);
       render();
     });
     on(db.doc('opticsResults/' + c.targetWeek), d => { S.results = d.exists ? d.data() : null; S.verify = null; render(); });
@@ -1170,7 +1181,8 @@ function makeFirestoreStore() {
     async saveVote(ranks) {
       const c = cycle();
       await db.doc(`opticsVotes/${c.targetWeek}_${S.user.id}`).set({
-        week: c.targetWeek, memberId: S.user.id, ranks, updatedAt: FV.serverTimestamp(),
+        // 항상 신형 {d,q} 로 정규화해 저장 (구버전 문서를 그대로 되돌려 보내면 규칙에서 거부됨)
+        week: c.targetWeek, memberId: S.user.id, ranks: optNormRanks(ranks), updatedAt: FV.serverTimestamp(),
       });
     },
     async deleteVote() {
@@ -1317,7 +1329,7 @@ function makeDemoStore() {
     const c = cycle();
     S.members = { ...mem.members };
     S.votes = { ...(mem.votes[c.targetWeek] || {}) };
-    if (S.pendingRanks === null && S.user && S.votes[S.user.id]) S.pendingRanks = { ...S.votes[S.user.id] };
+    if (S.pendingRanks === null && S.user && S.votes[S.user.id]) S.pendingRanks = optNormRanks(S.votes[S.user.id]);
     S.results = mem.results[c.targetWeek] || null;
     S.curResults = mem.results[c.votingWeek] || null;
     S.sched = JSON.parse(JSON.stringify(mem.sched[c.targetWeek] || {}));
@@ -1342,7 +1354,7 @@ function makeDemoStore() {
       S.pendingRanks = null; pushState();
     },
     logout() { S.user = null; S.pendingRanks = null; pushState(); },
-    async saveVote(ranks) { const c = cycle(); (mem.votes[c.targetWeek] = mem.votes[c.targetWeek] || {})[S.user.id] = { ...ranks }; pushState(); },
+    async saveVote(ranks) { const c = cycle(); (mem.votes[c.targetWeek] = mem.votes[c.targetWeek] || {})[S.user.id] = optNormRanks(ranks); pushState(); },
     async deleteVote() { const c = cycle(); delete (mem.votes[c.targetWeek] || {})[S.user.id]; pushState(); },
     async ensureResults() {
       const c = cycle();
@@ -1676,7 +1688,7 @@ function renderVote() {
       <p class="muted">지금은 투표 기간이 아닙니다. 투표는 <b>매주 월 00:00 ~ 수 24:00</b>. 다음 시작: <b>${fmtDT(weekStartMs(c.votingWeek + 1))}</b></p>
       ${mine.length ? `<div class="note">이번 주 내 투표(마감됨): ${mine.map((n, i) => `${i + 1}순위 ${OPT_DAYS[n.d]} <b>${optQuartersLabel(n.q)}</b>`).join(', ')}</div>` : ''}</div>`;
   }
-  if (S.pendingRanks === null) S.pendingRanks = { ...(S.votes[S.user.id] || {}) };
+  if (S.pendingRanks === null) S.pendingRanks = optNormRanks(S.votes[S.user.id]);
   const p = S.pendingRanks;
   const norm = k => optNormRank(p[k]);
   const saved = optCanonicalVotesJson({ x: S.votes[S.user.id] || {} }) === optCanonicalVotesJson({ x: p });
@@ -2430,7 +2442,7 @@ function bindMain() {
       toast('투표가 저장되었습니다.', 'okk');
     } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
   });
-  $('#btnResetVote')?.addEventListener('click', () => { S.pendingRanks = { ...(S.votes[S.user.id] || {}) }; render(); });
+  $('#btnResetVote')?.addEventListener('click', () => { S.pendingRanks = optNormRanks(S.votes[S.user.id]); render(); });
   $('#btnClearVote')?.addEventListener('click', async () => {
     if (!confirm('이번 주 순위 투표를 전부 취소할까요?')) return;
     try {
