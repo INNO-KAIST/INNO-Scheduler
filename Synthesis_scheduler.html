@@ -7,15 +7,11 @@
 <!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지)
      그라디언트 id 는 파일마다 고유해야 함 — 여러 SVG 를 한 문서에 인라인하면 url(#id) 가 뒤섞임 -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cdefs%3E%3ClinearGradient%20id='gs'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%2322d3ee'/%3E%3Cstop%20offset='.45'%20stop-color='%233b82f6'/%3E%3Cstop%20offset='1'%20stop-color='%234338ca'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='32'%20height='32'%20rx='7.4'%20fill='url(%23gs)'/%3E%3Crect%20x='6.6'%20y='6.6'%20width='8.4'%20height='8.4'%20rx='2.4'%20fill='%23ffffff'/%3E%3Crect%20x='17'%20y='6.6'%20width='8.4'%20height='8.4'%20rx='2.4'%20fill='%23ffffff'%20opacity='.5'/%3E%3Crect%20x='6.6'%20y='17'%20width='8.4'%20height='8.4'%20rx='2.4'%20fill='%23ffffff'%20opacity='.5'/%3E%3Crect%20x='17'%20y='17'%20width='8.4'%20height='8.4'%20rx='2.4'%20fill='%23ffffff'/%3E%3Cpath%20d='M0%207.4A7.4%207.4%200%200%201%207.4%200h17.2A7.4%207.4%200%200%201%2032%207.4V13C24%2017.5%208%2017.5%200%2011.5Z'%20fill='%23ffffff'%20opacity='.14'/%3E%3Crect%20x='.7'%20y='.7'%20width='30.6'%20height='30.6'%20rx='6.9'%20fill='none'%20stroke='%23ffffff'%20stroke-width='1.1'%20opacity='.22'/%3E%3C/svg%3E">
-<meta name="theme-color" content="#3b82f6">
+<meta name="theme-color" content="#1a2e42">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
-  :root {
-    --bg: #f4f6fa; --card: #ffffff; --line: #e3e8f0; --text: #1c2333; --sub: #6b7690;
-    --accent: #3b5bdb; --accent-soft: #e7ecfd; --green: #2f9e63; --green-soft: #e3f5ec;
-    --amber: #b7791f; --amber-soft: #fdf3e0; --red: #d64550; --red-soft: #fdeaec;
-    --violet: #7048b6; --violet-soft: #f0e9fb; --radius: 12px;
-    --shadow: 0 1px 3px rgba(20,30,60,.08), 0 4px 14px rgba(20,30,60,.05);
-  }
+  /* INNO suite tokens — 공통 틀 + Scheduler 강조색(steel blue). 옛 변수명은 별칭 */
+  :root{color-scheme:light;--page:#f5f6f3;--surface:#ffffff;--surface-2:#eef1ed;--surface-3:#e6eae5;--ink:#243433;--ink-2:#4a5a56;--muted:#62706b;--faint:#8b978f;--border:#dde3dc;--border-strong:#c9d3c8;--grid:#e4e8e2;--ok:#2a7141;--ok-soft:#e3f0e5;--warn:#8a5f0a;--warn-soft:#f7ecd3;--risk:#ab3f35;--risk-soft:#f6e1dd;--info:#2f5f9e;--info-soft:#e2eaf5;--scrim:rgba(20,32,30,.42);--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06);--shadow-lg:0 24px 70px rgba(24,40,37,.18);--accent:#2b5f8e;--accent-strong:#214b71;--accent-soft:#e3ebf4;--focus:#5b88b4;--chrome:#1a2e42;--chrome-mark:#a9c7e5;--on-accent:#ffffff;--toast-bg:#1a2e42;--toast-ink:#f1f4ef;--chrome-ink:#f1f4ef;--chrome-ink-2:rgba(241,244,239,.72);--chrome-line:rgba(255,255,255,.09);--chrome-soft:rgba(255,255,255,.08);--chrome-soft-2:rgba(255,255,255,.14);--subtle:#f9faf7;--violet:#6a4aa8;--violet-soft:#efe9f8;--font:"DM Sans","Noto Sans KR",system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;--mono:ui-monospace,"Cascadia Mono",Consolas,"D2Coding",monospace;--bg:var(--page);--card:var(--surface);--line:var(--border);--text:var(--ink);--sub:var(--muted);--green:var(--ok);--green-soft:var(--ok-soft);--amber:var(--warn);--amber-soft:var(--warn-soft);--red:var(--risk);--red-soft:var(--risk-soft);--radius:10px;--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06)}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
   body { font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
@@ -36,8 +32,8 @@
          border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 600;
          transition: .15s; box-shadow: var(--shadow); }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { filter: brightness(1.08); color:#fff; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { filter: brightness(1.08); color: var(--on-accent); }
   .btn.danger { color: var(--red); }
   .btn.danger:hover { border-color: var(--red); }
   .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -53,11 +49,11 @@
   .b-amber  { background: var(--amber-soft);  color: var(--amber); }
   .b-red    { background: var(--red-soft);    color: var(--red); }
   .b-violet { background: var(--violet-soft); color: var(--violet); }
-  .b-gray   { background: #eef1f6; color: var(--sub); }
+  .b-gray   { background: var(--surface-2); color: var(--sub); }
   .countdown { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
   .steps { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
   .step { flex: 1 1 140px; border-radius: 9px; padding: 8px 10px; border: 1px solid var(--line);
-          font-size: 12.5px; color: var(--sub); background: #fafbfe; }
+          font-size: 12.5px; color: var(--sub); background: var(--subtle); }
   .step b { display: block; font-size: 13px; color: var(--text); }
   .step.on { border-color: var(--accent); background: var(--accent-soft); }
   .step.on b { color: var(--accent); }
@@ -67,15 +63,15 @@
   nav.tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
   nav.tabs button { white-space: nowrap; border: none; background: transparent; padding: 9px 15px;
                     border-radius: 10px; font-size: 14.5px; font-weight: 600; color: var(--sub); }
-  nav.tabs button.on { background: var(--text); color: #fff; }
-  nav.tabs button:not(.on):hover { background: #e8ecf4; color: var(--text); }
+  nav.tabs button.on { background: var(--text); color: var(--on-accent); }
+  nav.tabs button:not(.on):hover { background: var(--surface-2); color: var(--text); }
 
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
           box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
   .card h2 { font-size: 16.5px; margin-bottom: 10px; letter-spacing: -.2px; }
   .card h3 { font-size: 14.5px; margin: 14px 0 6px; }
   .muted { color: var(--sub); font-size: 13px; }
-  .note { background: #fafbfe; border: 1px dashed var(--line); border-radius: 9px;
+  .note { background: var(--subtle); border: 1px dashed var(--line); border-radius: 9px;
           padding: 10px 12px; font-size: 13px; color: var(--sub); margin: 8px 0; }
 
   /* ---- schedule grid ---- */
@@ -86,17 +82,17 @@
   table.sched td.rowh { font-size: 12.5px; font-weight: 600; padding: 4px 8px; white-space: nowrap; }
   table.sched td.rowh small { display: block; color: var(--sub); font-weight: 500; font-size: 11px; }
   .cell { height: 46px; min-width: 92px; border-radius: 9px; border: 1.5px solid var(--line);
-          background: #fbfcfe; text-align: center; vertical-align: middle; font-size: 12.5px;
+          background: var(--subtle); text-align: center; vertical-align: middle; font-size: 12.5px;
           padding: 2px 4px; position: relative; transition: .12s; }
   .cell.clickable { cursor: pointer; }
   .cell.clickable:hover { border-color: var(--accent); transform: translateY(-1px); }
   .cell.mine    { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
-  .cell.lottery { background: var(--accent-soft); border-color: #b9c6f5; color: #2c47b8; font-weight: 700; }
-  .cell.booked  { background: var(--green-soft); border-color: #bfe6d2; color: #1c7a49; font-weight: 700; }
+  .cell.lottery { background: var(--accent-soft); border-color: color-mix(in srgb,var(--accent) 35%,var(--surface)); color: var(--accent-strong); font-weight: 700; }
+  .cell.booked  { background: var(--green-soft); border-color: color-mix(in srgb,var(--ok) 35%,var(--surface)); color: var(--ok); font-weight: 700; }
   .cell.minewin { outline: 2px solid var(--accent); }
   .cell.empty-book { border-style: dashed; color: var(--sub); }
   .cell.disabled { opacity: .5; }
-  .cell .cnt { position: absolute; top: -7px; right: -5px; background: var(--amber); color: #fff;
+  .cell .cnt { position: absolute; top: -7px; right: -5px; background: var(--amber); color: var(--on-accent);
                border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 1px 6px; }
   .cell .tag { display:block; font-size: 10.5px; font-weight: 500; opacity: .75; }
   .periodrow td { padding-top: 10px; font-size: 12px; font-weight: 800; color: var(--sub);
@@ -110,58 +106,58 @@
   .tokens { display: flex; gap: 6px; align-items: center; }
   .tok { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent);
          display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--accent); }
-  .tok.used { border-color: var(--line); color: #c3cad8; background: #f2f4f9; }
+  .tok.used { border-color: var(--line); color: var(--faint); background: var(--surface-2); }
 
   /* ---- lists / tables ---- */
   table.list { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   table.list th { text-align: left; color: var(--sub); font-size: 12px; font-weight: 600;
                   border-bottom: 1px solid var(--line); padding: 6px 8px; }
-  table.list td { border-bottom: 1px solid #f0f2f7; padding: 8px; }
+  table.list td { border-bottom: 1px solid var(--grid); padding: 8px; }
   table.list tr:last-child td { border-bottom: none; }
 
   /* ---- rules tab ---- */
   .rules h3 { margin: 18px 0 8px; font-size: 15px; color: var(--accent); }
   .rules ul { margin: 4px 0 10px 20px; }
   .rules li { margin: 4px 0; font-size: 13.8px; }
-  .rules li li { font-size: 13.2px; color: #3a4358; }
+  .rules li li { font-size: 13.2px; color: var(--ink-2); }
 
   /* ---- modal ---- */
   .modal-bg { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: flex;
               align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-  .modal { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
+  .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
            box-shadow: 0 20px 60px rgba(0,0,0,.25); }
   .modal h2 { font-size: 17px; margin-bottom: 12px; }
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--sub); margin-bottom: 4px; }
   .field input, .field select { width: 100%; border: 1.5px solid var(--line); border-radius: 9px;
-                                padding: 9px 12px; font-size: 15px; font-family: inherit; background: #fff; }
+                                padding: 9px 12px; font-size: 15px; font-family: inherit; background: var(--surface); }
   .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
 
   /* ---- toast ---- */
   /* pointer-events:none — 토스트가 떠 있는 동안 그 아래 예약 칸 클릭이 먹히지 않던 문제 방지 */
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99;
            display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-  .toastmsg { background: #1c2333; color: #fff; border-radius: 10px; padding: 10px 18px;
+  .toastmsg { background: var(--ink); color: var(--on-accent); border-radius: 10px; padding: 10px 18px;
               font-size: 13.5px; box-shadow: 0 8px 30px rgba(0,0,0,.3); animation: pop .2s; max-width: 90vw; }
   .toastmsg.err { background: var(--red); }
   .toastmsg.okk { background: var(--green); }
   @keyframes pop { from { opacity: 0; transform: translateY(8px);} }
 
-  .demo-banner { background: var(--amber-soft); border: 1px solid #f0dcb4; color: var(--amber);
+  .demo-banner { background: var(--amber-soft); border: 1px solid color-mix(in srgb,var(--warn) 30%,var(--surface)); color: var(--amber);
                  border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
   .verify-ok { color: var(--green); font-weight: 700; }
   .verify-bad { color: var(--red); font-weight: 700; }
-  .prio-banner { background: var(--violet-soft); border: 1px solid #ddd0f2; color: var(--violet);
+  .prio-banner { background: var(--violet-soft); border: 1px solid color-mix(in srgb,var(--violet) 30%,var(--surface)); color: var(--violet);
                  border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 12px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
-  .stat { text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background:#fafbfe; }
+  .stat { text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background:var(--subtle); }
   .stat b { display: block; font-size: 22px; color: var(--accent); }
   .stat span { font-size: 12px; color: var(--sub); }
   .flexrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  code.k { background:#eef1f6; border-radius:5px; padding:1px 6px; font-size:12px; }
+  code.k { background:var(--surface-2); border-radius:5px; padding:1px 6px; font-size:12px; }
   .weekchips { display: inline-flex; gap: 6px; }
-  .weekchips button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+  .weekchips button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px;
                       padding: 5px 14px; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; }
   .weekchips button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
@@ -199,7 +195,7 @@
     table.list { display: block; font-size: 13.5px; }
     table.list tbody { display: block; }
     table.list tr { display: block; border: 1px solid var(--line); border-radius: 11px;
-                    background: #fbfcfe; padding: 9px 11px; margin-bottom: 8px; }
+                    background: var(--subtle); padding: 9px 11px; margin-bottom: 8px; }
     table.list tr:first-child { display: none; }          /* th 헤더행 */
     table.list td { display: flex; align-items: baseline; gap: 10px;
                     border: none; padding: 3px 0; word-break: break-word; }
@@ -224,6 +220,68 @@
     .cell { min-width: 78px; height: 44px; font-size: 12px; }
     .stat b { font-size: 19px; }
   }
+
+/* ════════ INNO suite skin — Workspace 결 (2026-09-29) ════════
+   공통 틀은 RefAtlas·Ledger·NanoLab 과 같고, 강조색만 Scheduler 고유(steel blue). 라이트 전용. */
+body{font-family:var(--font);font-synthesis:none;-webkit-font-smoothing:antialiased;background:var(--page);color:var(--ink)}
+::selection{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+:where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.field input:focus,.field select:focus,.chatin input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ── 상단 크롬 띠 ── */
+header{background:var(--chrome);color:var(--chrome-ink);box-shadow:0 0 0 100vmax var(--chrome);clip-path:inset(0 -100vmax);margin:-16px 0 18px;padding:16px 0 14px}
+.logo{color:var(--chrome-ink);font-weight:700;letter-spacing:-.01em}
+.logo small{color:var(--chrome-ink-2);letter-spacing:.02em}
+header .btn{background:var(--chrome-soft);border-color:var(--chrome-line);color:var(--chrome-ink);box-shadow:none}
+header .btn:hover{background:var(--chrome-soft-2);border-color:var(--chrome-line);color:var(--chrome-ink)}
+header .btn.primary{background:var(--chrome-mark);border-color:var(--chrome-mark);color:var(--chrome)}
+header .btn.primary:hover{filter:none;background:#c3d8ee;color:var(--chrome)}
+header .userchip{background:var(--chrome-soft);border-color:var(--chrome-line);color:var(--chrome-ink);box-shadow:none}
+header .userchip .dot{background:#7fd49a}
+
+/* ── 버튼 ── */
+.btn{border-color:var(--border-strong);border-radius:8px;box-shadow:none;min-height:36px;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+.btn.primary{color:var(--on-accent)}
+.btn.primary:hover{filter:none;background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent)}
+.btn.danger:hover{background:var(--risk-soft)}
+.btn.sm{min-height:30px}
+
+/* ── 국면 배너·단계 ── */
+.phasebar,.card{border-color:var(--border);border-radius:10px}
+.badge{font-weight:600}
+.b-gray{background:var(--surface-2);color:var(--ink-2)}
+.step{border-color:var(--border);color:var(--muted)}
+.step.on{border-color:var(--accent);background:var(--accent-soft)}
+.step.done{opacity:.6}
+.demo-banner,.prio-banner{color:var(--ink)}
+.demo-banner b{color:var(--warn)}
+.prio-banner b{color:var(--violet)}
+
+/* ── 탭: 선택 = 강조색 채움 ── */
+nav.tabs{gap:4px}
+nav.tabs button{color:var(--ink-2);font-weight:500;border-radius:8px;min-height:38px}
+nav.tabs button.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+nav.tabs button:not(.on):hover{background:var(--surface-2);color:var(--ink)}
+
+/* ── 카드·표 ── */
+.card h2{font-weight:600;letter-spacing:-.01em}
+.card h3{font-weight:600}
+.rules h3{color:var(--accent)}
+table.list th{color:var(--muted);font-weight:600}
+.note{border-color:var(--border-strong)}
+.periodrow td{color:var(--muted);font-weight:700;letter-spacing:.1em}
+
+/* ── 모달·팝업·토스트 ── */
+.modal-bg{background:var(--scrim)}
+.modal{border-radius:12px;box-shadow:var(--shadow-lg)}
+.cellpop{box-shadow:var(--shadow-lg)}
+.field input,.field select{border-color:var(--border-strong)}
+.toastmsg{background:var(--toast-bg);color:var(--toast-ink);box-shadow:var(--shadow-lg)}
+.toastmsg.err{background:var(--risk);color:#fff}
+.toastmsg.okk{background:var(--ok);color:#fff}
+.dragtip{background:var(--toast-bg);color:var(--toast-ink)}
 </style>
 </head>
 <body>
@@ -1119,9 +1177,9 @@ function gridHtml(mode) {
     <tr><th class="rowh">시간표</th>${BATCHES.map(b => `<th>Batch #${b}</th>`).join('')}</tr>${rows}</table></div>
     <div class="legend">
       <span><span class="sw" style="background:var(--accent-soft);border-color:var(--accent)"></span>내 토큰/추첨 확정</span>
-      <span><span class="sw" style="background:var(--green-soft);border-color:#bfe6d2"></span>실시간 예약</span>
+      <span><span class="sw" style="background:var(--green-soft);border-color:color-mix(in srgb,var(--ok) 35%,var(--surface))"></span>실시간 예약</span>
       <span><span class="sw" style="border-style:dashed"></span>예약 가능(빈 슬롯)</span>
-      <span><span class="sw" style="background:#fff"></span>지원자 수는 우측 상단 숫자</span>
+      <span><span class="sw" style="background:var(--surface)"></span>지원자 수는 우측 상단 숫자</span>
     </div>`;
 }
 
@@ -1313,7 +1371,7 @@ function renderMembers() {
 function renderRules() {
   return `<div class="card rules"><h2>📖 운영 규칙 및 내부 프로세스</h2>
 
-  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:#8a2530;font-size:14px">
+  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--risk);font-size:14px">
     <b>⚠ 최우선 주의사항</b> — 확보한 시간(추첨 확정·실시간 예약)에 사용이 불가능해진 경우,
     다른 멤버가 그 시간을 쓸 수 있도록 <b>최대한 빨리 시스템에서 직접 취소</b>해 주세요.
     (다음 주는 «실시간 예약» 탭, <b>이번 주는 «일정» 탭(이번 주 보기)</b>에서 본인 칸 클릭 → 취소.

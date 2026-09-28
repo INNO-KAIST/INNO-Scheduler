@@ -7,15 +7,11 @@
 <!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지)
      그라디언트 id 는 파일마다 고유해야 함 — 여러 SVG 를 한 문서에 인라인하면 url(#id) 가 뒤섞임 -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cdefs%3E%3ClinearGradient%20id='go'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23a21caf'/%3E%3Cstop%20offset='.5'%20stop-color='%23db2777'/%3E%3Cstop%20offset='1'%20stop-color='%23fb7185'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='32'%20height='32'%20rx='7.4'%20fill='url(%23go)'/%3E%3Crect%20x='1.4'%20y='13.9'%20width='29.2'%20height='4.2'%20rx='2.1'%20fill='%23ffffff'%20opacity='.62'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='8'%20fill='url(%23go)'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='7.6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3.2'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='2.8'%20fill='%23ffffff'/%3E%3Cpath%20d='M0%207.4A7.4%207.4%200%200%201%207.4%200h17.2A7.4%207.4%200%200%201%2032%207.4V13C24%2017.5%208%2017.5%200%2011.5Z'%20fill='%23ffffff'%20opacity='.14'/%3E%3Crect%20x='.7'%20y='.7'%20width='30.6'%20height='30.6'%20rx='6.9'%20fill='none'%20stroke='%23ffffff'%20stroke-width='1.1'%20opacity='.22'/%3E%3C/svg%3E">
-<meta name="theme-color" content="#db2777">
+<meta name="theme-color" content="#1a2e42">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
-  :root {
-    --bg: #f4f6fa; --card: #ffffff; --line: #e3e8f0; --text: #1c2333; --sub: #6b7690;
-    --accent: #3b5bdb; --accent-soft: #e7ecfd; --green: #2f9e63; --green-soft: #e3f5ec;
-    --amber: #b7791f; --amber-soft: #fdf3e0; --red: #d64550; --red-soft: #fdeaec;
-    --violet: #7048b6; --violet-soft: #f0e9fb; --radius: 12px;
-    --shadow: 0 1px 3px rgba(20,30,60,.08), 0 4px 14px rgba(20,30,60,.05);
-  }
+  /* INNO suite tokens — 공통 틀 + Scheduler 강조색(steel blue). 옛 변수명은 별칭 */
+  :root{color-scheme:light;--page:#f5f6f3;--surface:#ffffff;--surface-2:#eef1ed;--surface-3:#e6eae5;--ink:#243433;--ink-2:#4a5a56;--muted:#62706b;--faint:#8b978f;--border:#dde3dc;--border-strong:#c9d3c8;--grid:#e4e8e2;--ok:#2a7141;--ok-soft:#e3f0e5;--warn:#8a5f0a;--warn-soft:#f7ecd3;--risk:#ab3f35;--risk-soft:#f6e1dd;--info:#2f5f9e;--info-soft:#e2eaf5;--scrim:rgba(20,32,30,.42);--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06);--shadow-lg:0 24px 70px rgba(24,40,37,.18);--accent:#2b5f8e;--accent-strong:#214b71;--accent-soft:#e3ebf4;--focus:#5b88b4;--chrome:#1a2e42;--chrome-mark:#a9c7e5;--on-accent:#ffffff;--toast-bg:#1a2e42;--toast-ink:#f1f4ef;--chrome-ink:#f1f4ef;--chrome-ink-2:rgba(241,244,239,.72);--chrome-line:rgba(255,255,255,.09);--chrome-soft:rgba(255,255,255,.08);--chrome-soft-2:rgba(255,255,255,.14);--subtle:#f9faf7;--violet:#6a4aa8;--violet-soft:#efe9f8;--font:"DM Sans","Noto Sans KR",system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;--mono:ui-monospace,"Cascadia Mono",Consolas,"D2Coding",monospace;--bg:var(--page);--card:var(--surface);--line:var(--border);--text:var(--ink);--sub:var(--muted);--green:var(--ok);--green-soft:var(--ok-soft);--amber:var(--warn);--amber-soft:var(--warn-soft);--red:var(--risk);--red-soft:var(--risk-soft);--radius:10px;--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06)}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
   body { font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
@@ -36,8 +32,8 @@
          border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 600;
          transition: .15s; box-shadow: var(--shadow); }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { filter: brightness(1.08); color:#fff; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { filter: brightness(1.08); color: var(--on-accent); }
   .btn.danger { color: var(--red); }
   .btn.danger:hover { border-color: var(--red); }
   .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -53,11 +49,11 @@
   .b-amber  { background: var(--amber-soft);  color: var(--amber); }
   .b-red    { background: var(--red-soft);    color: var(--red); }
   .b-violet { background: var(--violet-soft); color: var(--violet); }
-  .b-gray   { background: #eef1f6; color: var(--sub); }
+  .b-gray   { background: var(--surface-2); color: var(--sub); }
   .countdown { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
   .steps { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
   .step { flex: 1 1 140px; border-radius: 9px; padding: 8px 10px; border: 1px solid var(--line);
-          font-size: 12.5px; color: var(--sub); background: #fafbfe; }
+          font-size: 12.5px; color: var(--sub); background: var(--subtle); }
   .step b { display: block; font-size: 13px; color: var(--text); }
   .step.on { border-color: var(--accent); background: var(--accent-soft); }
   .step.on b { color: var(--accent); }
@@ -67,15 +63,15 @@
   nav.tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
   nav.tabs button { white-space: nowrap; border: none; background: transparent; padding: 9px 15px;
                     border-radius: 10px; font-size: 14.5px; font-weight: 600; color: var(--sub); }
-  nav.tabs button.on { background: var(--text); color: #fff; }
-  nav.tabs button:not(.on):hover { background: #e8ecf4; color: var(--text); }
+  nav.tabs button.on { background: var(--text); color: var(--on-accent); }
+  nav.tabs button:not(.on):hover { background: var(--surface-2); color: var(--text); }
 
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
           box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
   .card h2 { font-size: 16.5px; margin-bottom: 10px; letter-spacing: -.2px; }
   .card h3 { font-size: 14.5px; margin: 14px 0 6px; }
   .muted { color: var(--sub); font-size: 13px; }
-  .note { background: #fafbfe; border: 1px dashed var(--line); border-radius: 9px;
+  .note { background: var(--subtle); border: 1px dashed var(--line); border-radius: 9px;
           padding: 10px 12px; font-size: 13px; color: var(--sub); margin: 8px 0; }
 
   /* ---- schedule grid ---- */
@@ -86,17 +82,17 @@
   table.sched td.rowh { font-size: 12.5px; font-weight: 600; padding: 4px 8px; white-space: nowrap; }
   table.sched td.rowh small { display: block; color: var(--sub); font-weight: 500; font-size: 11px; }
   .cell { height: 46px; min-width: 92px; border-radius: 9px; border: 1.5px solid var(--line);
-          background: #fbfcfe; text-align: center; vertical-align: middle; font-size: 12.5px;
+          background: var(--subtle); text-align: center; vertical-align: middle; font-size: 12.5px;
           padding: 2px 4px; position: relative; transition: .12s; }
   .cell.clickable { cursor: pointer; }
   .cell.clickable:hover { border-color: var(--accent); transform: translateY(-1px); }
   .cell.mine    { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
-  .cell.lottery { background: var(--accent-soft); border-color: #b9c6f5; color: #2c47b8; font-weight: 700; }
-  .cell.booked  { background: var(--green-soft); border-color: #bfe6d2; color: #1c7a49; font-weight: 700; }
+  .cell.lottery { background: var(--accent-soft); border-color: color-mix(in srgb,var(--accent) 35%,var(--surface)); color: var(--accent-strong); font-weight: 700; }
+  .cell.booked  { background: var(--green-soft); border-color: color-mix(in srgb,var(--ok) 35%,var(--surface)); color: var(--ok); font-weight: 700; }
   .cell.minewin { outline: 2px solid var(--accent); }
   .cell.empty-book { border-style: dashed; color: var(--sub); }
   .cell.disabled { opacity: .5; }
-  .cell .cnt { position: absolute; top: -7px; right: -5px; background: var(--amber); color: #fff;
+  .cell .cnt { position: absolute; top: -7px; right: -5px; background: var(--amber); color: var(--on-accent);
                border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 1px 6px; }
   .cell .tag { display:block; font-size: 10.5px; font-weight: 500; opacity: .75; }
   .periodrow td { padding-top: 10px; font-size: 12px; font-weight: 800; color: var(--sub);
@@ -110,74 +106,74 @@
   .tokens { display: flex; gap: 6px; align-items: center; }
   .tok { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent);
          display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--accent); }
-  .tok.used { border-color: var(--line); color: #c3cad8; background: #f2f4f9; }
+  .tok.used { border-color: var(--line); color: var(--faint); background: var(--surface-2); }
 
   /* ---- lists / tables ---- */
   table.list { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   table.list th { text-align: left; color: var(--sub); font-size: 12px; font-weight: 600;
                   border-bottom: 1px solid var(--line); padding: 6px 8px; }
-  table.list td { border-bottom: 1px solid #f0f2f7; padding: 8px; }
+  table.list td { border-bottom: 1px solid var(--grid); padding: 8px; }
   table.list tr:last-child td { border-bottom: none; }
 
   /* ---- rules tab ---- */
   .rules h3 { margin: 18px 0 8px; font-size: 15px; color: var(--accent); }
   .rules ul { margin: 4px 0 10px 20px; }
   .rules li { margin: 4px 0; font-size: 13.8px; }
-  .rules li li { font-size: 13.2px; color: #3a4358; }
+  .rules li li { font-size: 13.2px; color: var(--ink-2); }
 
   /* ---- modal ---- */
   .modal-bg { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: flex;
               align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-  .modal { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
+  .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
            box-shadow: 0 20px 60px rgba(0,0,0,.25); }
   .modal h2 { font-size: 17px; margin-bottom: 12px; }
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--sub); margin-bottom: 4px; }
   .field input, .field select { width: 100%; border: 1.5px solid var(--line); border-radius: 9px;
-                                padding: 9px 12px; font-size: 15px; font-family: inherit; background: #fff; }
+                                padding: 9px 12px; font-size: 15px; font-family: inherit; background: var(--surface); }
   .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
 
   /* ---- toast ---- */
   /* pointer-events:none — 토스트가 떠 있는 동안 그 아래 스케줄 칸 클릭이 먹히지 않던 문제 방지 */
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99;
            display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-  .toastmsg { background: #1c2333; color: #fff; border-radius: 10px; padding: 10px 18px;
+  .toastmsg { background: var(--ink); color: var(--on-accent); border-radius: 10px; padding: 10px 18px;
               font-size: 13.5px; box-shadow: 0 8px 30px rgba(0,0,0,.3); animation: pop .2s; max-width: 90vw; }
   .toastmsg.err { background: var(--red); }
   .toastmsg.okk { background: var(--green); }
   @keyframes pop { from { opacity: 0; transform: translateY(8px);} }
 
-  .demo-banner { background: var(--amber-soft); border: 1px solid #f0dcb4; color: var(--amber);
+  .demo-banner { background: var(--amber-soft); border: 1px solid color-mix(in srgb,var(--warn) 30%,var(--surface)); color: var(--amber);
                  border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
   .verify-ok { color: var(--green); font-weight: 700; }
   .verify-bad { color: var(--red); font-weight: 700; }
-  .prio-banner { background: var(--violet-soft); border: 1px solid #ddd0f2; color: var(--violet);
+  .prio-banner { background: var(--violet-soft); border: 1px solid color-mix(in srgb,var(--violet) 30%,var(--surface)); color: var(--violet);
                  border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 12px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
-  .stat { text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background:#fafbfe; }
+  .stat { text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background:var(--subtle); }
   .stat b { display: block; font-size: 22px; color: var(--accent); }
   .stat span { font-size: 12px; color: var(--sub); }
   .flexrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  code.k { background:#eef1f6; border-radius:5px; padding:1px 6px; font-size:12px; }
+  code.k { background:var(--surface-2); border-radius:5px; padding:1px 6px; font-size:12px; }
 
   /* ---- 주간 캘린더 (30분 x 7일) ---- */
   .calwrap { overflow-x: auto; }
   .cal { display: grid; grid-template-columns: 46px repeat(7, minmax(96px, 1fr)); gap: 0;
          min-width: 760px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
-         user-select: none; -webkit-user-select: none; background: #fff; }
+         user-select: none; -webkit-user-select: none; background: var(--surface); }
   .cal.mini { min-width: 0; width: 100%; grid-template-columns: 36px repeat(7, minmax(0, 1fr)); font-size: 10px; }
   .cal.mini .cell { min-width: 0; } /* 컨테이너 폭에 딱 맞춤 — 가로 스크롤 방지 */
-  .cal .hd { background: #f2f4f9; border-bottom: 1.5px solid var(--line); padding: 6px 2px;
+  .cal .hd { background: var(--surface-2); border-bottom: 1.5px solid var(--line); padding: 6px 2px;
              text-align: center; font-size: 12px; font-weight: 700; position: sticky; top: 0; }
   .cal.mini .hd { font-size: 10.5px; padding: 4px 1px; }
   .cal .hd small { display: block; font-weight: 500; color: var(--sub); font-size: 10px; }
   .cal .tl { font-size: 10px; color: var(--sub); text-align: right; padding-right: 4px;
-             border-top: 1px solid #eef1f6; background: #fafbfe; line-height: 1; padding-top: 2px; }
-  .cal .cell { height: 13px; border-top: 1px solid #f3f5f9; border-left: 1px solid #f3f5f9;
+             border-top: 1px solid var(--surface-2); background: var(--subtle); line-height: 1; padding-top: 2px; }
+  .cal .cell { height: 13px; border-top: 1px solid var(--grid); border-left: 1px solid var(--grid);
                position: relative; cursor: default; }
   .cal.mini .cell { height: 11.8px; } /* 조율 탭: 채팅창(620px) 높이에 맞춰 세로 확장 */
-  .cal .cell.hour { border-top-color: #dfe4ee; }
+  .cal .cell.hour { border-top-color: var(--border-strong); }
   .cal .cell.editable { cursor: pointer; }
   .cal .cell.sel { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
   .cal .cell .lbl { position: absolute; top: 0; left: 3px; right: 2px; font-size: 10px; font-weight: 700;
@@ -196,53 +192,53 @@
   .cal.mini[data-editable="1"] .cell { touch-action: none; }
   .cal .tl, .cal .hd { touch-action: auto; }   /* 스크롤 손잡이 역할 명시 */
   /* 드래그 중 선택 범위 표시 — 손가락에 칸이 가려지는 모바일에서 필수 피드백 */
-  .dragtip { position: fixed; z-index: 70; background: #1c2333; color: #fff; border-radius: 9px;
+  .dragtip { position: fixed; z-index: 70; background: var(--ink); color: var(--on-accent); border-radius: 9px;
              padding: 6px 11px; font-size: 12.5px; font-weight: 700; pointer-events: none;
              box-shadow: 0 6px 22px rgba(0,0,0,.3); white-space: nowrap; }
   /* 희망순위 오버레이 칩 */
   .rankchips { min-height: 0; display: flex; flex-direction: column; gap: 2px; padding: 3px 2px;
-               background: #fbfcfe; border-top: 1px dashed var(--line); }
+               background: var(--subtle); border-top: 1px dashed var(--line); }
   .rankchip { font-size: 10px; border-radius: 6px; padding: 1px 5px; opacity: .62;
               border: 1px solid; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rc1 { background: var(--accent-soft); border-color: var(--accent); color: #2c47b8; }
-  .rc2 { background: var(--green-soft); border-color: var(--green); color: #1c7a49; }
+  .rc1 { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+  .rc2 { background: var(--green-soft); border-color: var(--green); color: var(--ok); }
   .rc3 { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
   /* 셀 편집 팝업 */
-  .cellpop { position: fixed; z-index: 60; background: #fff; border: 1px solid var(--line);
+  .cellpop { position: fixed; z-index: 60; background: var(--surface); border: 1px solid var(--line);
              border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.22); padding: 12px; width: 230px; }
   .cellpop h4 { font-size: 13px; margin-bottom: 8px; }
   /* ---- 투표 요일 카드 ---- */
   .daycards { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
   .daycard { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 10px; text-align: center;
-             cursor: pointer; background: #fbfcfe; transition: .12s; position: relative; }
+             cursor: pointer; background: var(--subtle); transition: .12s; position: relative; }
   .daycard:hover { border-color: var(--accent); transform: translateY(-1px); }
   .daycard b { font-size: 16px; }
   .daycard .date { color: var(--sub); font-size: 11.5px; }
   .daycard .agg { margin-top: 6px; font-size: 11px; color: var(--sub); min-height: 16px; }
   .daycard .myrank { position: absolute; top: -9px; right: -6px; width: 26px; height: 26px; border-radius: 50%;
-                     background: var(--accent); color: #fff; font-weight: 800; font-size: 13px;
+                     background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: 13px;
                      display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
   .daycard.picked { border-color: var(--accent); background: var(--accent-soft); }
   .daycard.fullblocked { border-color: var(--red); background: var(--red-soft); }
   /* ---- 투표 요일 카드의 시간대(분기) 칩 ---- */
   .daycard { padding-bottom: 10px; }
   .dayhit { cursor: pointer; border-radius: 8px; padding: 2px 0; }
-  .dayhit:hover { background: rgba(59,91,219,.06); }
+  .dayhit:hover { background: var(--accent-soft); }
   /* 2×4 가 아니라 2×2 — 요일 카드 폭(약 120px)에서 '새벽' 같은 라벨이 세로로 쪼개지지 않도록 */
   .qchips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-top: 8px; }
-  .qchip { position: relative; border: 1.5px solid var(--line); background: #fff; border-radius: 8px;
+  .qchip { position: relative; border: 1.5px solid var(--line); background: var(--surface); border-radius: 8px;
            padding: 5px 4px; font-family: inherit; font-size: 11px; line-height: 1.2; color: var(--sub);
            display: flex; flex-direction: column; align-items: center; gap: 0; transition: .12s;
            white-space: nowrap; }
   .qchip:hover { border-color: var(--accent); color: var(--accent); }
   .qchip .qk { font-weight: 700; font-size: 11.5px; }
   .qchip .qr { font-size: 9.5px; opacity: .8; }
-  .qchip .qn { position: absolute; top: -6px; right: -4px; background: var(--amber); color: #fff;
+  .qchip .qn { position: absolute; top: -6px; right: -4px; background: var(--amber); color: var(--on-accent);
                border-radius: 999px; font-size: 9.5px; font-weight: 700; padding: 0 5px; }
-  .qchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .qchip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .qchip.on .qr { opacity: .85; }
   .qsum { margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--accent); }
-  .daycard.picked .qchip:not(.on) { background: #fbfcfe; }
+  .daycard.picked .qchip:not(.on) { background: var(--subtle); }
   @media (max-width: 560px) {
     .qchip { padding: 7px 2px; font-size: 11.5px; }   /* 터치 타깃 확보 */
     .qchip .qr { font-size: 9px; }
@@ -251,15 +247,15 @@
   .coord { display: grid; grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 1fr); gap: 14px; }
   @media (max-width: 860px) { .coord { grid-template-columns: 1fr; } }
   .chatbox { display: flex; flex-direction: column; height: 620px; border: 1px solid var(--line);
-             border-radius: 12px; background: #fff; overflow: hidden; }
+             border-radius: 12px; background: var(--surface); overflow: hidden; }
   .chatlog { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
   .msg { max-width: 85%; }
   .msg .meta { font-size: 10.5px; color: var(--sub); margin-bottom: 2px; }
-  .msg .bubble { background: #f1f3f9; border-radius: 12px; padding: 7px 11px; font-size: 13.5px;
+  .msg .bubble { background: var(--surface-2); border-radius: 12px; padding: 7px 11px; font-size: 13.5px;
                  white-space: pre-wrap; word-break: break-word; }
   .msg.mine { align-self: flex-end; text-align: right; }
-  .msg.mine .bubble { background: var(--accent); color: #fff; }
-  .chatin { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); background: #fafbfe; }
+  .msg.mine .bubble { background: var(--accent); color: var(--on-accent); }
+  .chatin { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); background: var(--subtle); }
   .chatin input { flex: 1; border: 1.5px solid var(--line); border-radius: 9px; padding: 9px 12px;
                   font-size: 14px; font-family: inherit; }
   .chatin input:focus { outline: none; border-color: var(--accent); }
@@ -270,7 +266,7 @@
   .hw .meta { font-size: 11px; color: var(--sub); white-space: nowrap; }
   .hwlog { max-height: 300px; overflow-y: auto; }
   .weekchips { display: inline-flex; gap: 6px; }
-  .weekchips button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+  .weekchips button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px;
                       padding: 5px 14px; font-size: 13px; font-weight: 600; color: var(--sub); }
   .weekchips button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
@@ -308,7 +304,7 @@
     table.list { display: block; font-size: 13.5px; }
     table.list tbody { display: block; }
     table.list tr { display: block; border: 1px solid var(--line); border-radius: 11px;
-                    background: #fbfcfe; padding: 9px 11px; margin-bottom: 8px; }
+                    background: var(--subtle); padding: 9px 11px; margin-bottom: 8px; }
     table.list tr:first-child { display: none; }          /* th 헤더행 */
     table.list td { display: flex; align-items: baseline; gap: 10px;
                     border: none; padding: 3px 0; word-break: break-word; }
@@ -340,6 +336,68 @@
     .daycard { padding: 10px 6px; }
     .daycard b { font-size: 15px; }
   }
+
+/* ════════ INNO suite skin — Workspace 결 (2026-09-29) ════════
+   공통 틀은 RefAtlas·Ledger·NanoLab 과 같고, 강조색만 Scheduler 고유(steel blue). 라이트 전용. */
+body{font-family:var(--font);font-synthesis:none;-webkit-font-smoothing:antialiased;background:var(--page);color:var(--ink)}
+::selection{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+:where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.field input:focus,.field select:focus,.chatin input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ── 상단 크롬 띠 ── */
+header{background:var(--chrome);color:var(--chrome-ink);box-shadow:0 0 0 100vmax var(--chrome);clip-path:inset(0 -100vmax);margin:-16px 0 18px;padding:16px 0 14px}
+.logo{color:var(--chrome-ink);font-weight:700;letter-spacing:-.01em}
+.logo small{color:var(--chrome-ink-2);letter-spacing:.02em}
+header .btn{background:var(--chrome-soft);border-color:var(--chrome-line);color:var(--chrome-ink);box-shadow:none}
+header .btn:hover{background:var(--chrome-soft-2);border-color:var(--chrome-line);color:var(--chrome-ink)}
+header .btn.primary{background:var(--chrome-mark);border-color:var(--chrome-mark);color:var(--chrome)}
+header .btn.primary:hover{filter:none;background:#c3d8ee;color:var(--chrome)}
+header .userchip{background:var(--chrome-soft);border-color:var(--chrome-line);color:var(--chrome-ink);box-shadow:none}
+header .userchip .dot{background:#7fd49a}
+
+/* ── 버튼 ── */
+.btn{border-color:var(--border-strong);border-radius:8px;box-shadow:none;min-height:36px;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+.btn.primary{color:var(--on-accent)}
+.btn.primary:hover{filter:none;background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent)}
+.btn.danger:hover{background:var(--risk-soft)}
+.btn.sm{min-height:30px}
+
+/* ── 국면 배너·단계 ── */
+.phasebar,.card{border-color:var(--border);border-radius:10px}
+.badge{font-weight:600}
+.b-gray{background:var(--surface-2);color:var(--ink-2)}
+.step{border-color:var(--border);color:var(--muted)}
+.step.on{border-color:var(--accent);background:var(--accent-soft)}
+.step.done{opacity:.6}
+.demo-banner,.prio-banner{color:var(--ink)}
+.demo-banner b{color:var(--warn)}
+.prio-banner b{color:var(--violet)}
+
+/* ── 탭: 선택 = 강조색 채움 ── */
+nav.tabs{gap:4px}
+nav.tabs button{color:var(--ink-2);font-weight:500;border-radius:8px;min-height:38px}
+nav.tabs button.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+nav.tabs button:not(.on):hover{background:var(--surface-2);color:var(--ink)}
+
+/* ── 카드·표 ── */
+.card h2{font-weight:600;letter-spacing:-.01em}
+.card h3{font-weight:600}
+.rules h3{color:var(--accent)}
+table.list th{color:var(--muted);font-weight:600}
+.note{border-color:var(--border-strong)}
+.periodrow td{color:var(--muted);font-weight:700;letter-spacing:.1em}
+
+/* ── 모달·팝업·토스트 ── */
+.modal-bg{background:var(--scrim)}
+.modal{border-radius:12px;box-shadow:var(--shadow-lg)}
+.cellpop{box-shadow:var(--shadow-lg)}
+.field input,.field select{border-color:var(--border-strong)}
+.toastmsg{background:var(--toast-bg);color:var(--toast-ink);box-shadow:var(--shadow-lg)}
+.toastmsg.err{background:var(--risk);color:#fff}
+.toastmsg.okk{background:var(--ok);color:#fff}
+.dragtip{background:var(--toast-bg);color:var(--toast-ink)}
 </style>
 </head>
 <body>
@@ -1577,7 +1635,7 @@ function calendarHtml(weekIdx, mini) {
     const free = optFreeSlotCount(ctx.adm, d);
     const blocked = free < OPT_SLOTS_PER_DAY;
     const admNote = !blocked ? ''
-      : (free === 0 ? ' · <b style="color:var(--red)">관리자 점유(종일)</b>' : ` · <b style="color:#8a2f1c">관리자 ${(OPT_SLOTS_PER_DAY - free) / 2}h</b>`);
+      : (free === 0 ? ' · <b style="color:var(--red)">관리자 점유(종일)</b>' : ` · <b style="color:var(--risk)">관리자 ${(OPT_SLOTS_PER_DAY - free) / 2}h</b>`);
     const ownerNote = owner ? ' · ' + esc(memberName(owner))
       : (owners.length > 1 ? ' · ' + esc(owners.map(memberName).join('/')) : '');
     hd += `<div class="hd">${OPT_DAYS[d]}<small>${fmtDate(optDayDate(weekIdx, d))}${ownerNote}${admNote}</small></div>`;
@@ -1717,7 +1775,7 @@ function renderVote() {
     const blocks = optAdminBlocksOfDay(S.adm, d);
     const free = optFreeSlotCount(S.adm, d);
     const admHtml = !blocks.length ? ''
-      : `<div class="agg" style="color:#8a2f1c;line-height:1.5">🔒 ${blocks.map(b => esc(optAdminLabel(b.owner)) + ' ' + optRangeLabel(b.start, b.end)).join('<br>')}
+      : `<div class="agg" style="color:var(--risk);line-height:1.5">🔒 ${blocks.map(b => esc(optAdminLabel(b.owner)) + ' ' + optRangeLabel(b.start, b.end)).join('<br>')}
          ${free === 0 ? '<br><b style="color:var(--red)">종일 사용 불가</b>' : ''}</div>`;
     // 분기 칩: 고른 요일이면 내 선택 표시, 아니면 눌러서 '그 시간대만' 바로 지원
     const qs = OPT_QUARTERS.map(o => {
@@ -1795,7 +1853,7 @@ function renderCoord() {
           <input id="chatText" placeholder="${S.user?.optics ? '메시지 입력 후 Enter' : '광학 활성 멤버만 채팅 가능'}" ${S.user?.optics ? '' : 'disabled'} maxlength="500">
           <button class="btn primary" id="btnChatSend" ${S.user?.optics ? '' : 'disabled'}>전송</button>
         </div>
-        ${S.user?.isAdmin ? '<div style="padding:6px 10px;border-top:1px solid var(--line);background:#fafbfe;text-align:right"><button class="btn sm danger" id="btnChatClear">🗑 채팅 전체 초기화 (관리자)</button></div>' : ''}
+        ${S.user?.isAdmin ? '<div style="padding:6px 10px;border-top:1px solid var(--line);background:var(--subtle);text-align:right"><button class="btn sm danger" id="btnChatClear">🗑 채팅 전체 초기화 (관리자)</button></div>' : ''}
       </div>
     </div></div>`;
 }
@@ -2063,7 +2121,7 @@ function renderMembers() {
 function renderRules() {
   return `<div class="card rules"><h2>📖 광학방 운영 규칙</h2>
 
-  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:#8a2530;font-size:14px">
+  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--risk);font-size:14px">
     <b>⚠ 최우선 주의사항</b> — ① 확보한 시간을 못 쓰게 되면 <b>즉시 스케줄에서 비우고</b> 채팅으로 알리세요.
     ② 부품(레이저·미러·SNSPD·파워미터 등)을 추가·제거·변경하면 <b>즉시 변경사항 탭(Hardware Log)에 기록</b>하세요. 다음 측정자의 시간과 데이터를 지키는 약속입니다.
     ③ <b style="color:var(--red)">ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구</b>가 원칙입니다.
@@ -2265,9 +2323,9 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
     </optgroup>` : '';
   const notice = !hasAdm ? ''
     : admEdit
-      ? `<p class="muted" style="color:#8a2f1c;margin:0 0 8px">🔒 현재 <b>${esc(curAdm ? optAdminLabel(admArr[s0]) : '관리자 지정 일정')}</b> 구간입니다.
+      ? `<p class="muted" style="color:var(--risk);margin:0 0 8px">🔒 현재 <b>${esc(curAdm ? optAdminLabel(admArr[s0]) : '관리자 지정 일정')}</b> 구간입니다.
          종류·메모를 바꿔 저장하거나 <b>🔓 해제</b>할 수 있고, <b>멤버를 지정하거나 비우면 관리자 지정이 함께 해제</b>됩니다.</p>`
-      : '<p class="muted" style="color:#8a2f1c;margin:0 0 8px">🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.</p>';
+      : '<p class="muted" style="color:var(--risk);margin:0 0 8px">🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.</p>';
   div.innerHTML = `
     <h4>${OPT_DAYS[day]} ${optSlotLabel(s0)} ~ ${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}</h4>
     ${notice}
