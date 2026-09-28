@@ -404,8 +404,8 @@ table.list th{color:var(--muted);font-weight:600}
    마지막 한두 글자만 다음 줄로 떨어진다. 어절(띄어쓰기) 단위로만 끊고,
    한 줄에 한 단어만 남는 줄(orphan)을 브라우저가 피하게 한다. */
 body{word-break:keep-all}
-:where(h1,h2,h3,h4){text-wrap:balance}
-:where(p,li,dd,dt,td,th,label,small,.hint,.muted,.note,.sub,.tag,.desc){text-wrap:pretty}
+:where(h1,h2,h3,h4){text-wrap-style:balance}
+:where(p,li,dd,dt,td,th,label,small,.hint,.muted,.note,.sub,.tag,.desc){text-wrap-style:pretty}
 
 .brand-mark{display:block;flex:none;width:30px;height:30px;border-radius:8px}
 </style>
@@ -2321,11 +2321,18 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
 
   const list = Object.values(S.members).filter(m => m.opticsActive === true)
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  /* 선택 구간의 현재 배정(관리자 블록 제외) — 누구 칸을 바꾸는지 보여 주고, 남의 칸이면 확인 */
+  const effDay = optEffectiveSchedule(calCtx(weekIdx).results || {}, calCtx(weekIdx).sched, calCtx(weekIdx).adm)[day] || [];
+  const curOwners = [...new Set(effDay.slice(s0, s1 + 1).filter(v => v && !optIsAdminOwner(v)))];
+  const curEmpty = effDay.slice(s0, s1 + 1).some(v => !v);
+  const curLabel = curOwners.length
+    ? curOwners.map(memberName).join(', ') + (curEmpty ? ' · 일부 빈 칸' : '')
+    : '비어 있음';
   const div = document.createElement('div');
   div.className = 'cellpop';
   const memberOpts = canEdit ? `
-      ${S.user?.optics ? `<option value="${S.user.id}">${esc(S.user.name)} (본인)</option>` : ''}
-      ${list.filter(m => !S.user || m.id !== S.user.id).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}
+      ${S.user?.optics ? `<option value="${S.user.id}"${curOwners.length === 1 && curOwners[0] !== S.user.id ? '' : ' selected'}>${esc(S.user.name)} (본인)</option>` : ''}
+      ${list.filter(m => !S.user || m.id !== S.user.id).map(m => `<option value="${m.id}"${curOwners.length === 1 && curOwners[0] === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}
       <option value="">(비우기)</option>` : '';
   const admOpts = admEdit ? `<optgroup label="관리자 지정 (예약 불가 구간)">
       ${OPT_ADMIN_KINDS.map(k => `<option value="${OPT_ADMIN_MARK}${k.code}"${curAdm && curAdm.code === k.code ? ' selected' : ''}>🔒 ${esc(k.label)}</option>`).join('')}
@@ -2339,6 +2346,7 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
   div.innerHTML = `
     <h4>${OPT_DAYS[day]} ${optSlotLabel(s0)} ~ ${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}</h4>
     ${notice}
+    ${canEdit ? `<p class="muted" style="margin:0 0 8px">현재 배정: <b>${esc(curLabel)}</b></p>` : ''}
     <div class="field"><label>배정 대상</label><select id="popMember">${memberOpts}${admOpts}</select></div>
     <div class="field" id="popMemoWrap" style="display:none"><label>메모 (선택)</label>
       <input id="popMemo" maxlength="40" placeholder="예: A대 김○○ 측정" value="${esc(curAdm ? curAdm.memo : '')}"></div>
@@ -2371,6 +2379,11 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
       if (!admEdit) return toast('관리자 지정 일정(Repair·외부인 방문측정) 구간은 수정할 수 없습니다. 관리자에게 요청하세요.', 'err');
       if (!confirm('이 구간에는 관리자 지정 일정(Repair·외부인 방문측정)이 있습니다.\n\n관리자 지정을 해제하고 선택한 내용으로 바꿀까요?')) return;
     }
+    /* 다른 사람의 배정을 바꾸는 경우: 확인 + 조율 채팅에 기록(누가 무엇을 바꿨는지 남긴다) */
+    const others = curOwners.filter(o => o !== mid && (!S.user || o !== S.user.id));
+    const range = `${OPT_DAYS[day]} ${optSlotLabel(s0)}~${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}`;
+    const toLabel = mid ? memberName(mid) : '빈 칸';
+    if (others.length && !confirm(`${range} 에 배정된 ${others.map(memberName).join(', ')} 님의 시간을 「${toLabel}」(으)로 바꿉니다.\n\n조율 채팅에 변경 기록이 남습니다. 계속할까요?`)) return;
     const changes = {};
     for (let s = s0; s <= s1; s++) changes[String(s)] = mid;
     try {
@@ -2381,7 +2394,11 @@ function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
       }
       await store.setSlots(weekIdx, day, changes);
       div.remove();
+      if (others.length) {
+        try { await store.sendChat(`[자동 기록] ${S.user ? S.user.name : ''} — ${optDayLabel(weekIdx, day)} ${optSlotLabel(s0)}~${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}: ${others.map(memberName).join(', ')} → ${toLabel}`); } catch (e) {}
+      }
       if (hasAdm) toast('관리자 지정을 해제하고 배정을 변경했습니다. (캘린더에 곧 반영)', 'okk');
+      else toast(`${range} → ${toLabel}`, 'okk');
     } catch (e) { toast('수정 실패: ' + e.message, 'err'); }
   };
   /* 관리자 블록 지정/해제 */
