@@ -6,7 +6,7 @@
 <title>Weekly Optics Scheduler</title>
 <!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지)
      그라디언트 id 는 파일마다 고유해야 함 — 여러 SVG 를 한 문서에 인라인하면 url(#id) 가 뒤섞임 -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cdefs%3E%3ClinearGradient%20id='go'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23a21caf'/%3E%3Cstop%20offset='.5'%20stop-color='%23db2777'/%3E%3Cstop%20offset='1'%20stop-color='%23fb7185'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='32'%20height='32'%20rx='7.4'%20fill='url(%23go)'/%3E%3Crect%20x='1.4'%20y='13.9'%20width='29.2'%20height='4.2'%20rx='2.1'%20fill='%23ffffff'%20opacity='.62'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='8'%20fill='url(%23go)'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='7.6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3.2'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='2.8'%20fill='%23ffffff'/%3E%3Cpath%20d='M0%207.4A7.4%207.4%200%200%201%207.4%200h17.2A7.4%207.4%200%200%201%2032%207.4V13C24%2017.5%208%2017.5%200%2011.5Z'%20fill='%23ffffff'%20opacity='.14'/%3E%3Crect%20x='.7'%20y='.7'%20width='30.6'%20height='30.6'%20rx='6.9'%20fill='none'%20stroke='%23ffffff'%20stroke-width='1.1'%20opacity='.22'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22isch%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23264466%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%231a2e42%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23isch%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Crect x=%2214%22 y=%2218%22 width=%2236%22 height=%2232%22 rx=%226%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M14 27.5h36%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22/%3E%3Cpath d=%22M24 12.5v9M40 12.5v9%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Crect x=%2220.5%22 y=%2233%22 width=%228%22 height=%228%22 rx=%222%22 fill=%22%23a9c7e5%22 opacity=%22.45%22/%3E%3Crect x=%2234%22 y=%2233%22 width=%229.5%22 height=%229.5%22 rx=%222.4%22 fill=%22%23F4F6F1%22/%3E%3C/svg%3E">
 <meta name="theme-color" content="#1a2e42">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -398,12 +398,14 @@ table.list th{color:var(--muted);font-weight:600}
 .toastmsg.err{background:var(--risk);color:#fff}
 .toastmsg.okk{background:var(--ok);color:#fff}
 .dragtip{background:var(--toast-bg);color:var(--toast-ink)}
+
+.brand-mark{display:block;flex:none;width:30px;height:30px;border-radius:8px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="logo">Weekly Optics Scheduler<small id="weekLabel"></small></div>
+    <svg class="brand-mark" style="width:34px;height:34px;border-radius:9px" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="26" height="26"><defs><linearGradient id="scmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#264466"/><stop offset=".62" stop-color="#1a2e42"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#scmk)"/><rect x=".75" y=".75" width="62.5" height="62.5" rx="14.3" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1.5"/><rect x="14" y="18" width="36" height="32" rx="6" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M14 27.5h36" stroke="#a9c7e5" stroke-width="4.5"/><path d="M24 12.5v9M40 12.5v9" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="20.5" y="33" width="8" height="8" rx="2" fill="#a9c7e5" opacity=".45"/><rect x="34" y="33" width="9.5" height="9.5" rx="2.4" fill="#F4F6F1"/></svg><div class="logo">Weekly Optics Scheduler<small id="weekLabel"></small></div>
     <div class="head-right" id="headRight"></div>
   </header>
   <div id="demoBanner"></div>
