@@ -316,6 +316,52 @@ body{word-break:keep-all}
 .inno-empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:13px}
 .inno-empty b{display:block;color:var(--ink);font-weight:600;font-size:14px;margin-bottom:4px}
 .inno-empty .btn{margin-top:10px}
+
+/* ── rd3 Scheduler 초안 ── */
+.phasebar{padding:12px 16px}
+.phasebar .toprow{align-items:center}
+.stepline{list-style:none;margin:0 0 0 auto;padding:0;display:flex;align-items:center;gap:0;font-size:12px;color:var(--muted)}
+.stepline li{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.stepline li+li::before{content:"";width:22px;height:1.5px;background:var(--line);margin:0 8px}
+.stepline li i{font-style:normal;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;border:1.5px solid var(--line);background:var(--surface)}
+.stepline li.done{opacity:.6}
+.stepline li.done i{background:var(--surface-2);border-color:var(--line)}
+.stepline li.on{color:var(--text);font-weight:600}
+.stepline li.on i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+nav.tabs .more{display:none}
+nav.tabs .tabmore{display:none}
+@media (max-width:720px){
+  .stepline{margin:6px 0 0;width:100%}
+  .stepline li span{display:none}
+  .stepline li.on span{display:inline}
+  .stepline li+li::before{width:14px;margin:0 5px}
+  nav.tabs button.sec{display:none!important}
+  nav.tabs .more{display:flex!important}
+  nav.tabs .tabmore{position:absolute;right:8px;bottom:calc(100% + 8px);display:flex;flex-direction:column;min-width:170px;padding:6px;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.25)}
+  nav.tabs .tabmore[hidden]{display:none}
+  nav.tabs .tabmore button{all:unset;cursor:pointer;padding:11px 12px;border-radius:8px;font-size:14px;color:var(--text)}
+  nav.tabs .tabmore button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+}
+
+/* ── 휴대폰 하단 탭 막대 (≤720px, INNO suite 공통 규칙) ── */
+@media (max-width:720px){
+  body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+  nav.tabs{position:fixed!important;left:0;right:0;bottom:0;top:auto!important;z-index:45;margin:0!important;display:grid!important;grid-template-columns:repeat(5,1fr);gap:0!important;
+    overflow:visible!important;padding:4px 2px calc(4px + env(safe-area-inset-bottom))!important;clip-path:none!important;border:0!important;
+    background:var(--chrome)!important;box-shadow:0 -1px 0 var(--chrome-line),0 -8px 24px rgba(0,0,0,.18)!important}
+  nav.tabs > button{display:flex!important;flex-direction:column;align-items:center;gap:3px;padding:6px 0 5px!important;margin:0!important;border:0!important;border-radius:8px;
+    font-size:10.5px!important;line-height:1.15;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;background:transparent;color:var(--chrome-ink-2)!important}
+  nav.tabs > button.on{color:var(--chrome-ink)!important;background:var(--chrome-soft)!important;font-weight:600}
+  nav.tabs > button::before{content:"";width:21px;height:21px;flex:none;background:currentColor;-webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat}
+  nav.tabs > button.on::after{content:"";position:absolute;left:28%;right:28%;top:0;bottom:auto;height:2.5px;border-radius:0 0 3px 3px;background:var(--chrome-mark)}
+  nav.tabs > button{position:relative}
+  #toast{bottom:calc(76px + env(safe-area-inset-bottom))!important} nav.tabs{overflow:visible!important} nav.tabs > button:not(.on):hover{background:transparent!important;color:var(--chrome-ink)!important}
+}
+nav.tabs > button[data-tab=dash]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E")}
+nav.tabs > button[data-tab=vote]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11l8-7 8 7'/%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M9 16l2 2 4-4'/%3E%3C/svg%3E")}
+nav.tabs > button[data-tab=book]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E")}
+nav.tabs > button[data-tab=results]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='3'/%3E%3Ccircle cx='8' cy='8' r='1.2'/%3E%3Ccircle cx='16' cy='16' r='1.2'/%3E%3Ccircle cx='12' cy='12' r='1.2'/%3E%3C/svg%3E")}
+nav.tabs > button.more{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13M8 12h13M8 18h13'/%3E%3Ccircle cx='3.5' cy='6' r='1'/%3E%3Ccircle cx='3.5' cy='12' r='1'/%3E%3Ccircle cx='3.5' cy='18' r='1'/%3E%3C/svg%3E")}
 </style>
 </head>
 <body>
@@ -1000,8 +1046,8 @@ async function maybeVerify() {
  * 렌더링
  * ===================================================================== */
 const TABS = [
-  ['dash', '📅 일정'], ['vote', '🗳️ 사전 투표'], ['book', '⚡ 실시간 예약'],
-  ['results', '🎲 투표 결과'], ['members', '👥 명단'], ['rules', '📖 규칙'], ['admin', '🔧 관리자'],
+  ['dash', '일정'], ['vote', '투표'], ['book', '예약'],
+  ['results', '추첨 결과'], ['members', '명단'], ['rules', '규칙'], ['admin', '관리자'],
 ];
 
 function render() {
@@ -1110,16 +1156,25 @@ function renderPhasebar() {
     <div class="toprow">${badge}
       <span class="muted">${targetLabel}</span>
       <span class="countdown" id="cd" data-target="${target}">${fmtDur(target - now())}</span>
-      <span class="muted" style="margin-left:auto">투표 대상: <b>${weekLabel(c.targetWeek)}</b> 스케줄</span>
-    </div>
-    <div class="steps">${steps.map(s => `<div class="step ${s[2]}"><b>${s[0]}</b>${s[1]}</div>`).join('')}</div>`;
+      <ol class="stepline" aria-label="진행 단계">${steps.map((s, i) => `<li class="${s[2]}" title="${s[1]}"><i>${s[2] === 'done' ? '✓' : i + 1}</i><span>${s[0]}</span></li>`).join('')}</ol>
+    </div>`;
 }
 
+const RD_PRIMARY = ['dash', 'vote', 'book', 'results'];
 function renderTabs() {
-  $('#tabs').innerHTML = TABS
-    .filter(([k]) => k !== 'admin' || S.user?.isAdmin)
-    .map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('');
+  const vis = TABS.filter(([k]) => k !== 'admin' || S.user?.isAdmin);
+  const prim = new Set(RD_PRIMARY);
+  const secOn = vis.some(([k]) => !prim.has(k) && S.tab === k);
+  const btn = ([k, l]) => `<button class="${S.tab === k ? 'on' : ''}${prim.has(k) ? '' : ' sec'}" data-tab="${k}">${l}</button>`;
+  $('#tabs').innerHTML = vis.map(btn).join('')
+    + `<button class="more${secOn ? ' on' : ''}" data-more aria-haspopup="true" aria-expanded="false">${secOn ? esc((vis.find(([k]) => k === S.tab) || [, '더보기'])[1]) : '더보기'}</button>`
+    + `<div class="tabmore" hidden>${vis.filter(([k]) => !prim.has(k)).map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>`;
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); }));
+  const mb = document.querySelector('#tabs [data-more]'), menu = document.querySelector('#tabs .tabmore');
+  if (mb && menu) {
+    mb.addEventListener('click', e => { e.stopPropagation(); menu.hidden = !menu.hidden; mb.setAttribute('aria-expanded', String(!menu.hidden)); });
+    document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== mb) { menu.hidden = true; mb.setAttribute('aria-expanded', 'false'); } });
+  }
 }
 
 /* ---------------- 그리드 공통 ---------------- */
@@ -1755,7 +1810,8 @@ render();
   closeOverlay: ov => { if (ov.classList.contains("cellpop")) ov.remove(); else if (typeof closeModal === "function") closeModal(); else ov.remove(); },
   clickables: ["td[data-act]", "[data-votday]"],
   tablists: [{ list: "#tabs", tab: "button", active: "on" }],
-  live: ["#toast"]
+  live: ["#toast"],
+  switcherHost: "header"
 });</script>
 <script>/* ════════ INNO suite UX layer (2026-09-29) ════════
    6개 INNO 앱이 같은 규칙으로 동작하도록 붙이는 공통 층. 앱 코드는 거의 건드리지 않고,
