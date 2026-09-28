@@ -399,6 +399,14 @@ table.list th{color:var(--muted);font-weight:600}
 .toastmsg.okk{background:var(--ok);color:#fff}
 .dragtip{background:var(--toast-bg);color:var(--toast-ink)}
 
+/* ── 한글 줄바꿈 (2026-09-29) ──
+   한글은 기본값이 '음절마다 줄바꿈 가능'이라, 좁은 화면에서 "선택하세" / "요" 처럼
+   마지막 한두 글자만 다음 줄로 떨어진다. 어절(띄어쓰기) 단위로만 끊고,
+   한 줄에 한 단어만 남는 줄(orphan)을 브라우저가 피하게 한다. */
+body{word-break:keep-all}
+:where(h1,h2,h3,h4){text-wrap:balance}
+:where(p,li,dd,dt,td,th,label,small,.hint,.muted,.note,.sub,.tag,.desc){text-wrap:pretty}
+
 .brand-mark{display:block;flex:none;width:30px;height:30px;border-radius:8px}
 </style>
 </head>
