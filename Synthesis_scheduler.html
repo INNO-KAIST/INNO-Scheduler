@@ -145,6 +145,9 @@
 
   .demo-banner { background: var(--amber-soft); border: 1px solid color-mix(in srgb,var(--warn) 30%,var(--surface)); color: var(--amber);
                  border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
+  .bot-banner { background: var(--risk-soft); border: 1px solid color-mix(in srgb,var(--risk) 35%,var(--surface)); color: var(--risk);
+                border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; line-height: 1.55; }
+  .bot-banner b { color: var(--risk); }
   .verify-ok { color: var(--green); font-weight: 700; }
   .verify-bad { color: var(--red); font-weight: 700; }
   .prio-banner { background: var(--violet-soft); border: 1px solid color-mix(in srgb,var(--violet) 30%,var(--surface)); color: var(--violet);
@@ -371,6 +374,7 @@ nav.tabs > button.more{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3
     <div class="head-right" id="headRight"></div>
   </header>
   <div id="demoBanner"></div>
+  <div id="botBanner"></div>
   <div class="phasebar" id="phasebar"></div>
   <nav class="tabs" id="tabs"></nav>
   <main id="main"></main>
@@ -650,6 +654,25 @@ if (typeof module !== 'undefined' && module.exports) {
 
 const IS_DEMO = !FIREBASE_CONFIG.apiKey;
 
+/* ── 봇 하트비트 감시 ──────────────────────────────────────────────────
+ * 봇(GAS)은 정상 동작할 때마다 syncMeta/<app>_bot.okMs 를 갱신한다(최대 30분 간격).
+ * 이 값이 BOT_STALE_MIN(60분) 보다 낡으면 화면 상단에 경고 배너를 띄운다.
+ * 30분 기록 + 60분 경고 — 한 번 거르는 건 눈감아 주고 두 번 연속 놓치면 경고한다.
+ * 임계값은 반드시 기록 간격의 2배 이상으로 둘 것. 간격에 바싹 붙이면 정상 동작
+ * 중에도 기록 직전마다 배너가 깜빡인다.
+ * 2026-10 실사례: GAS 프로젝트가 휴지통에 들어가 5일간 멈췄는데, 휴지통에 있는
+ * 스크립트는 아예 실행되지 않아 실행 오류도 Google 실패 알림 메일도 남지 않았다.
+ * 아무도 알아채지 못한 채 구글 캘린더만 조용히 낡아간 것이 이 배너를 만든 이유다. */
+const BOT_STALE_MIN = 60;
+function botStaleMin() { return S.botOkMs ? Math.floor((Date.now() - S.botOkMs) / 60000) : 0; }
+function agoText(min) {
+  if (min < 60) return min + '분 전';
+  const h = Math.floor(min / 60);
+  if (h < 24) return h + '시간' + (min % 60 ? ' ' + (min % 60) + '분' : '') + ' 전';
+  const d = Math.floor(h / 24);
+  return d + '일' + (h % 24 ? ' ' + (h % 24) + '시간' : '') + ' 전';
+}
+
 /* ---------------- 전역 상태 ---------------- */
 const S = {
   tab: 'dash',
@@ -737,6 +760,7 @@ function makeFirestoreStore() {
       if (!u) return;
       S.uid = u.uid;
       resubscribe();
+      startHeartbeatPoll();
     });
   }
 
@@ -786,6 +810,21 @@ function makeFirestoreStore() {
   function bumpSync() {
     return db.doc('syncMeta/wss').set({ rev: FV.increment(1) }, { merge: true })
       .catch(e => console.warn('syncMeta bump 실패(무시됨):', e.message));
+  }
+
+  /* 봇 하트비트 조회 — 실시간 구독이 아니라 30분 주기 단건 조회다.
+   * 배너는 실시간일 필요가 없고, 구독으로 붙이면 접속자 수 × 갱신 횟수만큼
+   * Firestore 읽기를 먹는다(읽기 한도로 한 번 앱 전체가 멈춘 이력이 있다). */
+  let hbTimer = null;
+  function pollHeartbeat() {
+    db.doc('syncMeta/wss_bot').get()
+      .then(d => { S.botOkMs = d.exists ? (d.data().okMs || 0) : 0; render(); })
+      .catch(e => console.warn('봇 상태 조회 실패(무시됨):', e.message));
+  }
+  function startHeartbeatPoll() {
+    if (hbTimer) return;              // onAuthStateChanged 가 여러 번 불려도 타이머는 하나
+    pollHeartbeat();
+    hbTimer = setInterval(pollHeartbeat, 30 * 60000);
   }
 
   /* 주가 바뀌면(월요일 00시 통과) 리스너 재구성 */
@@ -1122,6 +1161,12 @@ function renderHeader() {
     ? `<div class="demo-banner"><b>데모 모드</b> — Firebase 설정이 비어 있어 가상 데이터로 동작 중입니다 (새로고침 시 초기화, 다른 사람과 공유 안 됨). 설치 가이드에 따라 FIREBASE_CONFIG를 입력하면 실제 모드로 전환됩니다.
        &nbsp;국면 미리보기: <button class="btn sm" data-demo="vote">투표중</button> <button class="btn sm" data-demo="wait">추첨 대기</button> <button class="btn sm" data-demo="book">발표·예약</button></div>`
     : (S.authError ? `<div class="demo-banner"><b>⚠ ${esc(S.authError)}</b></div>` : '');
+  /* 봇 하트비트 경고 — 봇이 멈추면 구글 캘린더가 조용히 낡아간다. 근거는 BOT_STALE_MIN 주석. */
+  const botLate = !IS_DEMO && S.botOkMs && botStaleMin() >= BOT_STALE_MIN;
+  $('#botBanner').innerHTML = botLate
+    ? `<div class="bot-banner">⚠ <b>구글 캘린더 동기화가 멈춰 있습니다</b> — 자동 동기화 봇의 마지막 정상 동작: ${agoText(botStaleMin())}.<br>
+       이 앱 안의 예약·배정은 정상이지만, 그 이후 변경이 구글 캘린더에는 반영되지 않았습니다. 관리자에게 알려주세요.</div>`
+    : '';
   document.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => {
     const c2 = phaseOf(Date.now());
     const mode = b.dataset.demo;
