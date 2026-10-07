@@ -208,6 +208,11 @@
       word-break: keep-all;                    /* 한글이 단어 중간에서 끊기지 않게 */
     }
     table.list td > * { min-width: 0; }
+    /* 데스크톱 표에서 '내용폭에 맞춰 줄이기' 용도로 쓰는 인라인 width:1% 가
+     * 카드 모드에서는 셀을 3px 로 찌그러뜨려 값이 한 글자씩 세로로 쪼개진다
+     * (2026-10 특이사항 표 실사례). 인라인 스타일은 미디어쿼리를 이기므로
+     * !important 로 되돌려야 한다. 표를 새로 추가해도 자동 적용된다. */
+    table.list td, table.list th { width: auto !important; }
     /* 셀 값 전체를 하나의 열로 정렬. white-space:normal 이 반드시 필요하다 —
      * 일부 td 는 데스크톱 표 정렬용으로 nowrap 을 갖고 있는데, 값이 래퍼 안의
      * 인라인 콘텐츠가 되면 그 nowrap 때문에 버튼들이 줄바꿈되지 않아 화면을 밀어낸다. */
