@@ -1,0 +1,408 @@
+rules_version = '2';
+
+// =====================================================================
+// Weekly Synthesis Scheduler + Weekly Optics Scheduler - 통합 보안 규칙
+// (두 시스템이 같은 Firebase 프로젝트를 공유: 명단·PIN·기기인증은 공용,
+//  활성화 여부는 active(합성) / opticsActive(광학) 로 분리 관리)
+// 모든 마감시각/소유권/토큰한도는 이 규칙이 "서버 측"에서 강제합니다.
+// 클라이언트(브라우저) 코드를 조작해도 이 규칙을 우회할 수 없습니다.
+// 시간 기준: KST(UTC+9, 서머타임 없음), 주 시작 = 월요일 00:00
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------- 시간 헬퍼 ----------------
+    function nowMs() { return request.time.toMillis(); }
+    // 1970-01-01(목) 기준 KST 일수 (양수이므로 정수 나눗셈 = 내림)
+    function kstDay() { return (nowMs() + 32400000) / 86400000; }
+    // 요일: 0=월 1=화 2=수 3=목 4=금 5=토 6=일
+    function kstDow() { return (kstDay() + 3) % 7; }
+    // 현재 주 인덱스 (월요일 시작). 월요일 dayNum ≡ 4 (mod 7) 이므로 +3 보정
+    // (양수 정수 나눗셈 = 내림이므로 항상 정수. 클라이언트 core.js와 동일 공식)
+    function curWeek() { return (kstDay() + 3) / 7; }
+    // 주 w의 월요일 00:00(KST)의 UTC ms
+    function weekStart(w) { return (w * 7 - 3) * 86400000 - 32400000; }
+    // 대상 주 w의 발표시각 = 투표 주(w-1)의 목요일 12:00 KST
+    function announceMs(w) { return weekStart(w - 1) + 3 * 86400000 + 43200000; }
+    // 투표 가능: 대상 주 w 기준, 지금이 그 전 주 월~수인가
+    function inVoteWindow(w) { return curWeek() == w - 1 && kstDow() <= 2; }
+    // 예약 가능: 발표 이후 ~ 대상 주 일요일 24:00
+    function inBookWindow(w) { return nowMs() >= announceMs(w) && nowMs() < weekStart(w + 1); }
+
+    // ---------------- 신원 헬퍼 ----------------
+    function signedIn() { return request.auth != null; }
+    function member(mid) { return get(/databases/$(database)/documents/members/$(mid)).data; }
+    function myMemberId() { return get(/databases/$(database)/documents/uidmap/$(request.auth.uid)).data.memberId; }
+    // 이 기기(익명 uid)가 memberId 본인으로 확인되었는가
+    function isMe(mid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/uidmap/$(request.auth.uid))
+        && myMemberId() == mid
+        && member(mid).uids.hasAny([request.auth.uid])
+        && member(mid).active == true;
+    }
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/uidmap/$(request.auth.uid))
+        && member(myMemberId()).uids.hasAny([request.auth.uid])
+        && member(myMemberId()).isAdmin == true
+        && (member(myMemberId()).active == true
+            || member(myMemberId()).get('opticsActive', false) == true);
+    }
+    // 광학 시스템용: 기기 인증 + opticsActive 활성 멤버 본인
+    function isMeOptics(mid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/uidmap/$(request.auth.uid))
+        && myMemberId() == mid
+        && member(mid).uids.hasAny([request.auth.uid])
+        && member(mid).get('opticsActive', false) == true;
+    }
+    function isOpticsMember() { return isMeOptics(myMemberId()); }
+
+    // ---------------- 유효 슬롯 목록 (11개 슬롯 x 배치 4 = 44칸) ----------------
+    function allCells() {
+      return ['D0-1','D0-2','D0-3','D0-4','D1-1','D1-2','D1-3','D1-4',
+              'D2-1','D2-2','D2-3','D2-4','D3-1','D3-2','D3-3','D3-4',
+              'N0-1','N0-2','N0-3','N0-4','N1-1','N1-2','N1-3','N1-4',
+              'N2-1','N2-2','N2-3','N2-4','N3-1','N3-2','N3-3','N3-4',
+              'W0-1','W0-2','W0-3','W0-4','W1-1','W1-2','W1-3','W1-4',
+              'W2-1','W2-2','W2-3','W2-4'];
+    }
+
+    // ================= 멤버 명단 =================
+    match /members/{mid} {
+      allow read: if signedIn();
+
+      // 생성: 관리자, 또는 최초 설치(부트스트랩: config/app 미존재 시 첫 관리자 1회)
+      allow create: if signedIn() && validMember(request.resource.data) && (
+        isAdmin()
+        || ( !exists(/databases/$(database)/documents/config/app)
+             && request.resource.data.isAdmin == true
+             && request.resource.data.uids == [request.auth.uid] )
+      );
+
+      // 수정: 관리자(전권) 또는 본인 기기 등록(claim)
+      allow update: if isAdmin() || selfClaim();
+      allow delete: if isAdmin();
+
+      function validMember(d) {
+        return d.name is string && d.name.size() > 0 && d.name.size() <= 40
+          && d.uids is list && d.isAdmin is bool && d.active is bool;
+      }
+      // 본인 확인(claim): pinHash 지식 증명(최초엔 등록) + 본인 uid 추가만 허용
+      function selfClaim() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return signedIn()
+          && (before.active == true || before.get('opticsActive', false) == true)
+          && after.diff(before).affectedKeys().hasOnly(['pinHash', 'uids'])
+          // PIN: 미등록이면 이번에 등록, 등록돼 있으면 동일 해시 제시(지식 증명)
+          && after.pinHash is string && after.pinHash.size() == 64
+          && (before.pinHash == null || after.pinHash == before.pinHash)
+          // 기기 목록: 기존 유지 + 추가는 본인 uid만
+          && after.uids.hasAll(before.uids)
+          && after.uids.hasAny([request.auth.uid])
+          && after.uids.removeAll(before.uids).hasOnly([request.auth.uid]);
+      }
+    }
+
+    // ================= 기기 -> 멤버 매핑 =================
+    match /uidmap/{uid} {
+      allow read: if signedIn();
+      // 본인 uid 문서만, 그 멤버의 uids에 본인 uid가 등록된 경우만
+      allow create, update: if signedIn()
+        && uid == request.auth.uid
+        && member(request.resource.data.memberId).uids.hasAny([request.auth.uid]);
+      allow delete: if isAdmin() || (signedIn() && uid == request.auth.uid);
+    }
+
+    // ================= 운영 설정 =================
+    match /config/{doc} {
+      allow read: if signedIn();
+      // 최초 설치 시 1회 생성(문서가 이미 있으면 create는 자동 실패)
+      allow create: if signedIn() && doc == 'app' && validConfig(request.resource.data);
+      allow update: if isAdmin() && validConfig(request.resource.data);
+      allow delete: if false;
+
+      function validConfig(d) {
+        return d.priorityWindowMin is int && d.priorityWindowMin >= 0 && d.priorityWindowMin <= 720
+          && d.bookingDayCapEnabled is bool;
+      }
+    }
+
+    // ================= 투표 (토큰) =================
+    // 문서 ID = "{대상주}_{memberId}" : 1인 1문서 -> 토큰 수를 서버가 강제
+    match /votes/{voteId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validVote();
+      allow delete: if isMe(resource.data.memberId) && inVoteWindow(resource.data.week);
+
+      function validVote() {
+        let d = request.resource.data;
+        return isMe(d.memberId)
+          && d.week is int
+          && voteId == string(d.week) + '_' + d.memberId    // ID 위조 방지
+          && inVoteWindow(d.week)                           // 월 00:00 ~ 수 24:00만
+          && d.cells is map
+          && d.cells.size() <= 4                            // 주당 토큰 4개
+          && d.cells.keys().hasOnly(allCells())             // 유효 슬롯만
+          && d.cells.values().hasOnly([true]);
+      }
+    }
+
+    // ================= 추첨 결과 =================
+    // 결정론적(시드=투표 해시)이므로 누가 생성해도 동일. 생성 후 수정 불가.
+    // 모든 클라이언트가 재계산 검증하며, 불일치 시 관리자만 삭제 후 재생성.
+    match /results/{weekStr} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validResults();
+      allow update: if false;                               // 불변
+      allow delete: if isAdmin();
+
+      function validResults() {
+        let d = request.resource.data;
+        return d.week is int
+          && weekStr == string(d.week)
+          && nowMs() >= announceMs(d.week)                  // 목 12:00 이전 생성 불가
+          && nowMs() < weekStart(d.week + 1)
+          && d.seed is string && d.seed.size() == 64
+          && d.assignments is map
+          && d.priorityMembers is list
+          && d.votesJson is string;
+      }
+    }
+
+    // ================= 추첨 확정 취소 =================
+    // 본인이 추첨으로 배정받은 칸을 스스로 포기하는 기록.
+    // 결과 문서(results)는 불변으로 유지하고(공정성 검증 보존),
+    // 취소 문서가 존재하는 칸은 '빈 슬롯'으로 간주되어 실시간 예약이 가능해짐.
+    // 취소는 되돌릴 수 없음(권리 상실). 문서 ID = "{대상주}_{cellKey}"
+    match /cancellations/{cancelId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validCancel();
+      allow update: if false;                               // 취소는 최종적
+      allow delete: if isAdmin();
+
+      function validCancel() {
+        let d = request.resource.data;
+        let res = get(/databases/$(database)/documents/results/$(string(d.week))).data;
+        return d.week is int
+          && d.cellKey in allCells()
+          && cancelId == string(d.week) + '_' + d.cellKey   // ID 위조 방지
+          && inBookWindow(d.week)                           // 발표 후 ~ 대상 주 일요일
+          && d.cellKey in res.assignments
+          && res.assignments[d.cellKey] == d.memberId       // 취소 기록의 명의 = 확정자 본인
+          && (isMe(d.memberId) || isAdmin());               // 본인 또는 관리자(운영 조치)만 실행 가능
+      }
+    }
+
+    // ================= 실시간(선착순) 예약 =================
+    // 문서 ID = "{대상주}_{cellKey}" : 슬롯당 1문서 -> 동시 클릭 시 정확히 1명만
+    // 성공(이미 있으면 create가 원자적으로 거부됨). 이것이 선착순의 서버측 보장.
+    match /bookings/{bookId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validBooking();
+      allow update: if false;
+      allow delete: if isAdmin()
+        || (isMe(resource.data.memberId) && nowMs() < weekStart(resource.data.week + 1));
+
+      function validBooking() {
+        let d = request.resource.data;
+        let res = get(/databases/$(database)/documents/results/$(string(d.week))).data;
+        return d.week is int
+          && d.cellKey in allCells()
+          && bookId == string(d.week) + '_' + d.cellKey     // ID 위조 방지
+          && inBookWindow(d.week)                           // 목 12:00 ~ 대상 주 일요일
+          // 추첨 확정 칸 침범 금지 (단, 확정자가 취소한 칸은 예약 가능)
+          && ( !(d.cellKey in res.assignments)
+               || exists(/databases/$(database)/documents/cancellations/$(string(d.week) + '_' + d.cellKey)) )
+          && (
+            // 본인 예약 (우선예약 창 규칙 적용)
+            (isMe(d.memberId) && priorityOk(d.week, d.memberId, res))
+            // 또는 관리자의 대리 예약 (활성 멤버 명의로만, 우선창 제한 없음 - 운영 조치)
+            || (isAdmin() && member(d.memberId).active == true)
+          );
+      }
+      // 우선예약 창: 발표 후 N분간은 Day 탈락자만 예약 가능
+      function priorityOk(w, mid, res) {
+        let cfg = get(/databases/$(database)/documents/config/app).data;
+        return nowMs() >= announceMs(w) + cfg.get('priorityWindowMin', 60) * 60000
+          || res.priorityMembers.size() == 0
+          || mid in res.priorityMembers;
+      }
+    }
+
+    // #####################################################################
+    // ############ Weekly Optics Scheduler (광학방) 전용 규칙 ############
+    // #####################################################################
+
+    // ===== 광학 순위 투표: 문서ID = "{대상주}_{memberId}" =====
+    // ranks = {r1: 요일(0=월~6=일), r2?, r3?} — 순위는 1부터 연속, 요일 중복 금지
+    match /opticsVotes/{voteId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validOptVote();
+      allow delete: if isMeOptics(resource.data.memberId) && inVoteWindow(resource.data.week);
+
+      // 항목 형식: {d: 요일(0~6), q: [1~4 시간대 목록]}
+      //   Q1 새벽 00-06 / Q2 오전 06-12 / Q3 오후 12-18 / Q4 저녁 18-24
+      // 구버전 형식(요일 숫자 하나 = 종일)도 계속 허용한다. 브라우저에 옛 HTML 이 캐시돼
+      // 있거나 규칙/HTML 배포 시점이 어긋나도 투표가 막히지 않도록 하기 위함
+      // (2026-08 실사례: 신형만 허용했더니 이번 주에 이미 투표해 둔 사람이 수정·저장 시
+      //  손대지 않은 순위가 숫자로 되전송되어 permission denied).
+      function okRank(r) {
+        return (r is int && r >= 0 && r <= 6)
+          || (r is map
+              && r.keys().hasOnly(['d', 'q'])
+              && r.d is int && r.d >= 0 && r.d <= 6
+              && r.q is list && r.q.size() >= 1 && r.q.size() <= 4
+              && r.q.hasOnly([1, 2, 3, 4]));
+      }
+      function rankDay(r) { return r is int ? r : r.d; }
+      function validOptVote() {
+        let d = request.resource.data;
+        let rk = d.ranks;
+        return isMeOptics(d.memberId)
+          && d.week is int
+          && voteId == string(d.week) + '_' + d.memberId
+          && inVoteWindow(d.week)                              // 월 00:00 ~ 수 24:00
+          && rk is map
+          && rk.keys().hasOnly(['r1', 'r2', 'r3'])
+          && (!('r1' in rk) || okRank(rk.r1))
+          && (!('r2' in rk) || ('r1' in rk && okRank(rk.r2) && rankDay(rk.r2) != rankDay(rk.r1)))
+          && (!('r3' in rk) || ('r2' in rk && okRank(rk.r3) && rankDay(rk.r3) != rankDay(rk.r1) && rankDay(rk.r3) != rankDay(rk.r2)));
+      }
+    }
+
+    // ===== 광학 추첨 결과: 결정론적·불변 (합성과 동일 체계) =====
+    match /opticsResults/{weekStr} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validOptResults();
+      allow update: if false;
+      allow delete: if isAdmin();
+
+      function validOptResults() {
+        let d = request.resource.data;
+        return d.week is int
+          && weekStr == string(d.week)
+          && nowMs() >= announceMs(d.week)
+          && nowMs() < weekStart(d.week + 1)
+          && d.seed is string && d.seed.size() == 64
+          && d.dayAssign is map
+          && d.quarterAssign is map                           // 시간대(분기) 단위 실제 소유
+          && d.votesJson is string;
+      }
+    }
+
+    // ===== 광학 30분 스케줄 (발표 후 자유 조율): 문서ID = "{주}_{요일}" =====
+    // slots = {슬롯idx(0~47 문자열): memberId | ""(비움)}; 미기재 슬롯 = 요일 당첨자
+    // 광학 활성 멤버 전원이 발표 직후 ~ 해당 주 일요일까지 자유 수정 가능 (설계 의도)
+    match /opticsSchedule/{schedId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validOptSched();
+      allow delete: if isAdmin();
+
+      function validOptSched() {
+        let d = request.resource.data;
+        return (isOpticsMember() || isAdmin())
+          && d.week is int
+          && d.day is int && d.day >= 0 && d.day <= 6
+          && schedId == string(d.week) + '_' + string(d.day)
+          && inBookWindow(d.week)                              // 목 12:00 발표 후 ~ 해당 주 일요일
+          && d.slots is map
+          && d.slots.size() <= 48;
+      }
+    }
+
+    // ===== 광학 관리자 전용 블록 (Repair / 외부인 방문측정) =====
+    // 문서ID = "{주}_{요일}" ; slots = {슬롯idx(0~47 문자열): "!kind|메모" | ""(해제)}
+    // 관리자만 쓰기 가능하며, 투표 기간·발표 전에도 등록 가능(inBookWindow 제한 없음).
+    // 이 블록은 클라이언트/GAS의 optEffectiveSchedule에서 '최상위 레이어'로 적용되어
+    // 요일 당첨자·자유 조율 결과를 덮는다 → 당첨자는 블록 외 시간만 사용.
+    // 대상 주는 이번 주(curWeek) ~ 다음 주(curWeek+1)로 제한 (UI의 주 전환 범위와 동일).
+    match /opticsAdminBlocks/{blockId} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() && validOptAdminBlock();
+      allow delete: if isAdmin();
+
+      function validOptAdminBlock() {
+        let d = request.resource.data;
+        return d.week is int
+          && d.week >= curWeek() && d.week <= curWeek() + 1
+          && d.day is int && d.day >= 0 && d.day <= 6
+          && blockId == string(d.week) + '_' + string(d.day)   // ID 위조 방지
+          && d.slots is map
+          && d.slots.size() <= 48;
+      }
+    }
+
+    // ===== 광학 일정 조율 채팅 (연속 대화방) =====
+    match /opticsChat/{msgId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && isMeOptics(request.resource.data.memberId)
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ===== 하드웨어 현황판 (단일 문서) =====
+    match /opticsHardware/{doc} {
+      allow read: if signedIn();
+      allow create, update: if (isOpticsMember() || isAdmin()) && doc == 'current';
+      allow delete: if false;
+    }
+
+    // ===== 하드웨어 변경 로그 (불변 이력, GAS 봇이 1분 내 Slack 공지) =====
+    match /opticsHardwareLog/{logId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && isMeOptics(request.resource.data.memberId)
+        && request.resource.data.section is string
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() >= 1
+        && request.resource.data.summary.size() <= 1000;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ===== 광학 Remark — 특이사항 기록 (단일 문서, 최근 10개만 보관·밀어내기) =====
+    match /opticsRemarks/{doc} {
+      allow read: if signedIn();
+      allow create, update: if (isOpticsMember() || isAdmin())
+        && doc == 'log'
+        && request.resource.data.entries is list
+        && request.resource.data.entries.size() <= 10;
+      allow delete: if false;
+    }
+
+    // ================= 캘린더 봇 변경 감지 리비전 =================
+    // 문서 'wss'(합성) / 'wos'(광학) 각 1개. 캘린더에 영향을 주는 쓰기마다 클라이언트가
+    // rev 를 1 올리고, GAS 봇은 매분 이 1건만 읽어 값이 그대로면 전체 재조회를 건너뛴다.
+    // (Firestore 무료 플랜 일일 읽기 5만 건 보호 — 과거 매분 전량 재조회로 초과 사고 이력)
+    // 조작해봐야 봇이 불필요한 재동기화를 한 번 더 하는 것뿐이라 로그인 사용자면 쓰기 허용.
+    // 봇은 10분마다 rev 와 무관하게 한 번씩 전체 재동기화하여 누락을 자가 치유한다.
+    match /syncMeta/{app} {
+      allow read: if signedIn();
+      // <app>      : 클라이언트가 올리는 변경 리비전 (봇의 변경 감지용)
+      // <app>_bot  : 봇이 남기는 하트비트. 이 값이 낡으면 웹앱이 경고 배너를 띄운다.
+      //              봇도 익명 인증으로 쓰므로 signedIn() 범위를 벗어나지 않는다.
+      allow create, update: if signedIn() && (
+           ((app == 'wss' || app == 'wos')
+             && request.resource.data.keys().hasOnly(['rev'])
+             && request.resource.data.rev is int)
+        || ((app == 'wss_bot' || app == 'wos_bot')
+             && request.resource.data.keys().hasOnly(['okMs'])
+             && request.resource.data.okMs is int)
+      );
+      allow delete: if false;
+    }
+
+    // 그 외 모든 경로 접근 금지
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

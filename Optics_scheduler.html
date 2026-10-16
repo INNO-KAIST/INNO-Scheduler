@@ -1,0 +1,3085 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Optics Scheduler</title>
+<!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지)
+     그라디언트 id 는 파일마다 고유해야 함 — 여러 SVG 를 한 문서에 인라인하면 url(#id) 가 뒤섞임 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22isch%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23264466%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%231a2e42%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23isch%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Crect x=%2214%22 y=%2218%22 width=%2236%22 height=%2232%22 rx=%226%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M14 27.5h36%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22/%3E%3Cpath d=%22M24 12.5v9M40 12.5v9%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Crect x=%2220.5%22 y=%2233%22 width=%228%22 height=%228%22 rx=%222%22 fill=%22%23a9c7e5%22 opacity=%22.45%22/%3E%3Crect x=%2234%22 y=%2233%22 width=%229.5%22 height=%229.5%22 rx=%222.4%22 fill=%22%23F4F6F1%22/%3E%3C/svg%3E">
+<meta name="theme-color" content="#1a2e42">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<style>
+  /* INNO suite tokens — 공통 틀 + Scheduler 강조색(steel blue). 옛 변수명은 별칭 */
+  :root{color-scheme:light;--page:#f5f6f3;--surface:#ffffff;--surface-2:#eef1ed;--surface-3:#e6eae5;--ink:#243433;--ink-2:#4a5a56;--muted:#62706b;--faint:#8b978f;--border:#dde3dc;--border-strong:#c9d3c8;--grid:#e4e8e2;--ok:#2a7141;--ok-soft:#e3f0e5;--warn:#8a5f0a;--warn-soft:#f7ecd3;--risk:#ab3f35;--risk-soft:#f6e1dd;--info:#2f5f9e;--info-soft:#e2eaf5;--scrim:rgba(20,32,30,.42);--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06);--shadow-lg:0 24px 70px rgba(24,40,37,.18);--accent:#2b5f8e;--accent-strong:#214b71;--accent-soft:#e3ebf4;--focus:#5b88b4;--chrome:#1a2e42;--chrome-mark:#a9c7e5;--on-accent:#ffffff;--toast-bg:#1a2e42;--toast-ink:#f1f4ef;--chrome-ink:#f1f4ef;--chrome-ink-2:rgba(241,244,239,.72);--chrome-line:rgba(255,255,255,.09);--chrome-soft:rgba(255,255,255,.08);--chrome-soft-2:rgba(255,255,255,.14);--subtle:#f9faf7;--violet:#6a4aa8;--violet-soft:#efe9f8;--font:"DM Sans","Noto Sans KR",system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;--mono:ui-monospace,"Cascadia Mono",Consolas,"D2Coding",monospace;--bg:var(--page);--card:var(--surface);--line:var(--border);--text:var(--ink);--sub:var(--muted);--green:var(--ok);--green-soft:var(--ok-soft);--amber:var(--warn);--amber-soft:var(--warn-soft);--red:var(--risk);--red-soft:var(--risk-soft);--radius:10px;--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06)}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.55; }
+  button { font-family: inherit; cursor: pointer; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 16px 14px 80px; }
+
+  /* ---- header ---- */
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .logo { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+  .logo small { display:block; font-size: 12px; font-weight: 500; color: var(--sub); }
+  .head-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .userchip { background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+              padding: 6px 14px; font-weight: 600; font-size: 14px; box-shadow: var(--shadow);
+              display: inline-flex; gap: 8px; align-items: center; }
+  .userchip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .btn { border: 1px solid var(--line); background: var(--card); color: var(--text);
+         border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 600;
+         transition: .15s; box-shadow: var(--shadow); }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { filter: brightness(1.08); color: var(--on-accent); }
+  .btn.danger { color: var(--red); }
+  .btn.danger:hover { border-color: var(--red); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.sm { padding: 4px 10px; font-size: 12.5px; border-radius: 8px; box-shadow: none; }
+
+  /* ---- phase banner ---- */
+  .phasebar { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+              box-shadow: var(--shadow); padding: 14px 18px; margin-bottom: 14px; }
+  .phasebar .toprow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+  .badge { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+  .b-accent { background: var(--accent-soft); color: var(--accent); }
+  .b-green  { background: var(--green-soft);  color: var(--green); }
+  .b-amber  { background: var(--amber-soft);  color: var(--amber); }
+  .b-red    { background: var(--red-soft);    color: var(--red); }
+  .b-violet { background: var(--violet-soft); color: var(--violet); }
+  .b-gray   { background: var(--surface-2); color: var(--sub); }
+  .countdown { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+  .steps { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .step { flex: 1 1 140px; border-radius: 9px; padding: 8px 10px; border: 1px solid var(--line);
+          font-size: 12.5px; color: var(--sub); background: var(--subtle); }
+  .step b { display: block; font-size: 13px; color: var(--text); }
+  .step.on { border-color: var(--accent); background: var(--accent-soft); }
+  .step.on b { color: var(--accent); }
+  .step.done { opacity: .55; }
+
+  /* ---- tabs ---- */
+  nav.tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
+  nav.tabs button { white-space: nowrap; border: none; background: transparent; padding: 9px 15px;
+                    border-radius: 10px; font-size: 14.5px; font-weight: 600; color: var(--sub); }
+  nav.tabs button.on { background: var(--text); color: var(--on-accent); }
+  nav.tabs button:not(.on):hover { background: var(--surface-2); color: var(--text); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+          box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 16.5px; margin-bottom: 10px; letter-spacing: -.2px; }
+  .card h3 { font-size: 14.5px; margin: 14px 0 6px; }
+  .muted { color: var(--sub); font-size: 13px; }
+  .note { background: var(--subtle); border: 1px dashed var(--line); border-radius: 9px;
+          padding: 10px 12px; font-size: 13px; color: var(--sub); margin: 8px 0; }
+
+  /* ---- schedule grid ---- */
+  .gridwrap { overflow-x: auto; }
+  table.sched { border-collapse: separate; border-spacing: 4px; width: 100%; min-width: 640px; }
+  table.sched th { font-size: 12px; color: var(--sub); font-weight: 600; padding: 4px 6px; text-align: center; }
+  table.sched th.rowh { text-align: left; min-width: 130px; }
+  table.sched td.rowh { font-size: 12.5px; font-weight: 600; padding: 4px 8px; white-space: nowrap; }
+  table.sched td.rowh small { display: block; color: var(--sub); font-weight: 500; font-size: 11px; }
+  .cell { height: 46px; min-width: 92px; border-radius: 9px; border: 1.5px solid var(--line);
+          background: var(--subtle); text-align: center; vertical-align: middle; font-size: 12.5px;
+          padding: 2px 4px; position: relative; transition: .12s; }
+  .cell.clickable { cursor: pointer; }
+  .cell.clickable:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .cell.mine    { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .cell.lottery { background: var(--accent-soft); border-color: color-mix(in srgb,var(--accent) 35%,var(--surface)); color: var(--accent-strong); font-weight: 700; }
+  .cell.booked  { background: var(--green-soft); border-color: color-mix(in srgb,var(--ok) 35%,var(--surface)); color: var(--ok); font-weight: 700; }
+  .cell.minewin { outline: 2px solid var(--accent); }
+  .cell.empty-book { border-style: dashed; color: var(--sub); }
+  .cell.disabled { opacity: .5; }
+  .cell .cnt { position: absolute; top: -7px; right: -5px; background: var(--amber); color: var(--on-accent);
+               border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 1px 6px; }
+  .cell .tag { display:block; font-size: 10.5px; font-weight: 500; opacity: .75; }
+  .periodrow td { padding-top: 10px; font-size: 12px; font-weight: 800; color: var(--sub);
+                  text-transform: uppercase; letter-spacing: .6px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--sub); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .sw { width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid var(--line); display: inline-block; }
+
+  /* ---- token chips ---- */
+  .tokens { display: flex; gap: 6px; align-items: center; }
+  .tok { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent);
+         display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--accent); }
+  .tok.used { border-color: var(--line); color: var(--faint); background: var(--surface-2); }
+
+  /* ---- lists / tables ---- */
+  table.list { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.list th { text-align: left; color: var(--sub); font-size: 12px; font-weight: 600;
+                  border-bottom: 1px solid var(--line); padding: 6px 8px; }
+  table.list td { border-bottom: 1px solid var(--grid); padding: 8px; }
+  table.list tr:last-child td { border-bottom: none; }
+
+  /* ---- rules tab ---- */
+  .rules h3 { margin: 18px 0 8px; font-size: 15px; color: var(--accent); }
+  .rules ul { margin: 4px 0 10px 20px; }
+  .rules li { margin: 4px 0; font-size: 13.8px; }
+  .rules li li { font-size: 13.2px; color: var(--ink-2); }
+
+  /* ---- modal ---- */
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: flex;
+              align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
+           box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .modal h2 { font-size: 17px; margin-bottom: 12px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--sub); margin-bottom: 4px; }
+  .field input, .field select { width: 100%; border: 1.5px solid var(--line); border-radius: 9px;
+                                padding: 9px 12px; font-size: 15px; font-family: inherit; background: var(--surface); }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+
+  /* ---- toast ---- */
+  /* pointer-events:none — 토스트가 떠 있는 동안 그 아래 스케줄 칸 클릭이 먹히지 않던 문제 방지 */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99;
+           display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  .toastmsg { background: var(--ink); color: var(--on-accent); border-radius: 10px; padding: 10px 18px;
+              font-size: 13.5px; box-shadow: 0 8px 30px rgba(0,0,0,.3); animation: pop .2s; max-width: 90vw; }
+  .toastmsg.err { background: var(--red); }
+  .toastmsg.okk { background: var(--green); }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px);} }
+
+  .demo-banner { background: var(--amber-soft); border: 1px solid color-mix(in srgb,var(--warn) 30%,var(--surface)); color: var(--amber);
+                 border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
+  .bot-banner { background: var(--risk-soft); border: 1px solid color-mix(in srgb,var(--risk) 35%,var(--surface)); color: var(--risk);
+                border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; line-height: 1.55; }
+  .bot-banner b { color: var(--risk); }
+  .verify-ok { color: var(--green); font-weight: 700; }
+  .verify-bad { color: var(--red); font-weight: 700; }
+  .prio-banner { background: var(--violet-soft); border: 1px solid color-mix(in srgb,var(--violet) 30%,var(--surface)); color: var(--violet);
+                 border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .stat { text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background:var(--subtle); }
+  .stat b { display: block; font-size: 22px; color: var(--accent); }
+  .stat span { font-size: 12px; color: var(--sub); }
+  .flexrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  code.k { background:var(--surface-2); border-radius:5px; padding:1px 6px; font-size:12px; }
+
+  /* ---- 주간 캘린더 (30분 x 7일) ---- */
+  .calwrap { overflow-x: auto; }
+  .cal { display: grid; grid-template-columns: 46px repeat(7, minmax(96px, 1fr)); gap: 0;
+         min-width: 760px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+         user-select: none; -webkit-user-select: none; background: var(--surface); }
+  .cal.mini { min-width: 0; width: 100%; grid-template-columns: 36px repeat(7, minmax(0, 1fr)); font-size: 10px; }
+  .cal.mini .cell { min-width: 0; } /* 컨테이너 폭에 딱 맞춤 — 가로 스크롤 방지 */
+  .cal .hd { background: var(--surface-2); border-bottom: 1.5px solid var(--line); padding: 6px 2px;
+             text-align: center; font-size: 12px; font-weight: 700; position: sticky; top: 0; }
+  .cal.mini .hd { font-size: 10.5px; padding: 4px 1px; }
+  .cal .hd small { display: block; font-weight: 500; color: var(--sub); font-size: 10px; }
+  .cal .tl { font-size: 10px; color: var(--sub); text-align: right; padding-right: 4px;
+             border-top: 1px solid var(--surface-2); background: var(--subtle); line-height: 1; padding-top: 2px; }
+  .cal .cell { height: 13px; border-top: 1px solid var(--grid); border-left: 1px solid var(--grid);
+               position: relative; cursor: default; }
+  .cal.mini .cell { height: 11.8px; } /* 조율 탭: 채팅창(620px) 높이에 맞춰 세로 확장 */
+  .cal .cell.hour { border-top-color: var(--border-strong); }
+  .cal .cell.editable { cursor: pointer; }
+  .cal .cell.sel { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+  .cal .cell .lbl { position: absolute; top: 0; left: 3px; right: 2px; font-size: 10px; font-weight: 700;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 1; pointer-events: none; }
+  .cal.mini .cell .lbl { font-size: 9.5px; left: 2px; }
+  /* 관리자 지정 일정(Repair·외부인 방문측정) — 사선 빗금으로 '예약 불가' 를 시각적으로 구분 */
+  .cal .cell.admblock { background-image: repeating-linear-gradient(45deg,
+                          rgba(0,0,0,.055) 0 4px, rgba(0,0,0,0) 4px 8px); cursor: not-allowed; }
+  .cal[data-admedit="1"] .cell.admblock { cursor: pointer; }
+  /* ---- 모바일 제스처 분리 (터치) ----
+   * 편집 가능한 표의 '요일 칸' 위에서는 세로 스와이프를 브라우저 스크롤로 넘기지 않고
+   * 범위 선택 드래그로만 쓴다. 가로 pan 은 남겨야 min-width:760px 인 주간 표를 좌우로 훑을 수 있음.
+   * 좌측 시간 눈금(.tl)·헤더(.hd)·표 바깥은 그대로 화면 스크롤 영역으로 남는다. */
+  .cal[data-editable="1"] .cell { touch-action: pan-x; -webkit-touch-callout: none; }
+  /* 미니 표(실시간 예약 탭)는 컨테이너 폭에 맞아 가로 스크롤이 없으므로 모든 방향 차단 */
+  .cal.mini[data-editable="1"] .cell { touch-action: none; }
+  .cal .tl, .cal .hd { touch-action: auto; }   /* 스크롤 손잡이 역할 명시 */
+  /* 드래그 중 선택 범위 표시 — 손가락에 칸이 가려지는 모바일에서 필수 피드백 */
+  .dragtip { position: fixed; z-index: 70; background: var(--ink); color: var(--on-accent); border-radius: 9px;
+             padding: 6px 11px; font-size: 12.5px; font-weight: 700; pointer-events: none;
+             box-shadow: 0 6px 22px rgba(0,0,0,.3); white-space: nowrap; }
+  /* 희망순위 오버레이 칩 */
+  .rankchips { min-height: 0; display: flex; flex-direction: column; gap: 2px; padding: 3px 2px;
+               background: var(--subtle); border-top: 1px dashed var(--line); }
+  .rankchip { font-size: 10px; border-radius: 6px; padding: 1px 5px; opacity: .62;
+              border: 1px solid; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc1 { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+  .rc2 { background: var(--green-soft); border-color: var(--green); color: var(--ok); }
+  .rc3 { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  /* 셀 편집 팝업 */
+  .cellpop { position: fixed; z-index: 60; background: var(--surface); border: 1px solid var(--line);
+             border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.22); padding: 12px; width: 230px; }
+  .cellpop h4 { font-size: 13px; margin-bottom: 8px; }
+  /* ---- 투표 요일 카드 ---- */
+  .daycards { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
+  .daycard { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 10px; text-align: center;
+             cursor: pointer; background: var(--subtle); transition: .12s; position: relative; }
+  .daycard:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .daycard b { font-size: 16px; }
+  .daycard .date { color: var(--sub); font-size: 11.5px; }
+  .daycard .agg { margin-top: 6px; font-size: 11px; color: var(--sub); min-height: 16px; }
+  .daycard .myrank { position: absolute; top: -9px; right: -6px; width: 26px; height: 26px; border-radius: 50%;
+                     background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: 13px;
+                     display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
+  .daycard.picked { border-color: var(--accent); background: var(--accent-soft); }
+  .daycard.fullblocked { border-color: var(--red); background: var(--red-soft); }
+  /* ---- 투표 요일 카드의 시간대(분기) 칩 ---- */
+  .daycard { padding-bottom: 10px; }
+  .dayhit { cursor: pointer; border-radius: 8px; padding: 2px 0; }
+  .dayhit:hover { background: var(--accent-soft); }
+  /* 2×4 가 아니라 2×2 — 요일 카드 폭(약 120px)에서 '새벽' 같은 라벨이 세로로 쪼개지지 않도록 */
+  .qchips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-top: 8px; }
+  .qchip { position: relative; border: 1.5px solid var(--line); background: var(--surface); border-radius: 8px;
+           padding: 5px 4px; font-family: inherit; font-size: 11px; line-height: 1.2; color: var(--sub);
+           display: flex; flex-direction: column; align-items: center; gap: 0; transition: .12s;
+           white-space: nowrap; }
+  .qchip:hover { border-color: var(--accent); color: var(--accent); }
+  .qchip .qk { font-weight: 700; font-size: 11.5px; }
+  .qchip .qr { font-size: 9.5px; opacity: .8; }
+  .qchip .qn { position: absolute; top: -6px; right: -4px; background: var(--amber); color: var(--on-accent);
+               border-radius: 999px; font-size: 9.5px; font-weight: 700; padding: 0 5px; }
+  .qchip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .qchip.on .qr { opacity: .85; }
+  .qsum { margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--accent); }
+  .daycard.picked .qchip:not(.on) { background: var(--subtle); }
+  @media (max-width: 560px) {
+    .qchip { padding: 7px 2px; font-size: 11.5px; }   /* 터치 타깃 확보 */
+    .qchip .qr { font-size: 9px; }
+  }
+  /* ---- 조율 채팅 ---- */
+  .coord { display: grid; grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .coord { grid-template-columns: 1fr; } }
+  .chatbox { display: flex; flex-direction: column; height: 620px; border: 1px solid var(--line);
+             border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .chatlog { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 85%; }
+  .msg .meta { font-size: 10.5px; color: var(--sub); margin-bottom: 2px; }
+  .msg .bubble { background: var(--surface-2); border-radius: 12px; padding: 7px 11px; font-size: 13.5px;
+                 white-space: pre-wrap; word-break: break-word; }
+  .msg.mine { align-self: flex-end; text-align: right; }
+  .msg.mine .bubble { background: var(--accent); color: var(--on-accent); }
+  .chatin { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); background: var(--subtle); }
+  .chatin input { flex: 1; border: 1.5px solid var(--line); border-radius: 9px; padding: 9px 12px;
+                  font-size: 14px; font-family: inherit; }
+  .chatin input:focus { outline: none; border-color: var(--accent); }
+  /* ---- Hardware Log ---- */
+  .hw h3 { display: flex; align-items: center; gap: 8px; }
+  .hw table.list input[type="text"] { width: 100%; border: 1.5px solid var(--line); border-radius: 7px;
+                                       padding: 4px 8px; font-size: 13px; font-family: inherit; }
+  .hw .meta { font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .hwlog { max-height: 300px; overflow-y: auto; }
+  .weekchips { display: inline-flex; gap: 6px; }
+  .weekchips button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px;
+                      padding: 5px 14px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  .weekchips button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  /* =====================================================================
+   * 모바일 최적화 (폰 세로 기준). 아래 규칙이 없으면 관리자/명단/하드웨어 표가
+   * 뷰포트를 밀어내 페이지 전체가 가로로 잘리는 문제가 발생한다.
+   * ===================================================================== */
+  /* 표·캘린더의 좌우 스크롤 가능 여부를 가장자리 그림자로 알림 (background-attachment: local 트릭) */
+  .gridwrap, .calwrap, .hwlog {
+    background-image: linear-gradient(to right, var(--card) 30%, rgba(255,255,255,0)),
+                      linear-gradient(to left,  var(--card) 30%, rgba(255,255,255,0)),
+                      radial-gradient(farthest-side at 0 50%, rgba(20,30,60,.16), rgba(0,0,0,0)),
+                      radial-gradient(farthest-side at 100% 50%, rgba(20,30,60,.16), rgba(0,0,0,0));
+    background-position: 0 0, 100% 0, 0 0, 100% 0;
+    background-repeat: no-repeat;
+    background-size: 32px 100%, 32px 100%, 13px 100%, 13px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 12px 11px 72px; }
+    .card { padding: 14px 13px; }
+    .logo { font-size: 18px; }
+    .phasebar { padding: 12px 13px; }
+
+    /* iOS 사파리는 16px 미만 입력에 포커스하면 화면을 확대해버린다 → 확대 방지 */
+    input, select, textarea { font-size: 16px !important; }
+
+    /* 터치 타깃 최소 크기 확보 (WCAG 권장 44px 에 근접) */
+    .btn { padding: 10px 14px; }
+    .btn.sm { padding: 8px 12px; font-size: 13px; }
+
+    /* ---- 표를 카드형으로 전환 : 가로 잘림의 근본 해결 ----
+     * 헤더행은 숨기고, 각 셀 앞에 원래 열 이름(data-label, 렌더 후 JS가 자동 부착)을 붙인다. */
+    table.list { display: block; font-size: 13.5px; }
+    table.list tbody { display: block; }
+    table.list tr { display: block; border: 1px solid var(--line); border-radius: 11px;
+                    background: var(--subtle); padding: 9px 11px; margin-bottom: 8px; }
+    table.list tr:first-child { display: none; }          /* th 헤더행 */
+    table.list td { display: flex; align-items: baseline; gap: 10px;
+                    border: none; padding: 3px 0; word-break: break-word; }
+    table.list td[data-label]::before {
+      content: attr(data-label); flex: 0 0 88px; color: var(--sub);
+      font-size: 11.5px; font-weight: 700; line-height: 1.5;
+      word-break: keep-all;                    /* 한글이 단어 중간에서 끊기지 않게 */
+    }
+    table.list td > * { min-width: 0; }
+    /* 데스크톱 표에서 '내용폭에 맞춰 줄이기' 용도로 쓰는 인라인 width:1% 가
+     * 카드 모드에서는 셀을 3px 로 찌그러뜨려 값이 한 글자씩 세로로 쪼개진다
+     * (2026-10 특이사항 표 실사례). 인라인 스타일은 미디어쿼리를 이기므로
+     * !important 로 되돌려야 한다. 표를 새로 추가해도 자동 적용된다. */
+    table.list td, table.list th { width: auto !important; }
+    /* 셀 값 전체를 하나의 열로 정렬. white-space:normal 이 반드시 필요하다 —
+     * 일부 td 는 데스크톱 표 정렬용으로 nowrap 을 갖고 있는데, 값이 래퍼 안의
+     * 인라인 콘텐츠가 되면 그 nowrap 때문에 버튼들이 줄바꿈되지 않아 화면을 밀어낸다. */
+    table.list td, table.list td .cellval { white-space: normal; }
+    table.list td > .cellval { flex: 1 1 0; min-width: 0; display: block; }
+    /* 버튼이 여러 개 들어가는 '조치' 열은 줄바꿈 허용 */
+    table.list td { flex-wrap: wrap; }
+    table.list tr:last-child td { border-bottom: none; }
+  }
+
+  @media (max-width: 860px) {
+    .chatbox { height: 420px; }                            /* 폰에서 채팅이 화면을 다 먹지 않도록 */
+    .cal.mini .cell { height: 15px; }                      /* 미니 표 터치 정확도 확보 */
+  }
+  @media (max-width: 560px) {
+    .cal { min-width: 620px; grid-template-columns: 38px repeat(7, minmax(80px, 1fr)); }
+    .cal .hd { font-size: 11px; }
+    .cal .hd small { font-size: 9px; }
+    .daycards { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
+    .daycard { padding: 10px 6px; }
+    .daycard b { font-size: 15px; }
+  }
+
+/* ════════ INNO suite skin — Workspace 결 (2026-09-29) ════════
+   공통 틀은 RefAtlas·Ledger·NanoLab 과 같고, 강조색만 Scheduler 고유(steel blue). 라이트 전용. */
+body{font-family:var(--font);font-synthesis:none;-webkit-font-smoothing:antialiased;background:var(--page);color:var(--ink)}
+::selection{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+:where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.field input:focus,.field select:focus,.chatin input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ── 상단 크롬 띠 ── */
+header{background:var(--chrome);color:var(--chrome-ink);box-shadow:0 0 0 100vmax var(--chrome);clip-path:inset(0 -100vmax);margin:-16px 0 18px;padding:16px 0 14px}
+.logo{color:var(--chrome-ink);font-weight:700;letter-spacing:-.01em}
+.logo small{color:var(--chrome-ink-2);letter-spacing:.02em}
+header .btn{background:var(--chrome-soft);border-color:var(--chrome-line);color:var(--chrome-ink);box-shadow:none}
+header .btn:hover{background:var(--chrome-soft-2);border-color:var(--chrome-line);color:var(--chrome-ink)}
+header .btn.primary{background:var(--chrome-mark);border-color:var(--chrome-mark);color:var(--chrome)}
+header .btn.primary:hover{filter:none;background:#c3d8ee;color:var(--chrome)}
+header .userchip{background:var(--chrome-soft);border-color:var(--chrome-line);color:var(--chrome-ink);box-shadow:none}
+header .userchip .dot{background:#7fd49a}
+
+/* ── 버튼 ── */
+.btn{border-color:var(--border-strong);border-radius:8px;box-shadow:none;min-height:36px;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+.btn.primary{color:var(--on-accent)}
+.btn.primary:hover{filter:none;background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent)}
+.btn.danger:hover{background:var(--risk-soft)}
+.btn.sm{min-height:30px}
+
+/* ── 국면 배너·단계 ── */
+.phasebar,.card{border-color:var(--border);border-radius:10px}
+.badge{font-weight:600}
+.b-gray{background:var(--surface-2);color:var(--ink-2)}
+.step{border-color:var(--border);color:var(--muted)}
+.step.on{border-color:var(--accent);background:var(--accent-soft)}
+.step.done{opacity:.6}
+.demo-banner,.prio-banner{color:var(--ink)}
+.demo-banner b{color:var(--warn)}
+.prio-banner b{color:var(--violet)}
+
+/* ── 탭: 선택 = 강조색 채움 ── */
+nav.tabs{gap:4px}
+nav.tabs button{color:var(--ink-2);font-weight:500;border-radius:8px;min-height:38px}
+nav.tabs button.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+nav.tabs button:not(.on):hover{background:var(--surface-2);color:var(--ink)}
+
+/* ── 카드·표 ── */
+.card h2{font-weight:600;letter-spacing:-.01em}
+.card h3{font-weight:600}
+.rules h3{color:var(--accent)}
+table.list th{color:var(--muted);font-weight:600}
+.note{border-color:var(--border-strong)}
+.periodrow td{color:var(--muted);font-weight:700;letter-spacing:.1em}
+
+/* ── 모달·팝업·토스트 ── */
+.modal-bg{background:var(--scrim)}
+.modal{border-radius:12px;box-shadow:var(--shadow-lg)}
+.cellpop{box-shadow:var(--shadow-lg)}
+.field input,.field select{border-color:var(--border-strong)}
+.toastmsg{background:var(--toast-bg);color:var(--toast-ink);box-shadow:var(--shadow-lg)}
+.toastmsg.err{background:var(--risk);color:#fff}
+.toastmsg.okk{background:var(--ok);color:#fff}
+.dragtip{background:var(--toast-bg);color:var(--toast-ink)}
+
+/* ── 한글 줄바꿈 (2026-09-29) ──
+   한글은 기본값이 '음절마다 줄바꿈 가능'이라, 좁은 화면에서 "선택하세" / "요" 처럼
+   마지막 한두 글자만 다음 줄로 떨어진다. 어절(띄어쓰기) 단위로만 끊고,
+   한 줄에 한 단어만 남는 줄(orphan)을 브라우저가 피하게 한다. */
+body{word-break:keep-all}
+:where(h1,h2,h3,h4){text-wrap-style:balance}
+:where(p,li,dd,dt,td,th,label,small,.hint,.muted,.note,.sub,.tag,.desc){text-wrap-style:pretty}
+
+.brand-mark{display:block;flex:none;width:30px;height:30px;border-radius:8px}
+
+/* ════════ INNO suite UX layer — 공통 CSS (2026-09-29) ════════ */
+/* 앱 전환 버튼·메뉴 (크롬 위) */
+.inno-apps{position:relative;display:inline-flex}
+.inno-apps-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;
+  border:1px solid var(--chrome-line);background:var(--chrome-soft);color:var(--chrome-ink);cursor:pointer;padding:0}
+.inno-apps-btn:hover{background:var(--chrome-soft-2)}
+.inno-apps-menu{display:none;position:fixed;z-index:300;width:300px;max-width:calc(100vw - 24px);
+  background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px}
+.inno-apps-menu.open{display:block}
+.inno-apps-menu a{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;color:inherit;text-decoration:none}
+.inno-apps-menu a:hover,.inno-apps-menu a:focus-visible{background:var(--surface-2);text-decoration:none}
+.inno-apps-menu a.cur{background:var(--accent-soft)}
+.inno-apps-menu img{border-radius:9px;flex:none}
+.inno-apps-menu b{display:block;font-weight:600;font-size:13.5px}
+.inno-apps-menu small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+/* 키보드로 연 행·칸의 포커스 표시 */
+[role=button][tabindex="0"]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+/* 대화창 패널 자체에 포커스가 가도 테두리는 그리지 않는다(안의 요소부터 보이게) */
+[role=dialog]:focus{outline:none}
+/* 빈 결과 안내 (앱 공통) */
+.inno-empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:13px}
+.inno-empty b{display:block;color:var(--ink);font-weight:600;font-size:14px;margin-bottom:4px}
+.inno-empty .btn{margin-top:10px}
+
+/* ── rd3 Scheduler 초안 ── */
+.phasebar{padding:12px 16px}
+.phasebar .toprow{align-items:center}
+.stepline{list-style:none;margin:0 0 0 auto;padding:0;display:flex;align-items:center;gap:0;font-size:12px;color:var(--muted)}
+.stepline li{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.stepline li+li::before{content:"";width:22px;height:1.5px;background:var(--line);margin:0 8px}
+.stepline li i{font-style:normal;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;border:1.5px solid var(--line);background:var(--surface)}
+.stepline li.done{opacity:.6}
+.stepline li.done i{background:var(--surface-2);border-color:var(--line)}
+.stepline li.on{color:var(--text);font-weight:600}
+.stepline li.on i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+nav.tabs .more{display:none}
+nav.tabs .tabmore{display:none}
+@media (max-width:720px){
+  .stepline{margin:6px 0 0;width:100%}
+  .stepline li span{display:none}
+  .stepline li.on span{display:inline}
+  .stepline li+li::before{width:14px;margin:0 5px}
+  nav.tabs button.sec{display:none!important}
+  nav.tabs .more{display:flex!important}
+  nav.tabs .tabmore{position:absolute;right:8px;bottom:calc(100% + 8px);display:flex;flex-direction:column;min-width:170px;padding:6px;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.25)}
+  nav.tabs .tabmore[hidden]{display:none}
+  nav.tabs .tabmore button{all:unset;cursor:pointer;padding:11px 12px;border-radius:8px;font-size:14px;color:var(--text)}
+  nav.tabs .tabmore button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+}
+
+/* ── 휴대폰 하단 탭 막대 (≤720px, INNO suite 공통 규칙) ── */
+@media (max-width:720px){
+  body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+  nav.tabs{position:fixed!important;left:0;right:0;bottom:0;top:auto!important;z-index:45;margin:0!important;display:grid!important;grid-template-columns:repeat(5,1fr);gap:0!important;
+    overflow:visible!important;padding:4px 2px calc(4px + env(safe-area-inset-bottom))!important;clip-path:none!important;border:0!important;
+    background:var(--chrome)!important;box-shadow:0 -1px 0 var(--chrome-line),0 -8px 24px rgba(0,0,0,.18)!important}
+  nav.tabs > button{display:flex!important;flex-direction:column;align-items:center;gap:3px;padding:6px 0 5px!important;margin:0!important;border:0!important;border-radius:8px;
+    font-size:10.5px!important;line-height:1.15;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;background:transparent;color:var(--chrome-ink-2)!important}
+  nav.tabs > button.on{color:var(--chrome-ink)!important;background:var(--chrome-soft)!important;font-weight:600}
+  nav.tabs > button::before{content:"";width:21px;height:21px;flex:none;background:currentColor;-webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat}
+  nav.tabs > button.on::after{content:"";position:absolute;left:28%;right:28%;top:0;bottom:auto;height:2.5px;border-radius:0 0 3px 3px;background:var(--chrome-mark)}
+  nav.tabs > button{position:relative}
+  #toast{bottom:calc(76px + env(safe-area-inset-bottom))!important} nav.tabs{overflow:visible!important} nav.tabs > button:not(.on):hover{background:transparent!important;color:var(--chrome-ink)!important}
+}
+nav.tabs > button[data-tab=cal]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E")}
+nav.tabs > button[data-tab=vote]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11l8-7 8 7'/%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M9 16l2 2 4-4'/%3E%3C/svg%3E")}
+nav.tabs > button[data-tab=coord]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E")}
+nav.tabs > button[data-tab=results]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='3'/%3E%3Ccircle cx='8' cy='8' r='1.2'/%3E%3Ccircle cx='16' cy='16' r='1.2'/%3E%3Ccircle cx='12' cy='12' r='1.2'/%3E%3C/svg%3E")}
+nav.tabs > button.more{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13M8 12h13M8 18h13'/%3E%3Ccircle cx='3.5' cy='6' r='1'/%3E%3Ccircle cx='3.5' cy='12' r='1'/%3E%3Ccircle cx='3.5' cy='18' r='1'/%3E%3C/svg%3E")}
+
+.nowcard{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center}
+.nowcard h2{margin:0 0 4px;font-size:15px}
+.nowcard .nowline{font-size:13.5px;color:var(--text)}
+.nowcard .nowsub{font-size:12.5px;color:var(--muted);margin-top:3px}
+.nowcard .myslots{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.nowcard .myslots span{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2)}
+.nowcard .myslots span.past{opacity:.5;text-decoration:line-through}
+.daylist{display:flex;flex-direction:column;gap:10px}
+.dayl{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.dayl.today{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.dayl h3{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.dayl h3 small{font-weight:400;color:var(--muted);font-size:12px}
+.dayl .blk{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-size:13px}
+.dayl .blk:first-of-type{border-top:0}
+.dayl .blk .t{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+.dayl .blk .who{padding:3px 8px;border-radius:7px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dayl .blk.mine .who{outline:2px solid var(--accent);outline-offset:1px}
+.dayl .blk .h{font-size:12px;color:var(--muted)}
+.dayl .empty{font-size:12.5px;color:var(--muted)}
+.viewtoggle{display:none}
+@media (max-width:720px){ .viewtoggle{display:inline-flex} .nowcard{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="brand-mark" style="width:34px;height:34px;border-radius:9px" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="26" height="26"><defs><linearGradient id="scmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#264466"/><stop offset=".62" stop-color="#1a2e42"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#scmk)"/><rect x=".75" y=".75" width="62.5" height="62.5" rx="14.3" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1.5"/><rect x="14" y="18" width="36" height="32" rx="6" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M14 27.5h36" stroke="#a9c7e5" stroke-width="4.5"/><path d="M24 12.5v9M40 12.5v9" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="20.5" y="33" width="8" height="8" rx="2" fill="#a9c7e5" opacity=".45"/><rect x="34" y="33" width="9.5" height="9.5" rx="2.4" fill="#F4F6F1"/></svg><div class="logo">Weekly Optics Scheduler<small id="weekLabel"></small></div>
+    <div class="head-right" id="headRight"></div>
+  </header>
+  <div id="demoBanner"></div>
+  <div id="botBanner"></div>
+  <div class="phasebar" id="phasebar"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="main"></main>
+</div>
+<div id="modalRoot"></div>
+<div id="toast"></div>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<script>
+/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+ * [필수 설정] 아래에 Firebase 프로젝트의 구성 객체를 붙여넣으세요.
+ * (Firebase 콘솔 → 프로젝트 설정 → 일반 → 내 앱 → SDK 설정 및 구성)
+ * 비워두면 '데모 모드'로 실행됩니다 (가상 데이터, 저장 안 됨).
+ * ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyASUCqicjGLh7P86OA2ZLc-8gidrZnRCpI",
+  authDomain: "inno-synthesis-scheduler.firebaseapp.com",
+  projectId: "inno-synthesis-scheduler",
+  storageBucket: "inno-synthesis-scheduler.firebasestorage.app",
+  messagingSenderId: "662028027818",
+  appId: "1:662028027818:web:11a1887f10b015c1c20dd3"
+};
+</script>
+
+<script>
+/* =====================================================================
+ * Weekly Synthesis Scheduler - 핵심 공유 로직 (주차 계산 + 결정론적 추첨)
+ * 이 파일은 index.html 에 그대로 인라인되며, Node 단위테스트에서도 사용됨
+ * ===================================================================== */
+
+const KST_OFFSET_MS = 9 * 3600 * 1000; // Asia/Seoul, DST 없음
+const DAY_MS = 86400000;
+
+/* ---- 슬롯 정의 (canonical order) ----
+ * Day   : 월~목 06:00-18:00  → D0~D3
+ * Night : 월~목 18:00-익일06 → N0~N3
+ * Weekend: 금/토/일 전일     → W0~W2
+ * 배치: 1~4  → cellKey = "D0-1" 형태 (총 44개)
+ */
+const SLOT_DEFS = [
+  { key: 'D0', period: 'Day',     label: '월요일 06-18시',        day: '월' },
+  { key: 'D1', period: 'Day',     label: '화요일 06-18시',        day: '화' },
+  { key: 'D2', period: 'Day',     label: '수요일 06-18시',        day: '수' },
+  { key: 'D3', period: 'Day',     label: '목요일 06-18시',        day: '목' },
+  { key: 'N0', period: 'Night',   label: '월요일 18시-화 06시',   day: '월' },
+  { key: 'N1', period: 'Night',   label: '화요일 18시-수 06시',   day: '화' },
+  { key: 'N2', period: 'Night',   label: '수요일 18시-목 06시',   day: '수' },
+  { key: 'N3', period: 'Night',   label: '목요일 18시-금 06시',   day: '목' },
+  { key: 'W0', period: 'Weekend', label: '금요일 (전일)',          day: '금' },
+  { key: 'W1', period: 'Weekend', label: '토요일 (전일)',          day: '토' },
+  { key: 'W2', period: 'Weekend', label: '일요일 (전일)',          day: '일' },
+];
+const SLOT_ORDER = SLOT_DEFS.map(s => s.key);
+const BATCHES = [1, 2, 3, 4];
+const ALL_CELL_KEYS = SLOT_ORDER.flatMap(s => BATCHES.map(b => `${s}-${b}`));
+const TOKENS_PER_WEEK = 4;
+const DAY_CAP = 2; // 1주 Day 시간대 1인 최대 배치 수
+
+function isDaySlot(slotKey) { return slotKey[0] === 'D'; }
+function parseCell(cellKey) {
+  const [slot, b] = cellKey.split('-');
+  return { slot, batch: parseInt(b, 10) };
+}
+
+/* ---- 주차 계산 (월요일 시작, KST 고정) ---- */
+function kstDayNum(ms) { return Math.floor((ms + KST_OFFSET_MS) / DAY_MS); }
+function kstDow(ms) { return (kstDayNum(ms) + 3) % 7; } // 0=월 ... 6=일 (1970-01-01=목 검증됨)
+// 주 인덱스(월요일 시작). 월요일의 dayNum ≡ 4 (mod 7) 이므로 +3 보정 후 7로 나눠 항상 '정수' 반환
+function weekIndexOf(ms) { return Math.floor((kstDayNum(ms) + 3) / 7); }
+function weekStartMs(weekIdx) { return (weekIdx * 7 - 3) * DAY_MS - KST_OFFSET_MS; } // 해당 주 월요일 00:00 KST의 UTC ms
+function fmtDate(ms) {
+  const d = new Date(ms + KST_OFFSET_MS);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+function weekLabel(weekIdx) {
+  const s = weekStartMs(weekIdx);
+  return `${fmtDate(s)}(월) ~ ${fmtDate(s + 6 * DAY_MS)}(일)`;
+}
+/* 투표 주(현재 주)의 국면 판정. targetWeek = votingWeek + 1 */
+function phaseOf(nowMs) {
+  const votingWeek = weekIndexOf(nowMs);
+  const targetWeek = votingWeek + 1;
+  const monday = weekStartMs(votingWeek);
+  const voteClose = monday + 3 * DAY_MS;            // 목요일 00:00 (= 수요일 24시)
+  const announce = monday + 3 * DAY_MS + 12 * 3600 * 1000; // 목요일 12:00
+  let phase;
+  if (nowMs < voteClose) phase = 'VOTING';
+  else if (nowMs < announce) phase = 'WAITING';
+  else phase = 'BOOKING';
+  return { votingWeek, targetWeek, monday, voteClose, announce, phase };
+}
+
+/* ---- 결정론적 시드 및 PRNG ---- */
+/* 투표 스냅샷의 canonical JSON: memberId 정렬, 각 멤버의 cell 목록 정렬 */
+function canonicalVotesJson(votesByMember) {
+  const ids = Object.keys(votesByMember).sort();
+  const obj = {};
+  for (const id of ids) {
+    obj[id] = [...votesByMember[id]].sort();
+  }
+  return JSON.stringify(obj);
+}
+
+/* SHA-256 (의존성 없는 순수 JS 구현; 브라우저/Node 동일 결과) */
+function sha256Hex(str) {
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const rr = (x, n) => (x >>> n) | (x << (32 - n));
+  // UTF-8 인코딩
+  const bytes = [];
+  for (let i = 0; i < str.length; i++) {
+    let c = str.codePointAt(i);
+    if (c > 0xffff) i++;
+    if (c < 0x80) bytes.push(c);
+    else if (c < 0x800) bytes.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+    else if (c < 0x10000) bytes.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    else bytes.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+  }
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push((i >= 4 ? 0 : (bitLen / Math.pow(2, i * 8))) & 0xff);
+  // 상위 32비트는 실용상 0 (2^32비트 미만 입력)
+  for (let off = 0; off < bytes.length; off += 64) {
+    const w = new Array(64);
+    for (let i = 0; i < 16; i++)
+      w[i] = (bytes[off + 4 * i] << 24) | (bytes[off + 4 * i + 1] << 16) | (bytes[off + 4 * i + 2] << 8) | bytes[off + 4 * i + 3];
+    for (let i = 16; i < 64; i++) {
+      const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const S1 = rr(e, 6) ^ rr(e, 11) ^ rr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = rr(a, 2) ^ rr(a, 13) ^ rr(a, 22);
+      const mj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + mj) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H = H.map((x, i) => (x + [a, b, c, d, e, f, g, h][i]) | 0);
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+/* mulberry32 - 시드 기반 결정론적 PRNG */
+function makeRng(seedHex) {
+  let s = parseInt(seedHex.slice(0, 8), 16) >>> 0;
+  // 시드 확장: 해시 뒷부분도 섞음
+  s = (s ^ parseInt(seedHex.slice(8, 16), 16)) >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffled(arr, rng) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* =====================================================================
+ * 결정론적 추첨
+ * 입력: votesByMember = { memberId: ["D0-1","D0-2","N1-3", ...] }
+ * 출력: { seed, assignments: {cellKey: memberId}, priorityMembers: [...],
+ *         dayCount: {memberId: n} }
+ *
+ * 규칙 구현:
+ * (1) 동일 슬롯+배치 1인 배정, 경합 시 시드 기반 무작위 추첨
+ * (2) Day 시간대 주간 1인 최대 2배치 (배정 시점 강제)
+ * (3) 동일 슬롯에 2개 이상 배치 투표자(번들)가 우선권, 번들 간 경합도 무작위
+ * (4) 번들은 all-or-nothing (전부 배정 또는 전부 탈락)
+ * ===================================================================== */
+function computeLottery(votesByMember) {
+  const canonical = canonicalVotesJson(votesByMember);
+  const seed = sha256Hex(canonical);
+  const rng = makeRng(seed);
+
+  const assignments = {}; // cellKey -> memberId
+  const dayCount = {};    // memberId -> Day 배정 수
+  const memberIds = Object.keys(votesByMember).sort();
+
+  for (const slot of SLOT_ORDER) {
+    const day = isDaySlot(slot);
+    // 이 슬롯에서 멤버별 투표 배치 목록
+    const bySlot = [];
+    for (const m of memberIds) {
+      const bs = (votesByMember[m] || [])
+        .map(parseCell).filter(c => c.slot === slot).map(c => c.batch)
+        .sort((a, b) => a - b);
+      if (bs.length) bySlot.push({ m, bs });
+    }
+    // --- 1단계: 번들(같은 슬롯 2개 이상 배치) 우선, 무작위 순서 그리디 ---
+    const bundles = shuffled(bySlot.filter(x => x.bs.length >= 2), rng);
+    for (const { m, bs } of bundles) {
+      if (day && (dayCount[m] || 0) + bs.length > DAY_CAP) continue; // 규칙(2)
+      const free = bs.every(b => !assignments[`${slot}-${b}`]);
+      if (free) { // 규칙(4): all-or-nothing
+        for (const b of bs) assignments[`${slot}-${b}`] = m;
+        if (day) dayCount[m] = (dayCount[m] || 0) + bs.length;
+      }
+    }
+    // --- 2단계: 단일 투표자, 배치별 무작위 추첨 ---
+    const singles = bySlot.filter(x => x.bs.length === 1);
+    for (const b of BATCHES) {
+      const key = `${slot}-${b}`;
+      if (assignments[key]) continue;
+      const cands = singles
+        .filter(x => x.bs[0] === b)
+        .filter(x => !(day && (dayCount[x.m] || 0) >= DAY_CAP))
+        .map(x => x.m); // memberIds 순회로 이미 정렬됨
+      if (!cands.length) continue;
+      const pick = cands.length === 1 ? cands[0] : cands[Math.floor(rng() * cands.length)];
+      assignments[key] = pick;
+      if (day) dayCount[pick] = (dayCount[pick] || 0) + 1;
+    }
+  }
+
+  // Day에 1표 이상 투자했으나 Day 배정 0인 인원 → 우선예약 대상
+  const priorityMembers = memberIds.filter(m => {
+    const votedDay = (votesByMember[m] || []).some(c => isDaySlot(parseCell(c).slot));
+    return votedDay && !(dayCount[m] > 0);
+  });
+
+  return { seed, assignments, priorityMembers, dayCount, canonical };
+}
+
+/* 투표 유효성 검사 (클라이언트 측; 서버 rules 와 동일 기준) */
+function validateVoteSet(cells) {
+  if (!Array.isArray(cells)) return '형식 오류';
+  if (cells.length > TOKENS_PER_WEEK) return `토큰은 주당 ${TOKENS_PER_WEEK}개까지입니다.`;
+  const set = new Set(cells);
+  if (set.size !== cells.length) return '동일 슬롯·배치에 중복 투표할 수 없습니다.';
+  for (const c of cells) if (!ALL_CELL_KEYS.includes(c)) return `유효하지 않은 슬롯: ${c}`;
+  // 단일 Day 슬롯 내 3개 이상 번들은 규칙(2)와 (4)의 조합상 절대 당첨 불가 → 사전 차단
+  for (const s of SLOT_ORDER.filter(isDaySlot)) {
+    const n = cells.filter(c => parseCell(c).slot === s).length;
+    if (n > DAY_CAP) return `Day 슬롯(${s}) 하나에 ${n}개 배치 묶음은 Day 주간 2개 제한과 전부-또는-전무 규칙상 당첨이 불가능하여 차단됩니다.`;
+  }
+  return null;
+}
+
+/* Node 테스트용 export (브라우저에서는 무시됨) */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    SLOT_DEFS, SLOT_ORDER, BATCHES, ALL_CELL_KEYS, TOKENS_PER_WEEK, DAY_CAP,
+    isDaySlot, parseCell, kstDayNum, kstDow, weekIndexOf, weekStartMs, weekLabel, phaseOf,
+    canonicalVotesJson, sha256Hex, makeRng, shuffled, computeLottery, validateVoteSet, fmtDate,
+  };
+}
+
+</script>
+
+<script>
+/* =====================================================================
+ * Weekly Optics Scheduler - 광학 전용 핵심 로직
+ * (core.js 의 주차계산·SHA-256·PRNG 를 그대로 사용하며, 이 파일이 뒤에 연결됨)
+ * ===================================================================== */
+
+const OPT_DAYS = ['월', '화', '수', '목', '금', '토', '일']; // dayIdx 0~6
+const OPT_SLOTS_PER_DAY = 48; // 30분 단위 00:00~24:00
+const OPT_MAX_RANKS = 3;
+
+function optSlotLabel(slotIdx) {
+  const h = Math.floor(slotIdx / 2), m = slotIdx % 2 ? '30' : '00';
+  return String(h).padStart(2, '0') + ':' + m;
+}
+function optDayDate(weekIdx, dayIdx) { return weekStartMs(weekIdx) + dayIdx * DAY_MS; }
+function optDayLabel(weekIdx, dayIdx) { return fmtDate(optDayDate(weekIdx, dayIdx)) + '(' + OPT_DAYS[dayIdx] + ')'; }
+/* '7/16(목)' 형태 + 요일 포함 날짜 표기 (하드웨어 로그용) */
+/* Remark 기록: 새 항목을 맨 앞에 추가하고 최대 max개만 유지(오래된 것 자동 삭제) */
+function optPushRemark(entries, entry, max) {
+  const cap = max || 10;
+  const list = [entry].concat(Array.isArray(entries) ? entries : []);
+  return list.slice(0, cap);
+}
+
+function optFmtDateDow(ms) {
+  const dow = OPT_DAYS[(kstDayNum(ms) + 3) % 7];
+  const d = new Date(ms + KST_OFFSET_MS);
+  return `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}(${dow}) ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+/* =====================================================================
+ * 하루 4분할 (Quarter) — 투표 단위
+ * Q1 새벽 00-06 / Q2 오전 06-12 / Q3 오후 12-18 / Q4 저녁 18-24
+ * 30분 슬롯 기준으로 각 분기는 12칸을 차지한다 (12 × 30분 = 6시간).
+ * ===================================================================== */
+const OPT_QUARTERS = [
+  { q: 1, key: 'Q1', label: '새벽', range: '00-06' },
+  { q: 2, key: 'Q2', label: '오전', range: '06-12' },
+  { q: 3, key: 'Q3', label: '오후', range: '12-18' },
+  { q: 4, key: 'Q4', label: '저녁', range: '18-24' },
+];
+const OPT_SLOTS_PER_QUARTER = OPT_SLOTS_PER_DAY / 4; // 12
+const OPT_ALL_QUARTERS = [1, 2, 3, 4];
+
+function optQuarterLabel(q) {
+  const x = OPT_QUARTERS.filter(function (o) { return o.q === q; })[0];
+  return x ? x.key + ' ' + x.label + '(' + x.range + ')' : 'Q' + q;
+}
+/* 분기 목록 → '00-12시' 처럼 연속 구간을 합친 짧은 표기 */
+function optQuartersLabel(qs) {
+  const sorted = (qs || []).slice().sort(function (a, b) { return a - b; });
+  if (!sorted.length) return '';
+  if (sorted.length === 4) return '종일';
+  const parts = [];
+  let st = sorted[0], prev = sorted[0];
+  for (let i = 1; i <= sorted.length; i++) {
+    const cur = sorted[i];
+    if (cur === prev + 1) { prev = cur; continue; }
+    parts.push(String((st - 1) * 6).padStart(2, '0') + '-' + String(prev * 6).padStart(2, '0'));
+    st = cur; prev = cur;
+  }
+  return parts.join(', ') + '시';
+}
+
+/* ---- 투표 항목 정규화 ----
+ * 신형: {d: 요일idx, q: [1,2]}   구형(하위호환): 요일idx 숫자 하나 = 하루 전체
+ * 반환 {d, q(정렬·중복제거된 1~4)} 또는 null */
+function optNormRank(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'number') {
+    return Number.isInteger(v) && v >= 0 && v <= 6 ? { d: v, q: OPT_ALL_QUARTERS.slice() } : null;
+  }
+  if (typeof v !== 'object' || !Number.isInteger(v.d) || v.d < 0 || v.d > 6) return null;
+  let q = Array.isArray(v.q) ? v.q : OPT_ALL_QUARTERS;
+  q = q.filter(function (x) { return Number.isInteger(x) && x >= 1 && x <= 4; });
+  q = q.filter(function (x, i) { return q.indexOf(x) === i; }).sort(function (a, b) { return a - b; });
+  if (!q.length) return null;
+  return { d: v.d, q: q };
+}
+/* 투표 묶음 {r1,r2,r3} 을 전부 신형 {d,q} 로 정규화 (유효하지 않은 항목은 제거).
+ * 저장 직전과 편집 상태 초기화 시 반드시 통과시킬 것 — 구버전에서 저장된 숫자 형식이
+ * 그대로 다시 전송되면 서버 규칙(신형 형식 검사)에 걸려 'Missing or insufficient permissions' 가 난다. */
+function optNormRanks(ranks) {
+  const out = {};
+  ['r1', 'r2', 'r3'].forEach(function (k) {
+    const n = optNormRank((ranks || {})[k]);
+    if (n) out[k] = { d: n.d, q: n.q };
+  });
+  return out;
+}
+/* 분기 소유 맵 {"1":mid,…} → 48슬롯 배열 */
+function optQuarterSlots(qmap) {
+  const arr = new Array(OPT_SLOTS_PER_DAY).fill(null);
+  for (let k = 1; k <= 4; k++) {
+    const mid = (qmap || {})[String(k)];
+    if (!mid) continue;
+    for (let s = (k - 1) * OPT_SLOTS_PER_QUARTER; s < k * OPT_SLOTS_PER_QUARTER; s++) arr[s] = mid;
+  }
+  return arr;
+}
+/* 결과 문서 → 요일별 48슬롯 '기본 배정' 배열.
+ * quarterAssign 이 있으면 분기 단위로, 없으면(구버전 결과) dayAssign 으로 하루 전체. */
+function optBaseSlots(results) {
+  const r = results || {};
+  // dayAssign 맵을 그대로 넘겨준 옛 호출도 계속 지원 (키가 "0"~"6" 뿐이면 dayAssign 으로 간주)
+  const isRawDayAssign = r.dayAssign === undefined && r.quarterAssign === undefined;
+  const da = isRawDayAssign ? r : (r.dayAssign || {});
+  const qa = isRawDayAssign ? null : r.quarterAssign;
+  const out = {};
+  for (let day = 0; day < 7; day++) {
+    if (qa && qa[String(day)]) { out[day] = optQuarterSlots(qa[String(day)]); continue; }
+    const mid = da[String(day)] || null;
+    out[day] = new Array(OPT_SLOTS_PER_DAY).fill(mid);
+  }
+  return out;
+}
+
+/* =====================================================================
+ * 관리자 전용 블록 (Repair / 외부인 방문측정)
+ * ---------------------------------------------------------------------
+ * 30분 슬롯의 '소유자' 값으로 멤버ID 대신 특수 문자열을 사용한다.
+ *   형식: '!' + kind + ('|' + memo)      예) '!repair', '!visit|A대 김OO'
+ * Firestore 자동생성 ID는 영숫자뿐이므로 '!' 접두는 멤버ID와 절대 충돌하지 않는다.
+ * 이 값은 optEffectiveSchedule 의 '최상위 레이어'로 적용되어 추첨 배정·자유
+ * 조율 결과를 모두 덮는다 → 당첨자는 관리자 블록을 제외한 나머지 시간만 사용.
+ * ===================================================================== */
+const OPT_ADMIN_MARK = '!';
+const OPT_ADMIN_KINDS = [
+  { code: 'repair', label: 'Repair' },
+  { code: 'visit', label: '외부인 방문측정' },
+];
+function optIsAdminOwner(v) { return typeof v === 'string' && v.charAt(0) === OPT_ADMIN_MARK; }
+/* 메모 정제: 캘린더 태그([WOS|…]) 및 값 구분자와 충돌하는 문자 제거 + 길이 제한 */
+function optAdminMemoClean(memo) {
+  return String(memo == null ? '' : memo).replace(/[\[\]|\r\n\t]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+}
+function optAdminOwner(kind, memo) {
+  const m = optAdminMemoClean(memo);
+  return OPT_ADMIN_MARK + kind + (m ? '|' + m : '');
+}
+function optAdminParse(v) {
+  if (!optIsAdminOwner(v)) return null;
+  const body = v.slice(1);
+  const i = body.indexOf('|');
+  const code = i < 0 ? body : body.slice(0, i);
+  const memo = i < 0 ? '' : body.slice(i + 1);
+  const k = OPT_ADMIN_KINDS.filter(function (x) { return x.code === code; })[0];
+  return { code: code, kind: k ? k.label : code, memo: memo };
+}
+function optAdminLabel(v) {
+  const p = optAdminParse(v);
+  return p ? p.kind + (p.memo ? ' · ' + p.memo : '') : '';
+}
+/* 관리자 블록 문서에서 요일별 슬롯 배열(48) 추출. '' 또는 미기재 = 블록 없음 */
+function optAdminSlotArr(adminDocs, day) {
+  const slots = ((adminDocs || {})[String(day)] || {}).slots || {};
+  const arr = new Array(OPT_SLOTS_PER_DAY);
+  for (let s = 0; s < OPT_SLOTS_PER_DAY; s++) {
+    const v = slots[String(s)];
+    arr[s] = (v === undefined || v === null || v === '') ? null : v;
+  }
+  return arr;
+}
+/* 요일의 관리자 블록을 연속 구간으로 병합 → [{start, end, owner}] */
+function optAdminBlocksOfDay(adminDocs, day) { return optMergeBlocks(optAdminSlotArr(adminDocs, day)); }
+/* 요일 중 관리자 블록이 덮지 않은 30분 슬롯 수 (0이면 당첨자 가용 시간 없음) */
+function optFreeSlotCount(adminDocs, day) {
+  return optAdminSlotArr(adminDocs, day).filter(function (v) { return v === null; }).length;
+}
+/* 슬롯 구간 라벨: end 는 미포함 인덱스 */
+function optRangeLabel(start, end) {
+  return optSlotLabel(start) + '~' + (end >= OPT_SLOTS_PER_DAY ? '24:00' : optSlotLabel(end));
+}
+
+/* ---- 투표 canonical 직렬화 ----
+ * votesByMember = { memberId: {r1: dayIdx, r2?: dayIdx, r3?: dayIdx} } */
+function optCanonicalVotesJson(votesByMember) {
+  const ids = Object.keys(votesByMember).sort();
+  const obj = {};
+  for (const id of ids) {
+    const v = votesByMember[id] || {};
+    const o = {};
+    for (const k of ['r1', 'r2', 'r3']) {
+      const n = optNormRank(v[k]);
+      if (!n) continue;
+      // ★ 하위호환: '종일' 지원은 구버전과 똑같이 요일 숫자 하나로 직렬화한다.
+      //   그래야 시간대 기능 도입 전에 발표된 결과(및 과거 주차)의 시드가 그대로 재현되어
+      //   전원 재검증에서 '검증 불일치' 오탐이 나지 않는다.
+      //   시간대를 일부만 고른 투표가 하나라도 있으면 그 항목만 {d,q} 로 들어간다.
+      o[k] = n.q.length === 4 ? n.d : { d: n.d, q: n.q };
+    }
+    obj[id] = o;
+  }
+  return JSON.stringify(obj);
+}
+
+/* ---- 투표 유효성 (클라이언트; 서버 rules 와 동일 기준) ---- */
+function optValidateVote(ranks) {
+  const keys = Object.keys(ranks || {});
+  for (const k of keys) if (!['r1', 'r2', 'r3'].includes(k)) return '형식 오류';
+  const days = [];
+  for (const k of keys) {
+    const n = optNormRank(ranks[k]);
+    if (!n) return '유효하지 않은 요일 또는 시간대';
+    days.push(n.d);
+  }
+  if (new Set(days).size !== days.length) return '같은 요일을 중복 순위로 투표할 수 없습니다.';
+  // 순위는 1부터 연속 (r2가 있으면 r1도, r3가 있으면 r2도)
+  if ((ranks.r2 !== undefined && ranks.r1 === undefined) || (ranks.r3 !== undefined && ranks.r2 === undefined))
+    return '순위는 1순위부터 순서대로 지정해야 합니다.';
+  return null;
+}
+
+/* =====================================================================
+ * 결정론적 배정 (분기 단위)
+ * ---------------------------------------------------------------------
+ * 1단계 — 요일 대표 선정 (기존 규칙 그대로, 지원 시간대와 무관하게 동일 경쟁)
+ *   ① 현재까지 당첨 수가 적은 사람 (무당첨자 절대 우선)
+ *   ② 해당 요일에 대한 순위가 높은(숫자가 작은) 사람
+ *   ③ 전체 투표 수가 적은 사람 (더 간절함)
+ *   ④ 시드 기반 무작위 (시드 = 마감된 전체 투표의 SHA-256 → 조작 불가·전원 검증 가능)
+ *   → 대표는 자기가 지원한 분기만 가져간다 (종일 지원이면 하루 전체).
+ *
+ * 2단계 — 빈 분기 채우기 (요청 사양)
+ *   대표가 쓰지 않고 남은 분기에 '자기 지원 분기 전체가 온전히 들어가는' 사람이 있으면
+ *   같은 기준(①~④)으로 뽑아 추가 배정한다. 더 들어갈 사람이 없을 때까지 반복.
+ *   부분만 겹치는 사람은 넣지 않는다 (쪼개서 억지로 끼우지 않음).
+ *   예) A=Q1Q2, B=Q3Q4, C=Q2Q3 가 같은 요일 동일 순위로 경쟁 →
+ *       C가 대표면 Q1·Q4만 남아 아무도 못 들어가므로 C 단독,
+ *       A가 대표면 Q3Q4가 비므로 B가 그대로 들어가 A+B 배정.
+ *
+ * 당첨 수(wins)는 '시간을 받은 요일 수' 로 세며 2단계 배정도 1회로 계산한다
+ * (그래야 ①무당첨자 우선이 실제 사용 기회 기준으로 작동).
+ * ===================================================================== */
+function computeOpticsLottery(votesByMember) {
+  const canonical = optCanonicalVotesJson(votesByMember);
+  const seed = sha256Hex(canonical);
+  const rng = makeRng(seed);
+
+  const memberIds = Object.keys(votesByMember).sort();
+  const voteCount = {};       // mid -> 투표한 순위 수 (1~3)
+  const rankOf = {};          // mid -> {dayIdx: rank}
+  const quartOf = {};         // mid -> {dayIdx: [분기…]}
+  for (const mid of memberIds) {
+    const v = votesByMember[mid] || {};
+    rankOf[mid] = {}; quartOf[mid] = {};
+    let n = 0;
+    [['r1', 1], ['r2', 2], ['r3', 3]].forEach(function (pair) {
+      const nm = optNormRank(v[pair[0]]);
+      if (!nm) return;
+      rankOf[mid][nm.d] = pair[1];
+      quartOf[mid][nm.d] = nm.q;
+      n++;
+    });
+    voteCount[mid] = n;
+  }
+
+  const wins = {};            // mid -> 시간을 받은 요일 수
+  const dayAssign = {};       // dayIdx(string) -> 대표 memberId (표시·하위호환용)
+  const quarterAssign = {};   // dayIdx(string) -> { "1": mid, … }  실제 소유
+  const dayContenders = {};   // dayIdx -> [{mid, rank, q}] (결과 표시용)
+
+  /* 후보 목록에서 ①~④ 기준 최소 튜플을 뽑는다 (동률이면 시드 난수) */
+  function pick(cands) {
+    let best = null;
+    for (const c of cands) {
+      const w = wins[c.mid] || 0;
+      if (!best || w < best.w
+          || (w === best.w && (c.rank < best.rank
+          || (c.rank === best.rank && voteCount[c.mid] < best.v)))) {
+        best = { mid: c.mid, w: w, rank: c.rank, v: voteCount[c.mid] };
+      }
+    }
+    const tied = cands.filter(function (c) {
+      return (wins[c.mid] || 0) === best.w && c.rank === best.rank && voteCount[c.mid] === best.v;
+    });
+    return tied.length === 1 ? tied[0] : tied[Math.floor(rng() * tied.length)];
+  }
+
+  for (let day = 0; day < 7; day++) {
+    const cands = memberIds
+      .filter(function (mid) { return rankOf[mid][day] !== undefined; })
+      .map(function (mid) { return { mid: mid, rank: rankOf[mid][day], q: quartOf[mid][day] }; });
+    dayContenders[day] = cands.map(function (c) { return { mid: c.mid, rank: c.rank, q: c.q.slice() }; });
+    if (!cands.length) continue;
+
+    const owner = {};                       // 분기 -> mid
+    const taken = {};                       // 이미 배정된 mid
+    const remaining = cands.slice();
+
+    // 1단계: 대표
+    const first = pick(remaining);
+    first.q.forEach(function (q) { owner[q] = first.mid; });
+    taken[first.mid] = true;
+    wins[first.mid] = (wins[first.mid] || 0) + 1;
+    dayAssign[String(day)] = first.mid;
+
+    // 2단계: 남은 분기에 '통째로' 들어갈 수 있는 사람을 반복해서 채움
+    for (;;) {
+      const fits = cands.filter(function (c) {
+        if (taken[c.mid]) return false;
+        return c.q.every(function (q) { return owner[q] === undefined; });
+      });
+      if (!fits.length) break;
+      const nx = pick(fits);
+      nx.q.forEach(function (q) { owner[q] = nx.mid; });
+      taken[nx.mid] = true;
+      wins[nx.mid] = (wins[nx.mid] || 0) + 1;
+    }
+
+    const qmap = {};
+    for (let k = 1; k <= 4; k++) if (owner[k]) qmap[String(k)] = owner[k];
+    quarterAssign[String(day)] = qmap;
+  }
+
+  // 1표 이상 투표했으나 어떤 시간대도 받지 못한 인원 (참고 표시용)
+  const unassignedMembers = memberIds.filter(function (mid) { return voteCount[mid] > 0 && !(wins[mid] > 0); });
+
+  return { seed, dayAssign, quarterAssign, unassignedMembers, canonical, dayContenders };
+}
+
+/* ---- 유효 스케줄 계산: 기본 요일 배정 + 30분 단위 수정본(override) + 관리자 블록 ----
+ * scheduleDocs: {dayIdx(string): {slots: {slotIdx(string): memberId|""}}}
+ * adminDocs   : {dayIdx(string): {slots: {slotIdx(string): '!kind|memo'|""}}}  (선택)
+ * 우선순위(높은 쪽이 이김): 관리자 블록 > 자유 조율 override > 요일 기본 배정
+ * 반환: day -> [48] 배열 (memberId | '!kind…' | null)                          */
+function optEffectiveSchedule(resultsOrDayAssign, scheduleDocs, adminDocs) {
+  const baseSlots = optBaseSlots(resultsOrDayAssign);   // 분기 배정 → 48슬롯 (구형 dayAssign 도 수용)
+  const eff = {};
+  for (let day = 0; day < 7; day++) {
+    const base = baseSlots[day];
+    const slots = ((scheduleDocs || {})[String(day)] || {}).slots || {};
+    const adm = optAdminSlotArr(adminDocs, day);
+    const arr = new Array(OPT_SLOTS_PER_DAY);
+    for (let s = 0; s < OPT_SLOTS_PER_DAY; s++) {
+      if (adm[s] !== null) { arr[s] = adm[s]; continue; }   // 관리자 블록이 최우선
+      const ov = slots[String(s)];
+      arr[s] = ov === undefined ? base[s] : (ov === '' ? null : ov);
+    }
+    eff[day] = arr;
+  }
+  return eff;
+}
+
+/* 슬롯 배열 → 연속 블록 병합 [{start, end(미포함), owner}] (캘린더/표시용) */
+function optMergeBlocks(slotArr) {
+  const blocks = [];
+  let cur = null;
+  for (let s = 0; s < slotArr.length; s++) {
+    const o = slotArr[s];
+    if (cur && cur.owner === o) { cur.end = s + 1; continue; }
+    if (cur && cur.owner !== null) blocks.push(cur);
+    cur = o !== null ? { start: s, end: s + 1, owner: o } : null;
+    if (o === null) cur = null;
+  }
+  if (cur && cur.owner !== null) blocks.push(cur);
+  return blocks;
+}
+
+/* Node 테스트용 export */
+if (typeof module !== 'undefined' && module.exports) {
+  Object.assign(module.exports, {
+    OPT_DAYS, OPT_SLOTS_PER_DAY, optSlotLabel, optDayLabel, optFmtDateDow,
+    optCanonicalVotesJson, optValidateVote, computeOpticsLottery,
+    OPT_QUARTERS, OPT_ALL_QUARTERS, OPT_SLOTS_PER_QUARTER, optQuarterLabel, optQuartersLabel,
+    optNormRank, optNormRanks, optQuarterSlots, optBaseSlots,
+    optEffectiveSchedule, optMergeBlocks, optPushRemark,
+    OPT_ADMIN_MARK, OPT_ADMIN_KINDS, optIsAdminOwner, optAdminMemoClean,
+    optAdminOwner, optAdminParse, optAdminLabel, optAdminSlotArr,
+    optAdminBlocksOfDay, optFreeSlotCount, optRangeLabel,
+  });
+}
+
+</script>
+
+<script>
+/* =====================================================================
+ * Weekly Optics Scheduler - 앱 (1/3): 상태·저장소·공통
+ * ===================================================================== */
+'use strict';
+
+const IS_DEMO = !FIREBASE_CONFIG.apiKey;
+
+/* ── 봇 하트비트 감시 ──────────────────────────────────────────────────
+ * 봇(GAS)은 정상 동작할 때마다 syncMeta/<app>_bot.okMs 를 갱신한다(최대 30분 간격).
+ * 이 값이 BOT_STALE_MIN(60분) 보다 낡으면 화면 상단에 경고 배너를 띄운다.
+ * 30분 기록 + 60분 경고 — 한 번 거르는 건 눈감아 주고 두 번 연속 놓치면 경고한다.
+ * 임계값은 반드시 기록 간격의 2배 이상으로 둘 것. 간격에 바싹 붙이면 정상 동작
+ * 중에도 기록 직전마다 배너가 깜빡인다.
+ * 2026-10 실사례: GAS 프로젝트가 휴지통에 들어가 5일간 멈췄는데, 휴지통에 있는
+ * 스크립트는 아예 실행되지 않아 실행 오류도 Google 실패 알림 메일도 남지 않았다.
+ * 아무도 알아채지 못한 채 구글 캘린더만 조용히 낡아간 것이 이 배너를 만든 이유다. */
+const BOT_STALE_MIN = 60;
+function botStaleMin() { return S.botOkMs ? Math.floor((Date.now() - S.botOkMs) / 60000) : 0; }
+function agoText(min) {
+  if (min < 60) return min + '분 전';
+  const h = Math.floor(min / 60);
+  if (h < 24) return h + '시간' + (min % 60 ? ' ' + (min % 60) + '분' : '') + ' 전';
+  const d = Math.floor(h / 24);
+  return d + '일' + (h % 24 ? ' ' + (h % 24) + '시간' : '') + ' 전';
+}
+
+const S = {
+  tab: 'cal',
+  demoOffset: 0,
+  uid: null,
+  user: null,               // {id, name, isAdmin, optics}
+  members: {},
+  votes: {},                // targetWeek: mid -> ranks{r1,r2,r3}
+  results: null,            // opticsResults(targetWeek)
+  curResults: null,         // opticsResults(votingWeek = 이번 주)
+  sched: {},                // targetWeek: day(string) -> {slots}
+  curSched: {},             // votingWeek
+  adm: {},                  // targetWeek 관리자 블록: day(string) -> {slots}
+  curAdm: {},               // votingWeek 관리자 블록
+  chat: [],
+  hw: null,                 // opticsHardware/current
+  hwLog: [],
+  remarks: [],              // opticsRemarks/log.entries (최신순, 최대 10개)
+  pendingRanks: null,
+  viewWeek: 'cur',          // 스케줄 탭: 'cur' | 'next'
+  overlay: false,
+  verify: null, _verifying: false,
+  histCache: {},
+  connected: false, authError: null, ensuring: false,
+  drag: null,               // {day, s0, s1}
+};
+
+const now = () => Date.now() + S.demoOffset;
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const memberName = id => S.members[id]?.name || '(알 수 없음)';
+const pinHashOf = (memberId, pin) => sha256Hex(memberId + '|' + pin);
+const canonMap = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k]]));
+/* quarterAssign 은 2단 중첩 맵이라 키 정렬을 두 번 해야 Firestore 반환 순서와 무관해진다 */
+const canonQuarters = o => Object.keys(o || {}).sort().map(d => [d, canonMap((o || {})[d])]);
+function cycle() { return phaseOf(now()); }
+
+/* 멤버별 고정 색상 (정렬된 id 순서 기반 → 모든 기기에서 동일)
+ * 관리자 블록(!repair/!visit)은 멤버 색상과 확실히 구분되는 고정 색을 사용한다. */
+function memberColor(id) {
+  if (optIsAdminOwner(id)) {
+    const p = optAdminParse(id);
+    return p && p.code === 'visit'
+      ? { bg: '#e6e2f7', fg: '#4b3a8f' }   // 외부인 방문측정 (보라)
+      : { bg: '#f3ded8', fg: '#8a2f1c' };  // Repair (벽돌)
+  }
+  const ids = Object.keys(S.members).sort();
+  const i = Math.max(0, ids.indexOf(id));
+  const h = (i * 137.508) % 360; // golden angle
+  return { bg: `hsl(${h},70%,86%)`, fg: `hsl(${h},65%,30%)` };
+}
+/* 슬롯 소유자 표시명: 멤버는 이름, 관리자 블록은 'Repair · 메모' */
+function ownerLabel(o) { return optIsAdminOwner(o) ? optAdminLabel(o) : memberName(o); }
+/* 해당 주의 관리자 블록 문서 묶음 */
+function admOf(weekIdx) { const c = cycle(); return weekIdx === c.targetWeek ? S.adm : (weekIdx === c.votingWeek ? S.curAdm : {}); }
+/* 관리자가 이 주에 블록을 등록/해제할 수 있는가 (이번 주 ~ 다음 주) */
+function canAdminBlock(weekIdx) {
+  const c = cycle();
+  return !!(S.user?.isAdmin && (weekIdx === c.votingWeek || weekIdx === c.targetWeek));
+}
+
+function toast(msg, cls = '') {
+  const el = document.createElement('div');
+  el.className = 'toastmsg ' + cls;
+  el.textContent = msg;
+  $('#toast').appendChild(el);
+  setTimeout(() => el.remove(), 3800);
+}
+function fmtDT(ms) {
+  const d = new Date(ms + KST_OFFSET_MS);
+  const wd = OPT_DAYS[(kstDayNum(ms) + 3) % 7];
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${wd}) ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+}
+function fmtDur(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+  return (d ? d + '일 ' : '') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+}
+/* 해당 주 스케줄이 수정 가능한 기간인가 (발표 후 ~ 그 주 일요일 24시) */
+function editableWeek(weekIdx) {
+  const c = cycle();
+  const annc = weekStartMs(weekIdx - 1) + 3 * DAY_MS + 12 * 3600000;
+  return now() >= annc && now() < weekStartMs(weekIdx + 1);
+}
+function viewWeekIdx() { const c = cycle(); return S.viewWeek === 'next' ? c.targetWeek : c.votingWeek; }
+
+/* =====================================================================
+ * 저장소
+ * ===================================================================== */
+let store;
+
+function makeFirestoreStore() {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  const FV = firebase.firestore.FieldValue;
+  let unsubs = [], listenWeeks = null;
+
+  async function start() {
+    try { await auth.signInAnonymously(); }
+    catch (e) { S.authError = 'Firebase 인증 실패: ' + e.message; render(); return; }
+    auth.onAuthStateChanged(u => { if (!u) return; S.uid = u.uid; resubscribe(); startHeartbeatPoll(); });
+  }
+
+  function resubscribe() {
+    const c = cycle();
+    listenWeeks = c.targetWeek;
+    unsubs.forEach(f => f()); unsubs = [];
+    const on = (q, cb) => unsubs.push(q.onSnapshot(cb, e => { console.error(e); toast('데이터 수신 오류: ' + e.message, 'err'); }));
+
+    on(db.collection('members'), snap => {
+      S.members = {}; snap.forEach(d => S.members[d.id] = { id: d.id, ...d.data() });
+      restoreSession(); S.connected = true; render();
+    });
+    on(db.collection('opticsVotes').where('week', '==', c.targetWeek), snap => {
+      const v = {}; snap.forEach(d => { const x = d.data(); v[x.memberId] = x.ranks || {}; });
+      S.votes = v;
+      if (S.pendingRanks === null && S.user && v[S.user.id]) S.pendingRanks = optNormRanks(v[S.user.id]);
+      render();
+    });
+    on(db.doc('opticsResults/' + c.targetWeek), d => { S.results = d.exists ? d.data() : null; S.verify = null; render(); });
+    on(db.doc('opticsResults/' + c.votingWeek), d => { S.curResults = d.exists ? d.data() : null; render(); });
+    on(db.collection('opticsSchedule').where('week', '==', c.targetWeek), snap => {
+      const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.sched = m; render();
+    });
+    on(db.collection('opticsSchedule').where('week', '==', c.votingWeek), snap => {
+      const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.curSched = m; render();
+    });
+    on(db.collection('opticsAdminBlocks').where('week', '==', c.targetWeek), snap => {
+      const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.adm = m; render();
+    });
+    on(db.collection('opticsAdminBlocks').where('week', '==', c.votingWeek), snap => {
+      const m = {}; snap.forEach(d => { const x = d.data(); m[String(x.day)] = x; }); S.curAdm = m; render();
+    });
+    on(db.collection('opticsChat').orderBy('createdAt', 'desc').limit(120), snap => {
+      const arr = []; snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
+      S.chat = arr.reverse(); renderChatLogOnly() || render();
+    });
+    on(db.doc('opticsHardware/current'), d => { S.hw = d.exists ? d.data() : null; render(); });
+    on(db.collection('opticsHardwareLog').orderBy('createdAt', 'desc').limit(25), snap => {
+      const arr = []; snap.forEach(d => arr.push(d.data())); S.hwLog = arr; render();
+    });
+    on(db.doc('opticsRemarks/log'), d => { S.remarks = d.exists ? (d.data().entries || []) : []; render(); });
+  }
+  /* 캘린더 봇 변경 감지용 리비전 — 캘린더에 영향을 주는 쓰기마다 1 증가.
+   * 봇은 매분 이 문서 1건만 읽고 값이 그대로면 스케줄 전체 재조회를 건너뛴다
+   * (Firestore 무료 읽기 한도 보호). 실패해도 사용자 동작을 막지 않으며,
+   * 봇의 10분 안전 재동기화가 누락을 자가 치유한다. */
+  function bumpSync() {
+    return db.doc('syncMeta/wos').set({ rev: FV.increment(1) }, { merge: true })
+      .catch(e => console.warn('syncMeta bump 실패(무시됨):', e.message));
+  }
+
+  /* 봇 하트비트 조회 — 실시간 구독이 아니라 30분 주기 단건 조회다.
+   * 배너는 실시간일 필요가 없고, 구독으로 붙이면 접속자 수 × 갱신 횟수만큼
+   * Firestore 읽기를 먹는다(읽기 한도로 한 번 앱 전체가 멈춘 이력이 있다). */
+  let hbTimer = null;
+  function pollHeartbeat() {
+    db.doc('syncMeta/wos_bot').get()
+      .then(d => { S.botOkMs = d.exists ? (d.data().okMs || 0) : 0; render(); })
+      .catch(e => console.warn('봇 상태 조회 실패(무시됨):', e.message));
+  }
+  function startHeartbeatPoll() {
+    if (hbTimer) return;              // onAuthStateChanged 가 여러 번 불려도 타이머는 하나
+    pollHeartbeat();
+    hbTimer = setInterval(pollHeartbeat, 30 * 60000);
+  }
+
+  setInterval(() => { if (S.uid && listenWeeks !== cycle().targetWeek) { S.results = null; S.votes = {}; S.sched = {}; S.curSched = {}; S.adm = {}; S.curAdm = {}; S.pendingRanks = null; resubscribe(); } }, 30000);
+
+  async function fetchWeekVotes(week) {
+    const snap = await db.collection('opticsVotes').where('week', '==', week).get();
+    const v = {}; snap.forEach(d => { const x = d.data(); v[x.memberId] = x.ranks || {}; });
+    return v;
+  }
+
+  return {
+    start,
+    async claim(memberId, pin) {
+      const m = S.members[memberId];
+      if (!m) throw new Error('멤버를 찾을 수 없습니다.');
+      const h = pinHashOf(memberId, pin);
+      if (m.pinHash && m.pinHash !== h) throw new Error('PIN이 일치하지 않습니다.');
+      await db.doc('members/' + memberId).update({ pinHash: h, uids: FV.arrayUnion(S.uid) });
+      await db.doc('uidmap/' + S.uid).set({ memberId });
+      localStorage.setItem('wos_member', memberId);
+      S.user = { id: memberId, name: m.name, isAdmin: !!m.isAdmin, optics: m.opticsActive === true };
+      S.pendingRanks = null; render();
+    },
+    logout() { localStorage.removeItem('wos_member'); S.user = null; S.pendingRanks = null; render(); },
+    async saveVote(ranks) {
+      const c = cycle();
+      await db.doc(`opticsVotes/${c.targetWeek}_${S.user.id}`).set({
+        // 항상 신형 {d,q} 로 정규화해 저장 (구버전 문서를 그대로 되돌려 보내면 규칙에서 거부됨)
+        week: c.targetWeek, memberId: S.user.id, ranks: optNormRanks(ranks), updatedAt: FV.serverTimestamp(),
+      });
+    },
+    async deleteVote() {
+      const c = cycle();
+      await db.doc(`opticsVotes/${c.targetWeek}_${S.user.id}`).delete();
+    },
+    async ensureResults() {
+      const c = cycle();
+      if (S.results || S.ensuring || now() < c.announce) return;
+      S.ensuring = true;
+      try {
+        const v = await fetchWeekVotes(c.targetWeek);
+        const r = computeOpticsLottery(v);
+        await db.doc('opticsResults/' + c.targetWeek).set({
+          week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign, quarterAssign: r.quarterAssign,
+          unassignedMembers: r.unassignedMembers, votesJson: r.canonical,
+          createdAt: FV.serverTimestamp(), createdByUid: S.uid,
+        });
+        bumpSync();
+        toast('요일 배정 결과가 확정·발표되었습니다.', 'okk');
+      } catch (e) { if (!/permission|already/i.test(e.message)) console.error(e); }
+      finally { S.ensuring = false; }
+    },
+    async verifyResults(week, doc) {
+      const v = await fetchWeekVotes(week);
+      const r = computeOpticsLottery(v);
+      // 시간대 배정까지 재계산 결과와 일치해야 검증 통과 (구버전 결과 문서는 dayAssign 만 비교)
+      const qOk = doc.quarterAssign === undefined
+        || JSON.stringify(canonQuarters(r.quarterAssign)) === JSON.stringify(canonQuarters(doc.quarterAssign));
+      return { ok: r.seed === doc.seed && canonMap(r.dayAssign) === canonMap(doc.dayAssign) && qOk, recomputed: r };
+    },
+    /* 30분 슬롯 일괄 수정: changes = {slotIdx: memberId|""} */
+    async setSlots(week, day, changes) {
+      const payload = { week, day, slots: {} };
+      for (const [k, v] of Object.entries(changes)) payload.slots[k] = v;
+      await db.doc(`opticsSchedule/${week}_${day}`).set(payload, { merge: true });
+      bumpSync();
+    },
+    /* 관리자 전용 블록 일괄 수정: changes = {slotIdx: '!kind|memo' | ""(해제)} */
+    async setAdminBlock(week, day, changes) {
+      const payload = { week, day, slots: {} };
+      for (const [k, v] of Object.entries(changes)) payload.slots[k] = v;
+      await db.doc(`opticsAdminBlocks/${week}_${day}`).set(payload, { merge: true });
+      bumpSync();
+    },
+    async sendChat(text) {
+      await db.collection('opticsChat').add({
+        memberId: S.user.id, text, week: cycle().targetWeek, createdAt: FV.serverTimestamp(),
+      });
+    },
+    /* 관리자: 조율 채팅 전체 삭제 (오래된 메시지 포함 서버 전체를 400개 단위 배치로) */
+    async clearChat() {
+      for (;;) {
+        const snap = await db.collection('opticsChat').limit(400).get();
+        if (snap.empty) break;
+        const batch = db.batch();
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        if (snap.size < 400) break;
+      }
+    },
+    async saveHardware(current, section, summary) {
+      await db.doc('opticsHardware/current').set(current);
+      await db.collection('opticsHardwareLog').add({
+        memberId: S.user.id, section, summary, createdAt: FV.serverTimestamp(), tsMs: Date.now(),
+      });
+    },
+    /* Remark: 트랜잭션으로 최신 10개만 유지(밀어내기) — 동시 기록에도 안전 */
+    async addRemark(text) {
+      const ref = db.doc('opticsRemarks/log');
+      await db.runTransaction(async tx => {
+        const d = await tx.get(ref);
+        const cur = d.exists ? (d.data().entries || []) : [];
+        tx.set(ref, { entries: optPushRemark(cur, { tsMs: Date.now(), memberId: S.user.id, text }) });
+      });
+    },
+    async deleteRemark(tsMs, memberId) {
+      const ref = db.doc('opticsRemarks/log');
+      await db.runTransaction(async tx => {
+        const d = await tx.get(ref);
+        const cur = d.exists ? (d.data().entries || []) : [];
+        tx.set(ref, { entries: cur.filter(e => !(e.tsMs === tsMs && e.memberId === memberId)) });
+      });
+    },
+    async loadHistory(week) {
+      const [rd, votes, ssnap, asnap] = await Promise.all([
+        db.doc('opticsResults/' + week).get(), fetchWeekVotes(week),
+        db.collection('opticsSchedule').where('week', '==', week).get(),
+        db.collection('opticsAdminBlocks').where('week', '==', week).get(),
+      ]);
+      const sched = {}; ssnap.forEach(d => { const x = d.data(); sched[String(x.day)] = x; });
+      const adm = {}; asnap.forEach(d => { const x = d.data(); adm[String(x.day)] = x; });
+      return { results: rd.exists ? rd.data() : null, votes, sched, adm };
+    },
+    admin: {
+      addMember: (name) => db.collection('members').add({ name, pinHash: null, uids: [], isAdmin: false, active: false, opticsActive: true, createdAt: FV.serverTimestamp() }),
+      setOptics: (id, on) => db.doc('members/' + id).update({ opticsActive: on }),
+      setAdmin: (id, isAdmin) => db.doc('members/' + id).update({ isAdmin }),
+      resetPin: (id) => db.doc('members/' + id).update({ pinHash: null }),
+      resetDevices: (id) => db.doc('members/' + id).update({ uids: [] }),
+      deleteResults: (week) => db.doc('opticsResults/' + week).delete().then(bumpSync),
+    },
+  };
+}
+
+/* ---------------- 데모 저장소 ---------------- */
+function makeDemoStore() {
+  const mem = { members: {}, votes: {}, results: {}, sched: {}, adm: {}, chat: [], hw: null, hwLog: [], remarks: [], syncRev: 0 };
+  const bumpSync = () => { mem.syncRev++; };
+  ['김데모', '이샘플', '박예시', '최가상', '정테스트', '한체험'].forEach((n, i) => {
+    mem.members['m' + i] = { id: 'm' + i, name: n, pinHash: null, uids: [], isAdmin: i === 0, active: true, opticsActive: true };
+  });
+  const c0 = phaseOf(Date.now());
+  mem.votes[c0.targetWeek] = {
+    m1: { r1: { d: 0, q: [1, 2] }, r2: 1 },      // 월 새벽+오전만
+    m2: { r1: 1 },
+    m3: { r1: 1, r2: 2, r3: 3 },
+    m4: { r1: 5, r2: 6 },
+    m5: { r1: { d: 0, q: [3, 4] }, r2: 2 },      // 월 오후+저녁만 → m1 과 겹치지 않아 둘 다 배정
+  };
+  mem.hw = {
+    laser: [
+      { id: 'l1', band: '405 nm', controller: 'Controller A', turret: '2', updatedAt: Date.now() - 86400000 * 3, updatedBy: 'm1' },
+      { id: 'l2', band: '633 nm', controller: 'Controller B', turret: '3', updatedAt: Date.now() - 86400000, updatedBy: 'm3' },
+    ],
+    turret: [
+      { id: 't1', no: '1', mirror: 'Silver mirror', updatedAt: Date.now() - 86400000 * 5, updatedBy: 'm2' },
+      { id: 't2', no: '2', mirror: 'Dichroic 550', updatedAt: Date.now() - 86400000 * 2, updatedBy: 'm1' },
+    ],
+    snspd: [1, 2, 3, 4].map(ch => ({ ch, range: ch <= 2 ? '900-1300 nm' : '', detFiber: ch === 1, ttl: ch === 1, ttlPower: false, updatedAt: Date.now() - 86400000 * ch, updatedBy: 'm' + ch })),
+    powermeter: [1, 2, 3].map(no => ({ no, detector: no === 1 ? 'S120C' : '', position: no === 1 ? '샘플 앞' : '', updatedAt: Date.now() - 86400000 * no, updatedBy: 'm1' })),
+    extras: [],
+  };
+  mem.remarks = [
+    { tsMs: Date.now() - 3600000 * 20, memberId: 'm3', text: '633 nm 레이저 파워가 평소보다 10% 낮게 측정됨 — 컨트롤러 재부팅 후 정상. 참고 바랍니다.' },
+    { tsMs: Date.now() - 86400000 * 2, memberId: 'm1', text: '광학테이블 오른쪽 커버 나사 하나 분실. 임시로 테이프 고정해둠.' },
+  ];
+  mem.chat = [
+    { id: 'c1', memberId: 'm2', text: '목요일 오전만 쓰고 오후는 비울게요. 필요하신 분?', createdAt: Date.now() - 3600000 },
+    { id: 'c2', memberId: 'm3', text: '저 목요일 오후 받을게요! 스케줄에서 바로 수정할게요.', createdAt: Date.now() - 3000000 },
+  ];
+
+  function pushState() {
+    const c = cycle();
+    S.members = { ...mem.members };
+    S.votes = { ...(mem.votes[c.targetWeek] || {}) };
+    if (S.pendingRanks === null && S.user && S.votes[S.user.id]) S.pendingRanks = optNormRanks(S.votes[S.user.id]);
+    S.results = mem.results[c.targetWeek] || null;
+    S.curResults = mem.results[c.votingWeek] || null;
+    S.sched = JSON.parse(JSON.stringify(mem.sched[c.targetWeek] || {}));
+    S.curSched = JSON.parse(JSON.stringify(mem.sched[c.votingWeek] || {}));
+    S.adm = JSON.parse(JSON.stringify(mem.adm[c.targetWeek] || {}));
+    S.curAdm = JSON.parse(JSON.stringify(mem.adm[c.votingWeek] || {}));
+    S.chat = [...mem.chat];
+    S.hw = mem.hw ? JSON.parse(JSON.stringify(mem.hw)) : null;
+    S.hwLog = [...mem.hwLog];
+    S.remarks = [...mem.remarks];
+    S.connected = true; render();
+  }
+
+  return {
+    start() { S.uid = 'demo-uid'; pushState(); },
+    async claim(memberId, pin) {
+      const m = mem.members[memberId];
+      const h = pinHashOf(memberId, pin);
+      if (m.pinHash && m.pinHash !== h) throw new Error('PIN이 일치하지 않습니다.');
+      m.pinHash = h;
+      S.user = { id: memberId, name: m.name, isAdmin: !!m.isAdmin, optics: m.opticsActive === true };
+      S.pendingRanks = null; pushState();
+    },
+    logout() { S.user = null; S.pendingRanks = null; pushState(); },
+    async saveVote(ranks) { const c = cycle(); (mem.votes[c.targetWeek] = mem.votes[c.targetWeek] || {})[S.user.id] = optNormRanks(ranks); pushState(); },
+    async deleteVote() { const c = cycle(); delete (mem.votes[c.targetWeek] || {})[S.user.id]; pushState(); },
+    async ensureResults() {
+      const c = cycle();
+      if (mem.results[c.targetWeek] || now() < c.announce) return;
+      const r = computeOpticsLottery(mem.votes[c.targetWeek] || {});
+      mem.results[c.targetWeek] = { week: c.targetWeek, seed: r.seed, dayAssign: r.dayAssign, quarterAssign: r.quarterAssign, unassignedMembers: r.unassignedMembers, votesJson: r.canonical };
+      bumpSync();
+      toast('(데모) 요일 배정 결과가 확정·발표되었습니다.', 'okk'); pushState();
+    },
+    async verifyResults(week, doc) {
+      const r = computeOpticsLottery(mem.votes[week] || {});
+      const qOk = doc.quarterAssign === undefined
+        || JSON.stringify(canonQuarters(r.quarterAssign)) === JSON.stringify(canonQuarters(doc.quarterAssign));
+      return { ok: r.seed === doc.seed && canonMap(r.dayAssign) === canonMap(doc.dayAssign) && qOk, recomputed: r };
+    },
+    async setSlots(week, day, changes) {
+      const w = mem.sched[week] = mem.sched[week] || {};
+      const doc = w[String(day)] = w[String(day)] || { week, day, slots: {} };
+      Object.assign(doc.slots, changes); bumpSync(); pushState();
+    },
+    async setAdminBlock(week, day, changes) {
+      const w = mem.adm[week] = mem.adm[week] || {};
+      const doc = w[String(day)] = w[String(day)] || { week, day, slots: {} };
+      Object.assign(doc.slots, changes); bumpSync(); pushState();
+    },
+    async sendChat(text) { mem.chat.push({ id: 'c' + Math.random(), memberId: S.user.id, text, createdAt: Date.now() }); pushState(); },
+    async clearChat() { mem.chat = []; pushState(); },
+    async saveHardware(current, section, summary) {
+      mem.hw = JSON.parse(JSON.stringify(current));
+      mem.hwLog.unshift({ memberId: S.user.id, section, summary, tsMs: Date.now(), createdAt: Date.now() });
+      pushState();
+    },
+    async addRemark(text) {
+      mem.remarks = optPushRemark(mem.remarks, { tsMs: Date.now(), memberId: S.user.id, text });
+      pushState();
+    },
+    async deleteRemark(tsMs, memberId) {
+      mem.remarks = mem.remarks.filter(e => !(e.tsMs === tsMs && e.memberId === memberId));
+      pushState();
+    },
+    async loadHistory(week) {
+      return { results: mem.results[week] || null, votes: mem.votes[week] || {}, sched: mem.sched[week] || {}, adm: mem.adm[week] || {} };
+    },
+    admin: {
+      addMember: async (name) => { const id = 'm' + Math.random().toString(36).slice(2, 8); mem.members[id] = { id, name, pinHash: null, uids: [], isAdmin: false, active: false, opticsActive: true }; pushState(); },
+      setOptics: async (id, on) => { mem.members[id].opticsActive = on; pushState(); },
+      setAdmin: async (id, v) => { mem.members[id].isAdmin = v; pushState(); },
+      resetPin: async (id) => { mem.members[id].pinHash = null; pushState(); },
+      resetDevices: async (id) => { mem.members[id].uids = []; pushState(); },
+      deleteResults: async (week) => { delete mem.results[week]; bumpSync(); pushState(); },
+    },
+    _demo: { pushState, mem },
+  };
+}
+
+function restoreSession() {
+  if (S.user) return;
+  const id = localStorage.getItem('wos_member') || localStorage.getItem('wss_member');
+  if (id && S.members[id] && (S.members[id].opticsActive === true || S.members[id].isAdmin) &&
+      (IS_DEMO || (S.members[id].uids || []).includes(S.uid))) {
+    const m = S.members[id];
+    S.user = { id, name: m.name, isAdmin: !!m.isAdmin, optics: m.opticsActive === true };
+  }
+}
+
+async function maybeVerify() {
+  if (!S.results || S.verify || S._verifying) return;
+  S._verifying = true;
+  try {
+    const v = await store.verifyResults(cycle().targetWeek, S.results);
+    S.verify = { ok: v.ok }; render();
+  } catch (e) {} finally { S._verifying = false; }
+}
+
+/* =====================================================================
+ * Weekly Optics Scheduler - 앱 (2/3): 렌더링 (캘린더·투표·조율채팅)
+ * ===================================================================== */
+
+const TABS = [
+  ['cal', '일정'], ['vote', '투표'], ['coord', '조율·채팅'],
+  ['results', '배정 결과'], ['hw', '장비 변경'], ['remark', '특이사항'], ['members', '명단'], ['rules', '규칙'], ['admin', '관리자'],
+];
+
+function render() {
+  renderHeader(); renderPhasebar(); renderTabs();
+  const c = cycle();
+  if (c.phase === 'BOOKING' && !S.results && S.uid && S.connected) store.ensureResults();
+  if (S.results && !S.verify) maybeVerify();
+  const fn = { cal: renderCal, vote: renderVote, coord: renderCoord, results: renderResults,
+               hw: renderHw, remark: renderRemark, members: renderMembers, rules: renderRules, admin: renderAdmin }[S.tab];
+  $('#main').innerHTML = fn ? fn() : '';
+  stampTableLabels($('#main'));   // 모바일 카드형 표 라벨
+  scrollActiveTabIntoView();
+  bindMain();
+}
+/* ---------------- 모바일 대응 공통 후처리 ---------------- */
+/* 표의 헤더(th) 텍스트를 각 td 에 data-label 로 복사해 둔다.
+ * 좁은 화면(<=560px)에서는 CSS 가 헤더행을 숨기고 이 라벨을 셀 앞에 붙여
+ * 표를 '카드형'으로 바꾼다 — 이 처리가 없으면 표가 뷰포트를 밀어내 화면이 가로로 잘린다.
+ * 렌더 결과에 일괄 적용하므로 표를 새로 추가해도 자동으로 따라온다. */
+function stampTableLabels(root) {
+  (root || document).querySelectorAll('table.list').forEach(t => {
+    const head = t.rows[0];
+    if (!head) return;
+    const labels = [...head.cells].map(c => c.textContent.trim());
+    for (let r = 1; r < t.rows.length; r++) {
+      [...t.rows[r].cells].forEach((td, i) => {
+        // 셀 내용을 하나의 래퍼로 묶는다. 모바일에서 td 가 flex 가 되면 자식 노드가
+        // 각각 flex 아이템이 되어 <br> 줄바꿈이나 인라인 배치가 깨지기 때문.
+        if (!td.firstElementChild || td.childNodes.length > 1 || !td.firstElementChild.classList.contains('cellval')) {
+          const w = document.createElement('span');
+          w.className = 'cellval';
+          while (td.firstChild) w.appendChild(td.firstChild);
+          td.appendChild(w);
+        }
+        // colspan 안내행이나 헤더가 빈 열은 라벨을 붙이지 않는다
+        if (td.colSpan > 1) { td.removeAttribute('data-label'); return; }
+        if (labels[i]) td.setAttribute('data-label', labels[i]);
+      });
+    }
+  });
+}
+/* 선택된 탭이 가로 스크롤 밖에 있으면 보이도록 당겨온다 (탭이 많은 폰 화면 대응).
+ * scrollIntoView 는 페이지 세로 스크롤까지 건드릴 수 있어 scrollLeft 를 직접 계산한다. */
+function scrollActiveTabIntoView() {
+  const nav = document.querySelector('nav.tabs');
+  const on = nav && nav.querySelector('button.on');
+  if (!nav || !on) return;
+  // offsetLeft 는 offsetParent(여기선 body) 기준이라 탭 바 내부 좌표와 어긋난다 → 실제 사각형으로 계산
+  const nr = nav.getBoundingClientRect(), br = on.getBoundingClientRect();
+  const delta = (br.left - nr.left) - (nav.clientWidth - br.width) / 2;  // 가운데로 오도록
+  nav.scrollLeft = Math.max(0, Math.min(nav.scrollLeft + delta, nav.scrollWidth - nav.clientWidth));
+}
+
+
+function renderHeader() {
+  const c = cycle();
+  $('#weekLabel').textContent = `광학방 주간 스케줄 · 대상 주: ${weekLabel(c.targetWeek)}`;
+  let h = '';
+  if (S.authError) h += `<span class="badge b-red">연결 오류</span>`;
+  if (S.user) {
+    h += `<span class="userchip"><span class="dot"></span>${esc(S.user.name)}${S.user.isAdmin ? ' <span class="badge b-violet">관리자</span>' : ''}${S.user.optics ? '' : ' <span class="badge b-gray">광학 비활성</span>'}</span>
+          <button class="btn sm" id="btnLogout">로그아웃</button>`;
+  } else h += `<button class="btn primary" id="btnLogin">멤버 로그인</button>`;
+  $('#headRight').innerHTML = h;
+  $('#btnLogin')?.addEventListener('click', openLogin);
+  $('#btnLogout')?.addEventListener('click', () => store.logout());
+  $('#demoBanner').innerHTML = IS_DEMO
+    ? `<div class="demo-banner"><b>데모 모드</b> — 가상 데이터로 동작 중 (저장 안 됨).
+       &nbsp;국면 미리보기: <button class="btn sm" data-demo="vote">투표중</button> <button class="btn sm" data-demo="wait">추첨 대기</button> <button class="btn sm" data-demo="book">발표·조율</button></div>`
+    : (S.authError ? `<div class="demo-banner"><b>⚠ ${esc(S.authError)}</b></div>` : '');
+  /* 봇 하트비트 경고 — 봇이 멈추면 구글 캘린더가 조용히 낡아간다. 근거는 BOT_STALE_MIN 주석. */
+  const botLate = !IS_DEMO && S.botOkMs && botStaleMin() >= BOT_STALE_MIN;
+  $('#botBanner').innerHTML = botLate
+    ? `<div class="bot-banner">⚠ <b>구글 캘린더 동기화가 멈춰 있습니다</b> — 자동 동기화 봇의 마지막 정상 동작: ${agoText(botStaleMin())}.<br>
+       이 앱 안의 예약·배정은 정상이지만, 그 이후 변경이 구글 캘린더에는 반영되지 않았습니다. 관리자에게 알려주세요.</div>`
+    : '';
+  document.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => {
+    const c2 = phaseOf(Date.now());
+    const mode = b.dataset.demo;
+    if (mode === 'vote') S.demoOffset = c2.monday + 3600000 * 26 - Date.now();
+    if (mode === 'wait') S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 9 - Date.now();
+    if (mode === 'book') { S.demoOffset = c2.monday + 3 * DAY_MS + 3600000 * 12.5 - Date.now(); S.viewWeek = 'next'; }
+    S.results = null; S.verify = null;
+    // 데모: 국면 전환 시 '대상 주' 결과만 비워 재계산 유도 (이번 주 확정 스케줄은 보존)
+    if (store._demo) delete store._demo.mem.results[c2.targetWeek];
+    store._demo?.pushState();
+  }));
+}
+
+function renderPhasebar() {
+  const c = cycle();
+  const P = c.phase;
+  const badge = P === 'VOTING' ? '<span class="badge b-accent">1단계 · 사전 투표 중</span>'
+    : P === 'WAITING' ? '<span class="badge b-amber">2단계 · 배정 대기</span>'
+    : '<span class="badge b-green">3단계 · 자유 조율 중</span>';
+  const target = P === 'VOTING' ? c.voteClose : P === 'WAITING' ? c.announce : weekStartMs(c.targetWeek + 1);
+  const targetLabel = P === 'VOTING' ? '투표 마감까지' : P === 'WAITING' ? '배정 발표까지' : '대상 주 종료까지';
+  const steps = [
+    ['사전 투표', '월 00:00 ~ 수 24:00 · 요일 1/2/3순위 (선택)', P === 'VOTING' ? 'on' : 'done'],
+    ['마감·배정 대기', '목 00:00 ~ 12:00', P === 'WAITING' ? 'on' : (P === 'VOTING' ? '' : 'done')],
+    ['발표 + 자유 조율', '목 12:00 발표 → 전원 실시간 수정·채팅 조율', P === 'BOOKING' ? 'on' : ''],
+  ];
+  $('#phasebar').innerHTML = `
+    <div class="toprow">${badge}
+      <span class="muted">${targetLabel}</span>
+      <span class="countdown" id="cd" data-target="${target}">${fmtDur(target - now())}</span>
+      <ol class="stepline" aria-label="진행 단계">${steps.map((s, i) => `<li class="${s[2]}" title="${s[1]}"><i>${s[2] === 'done' ? '✓' : i + 1}</i><span>${s[0]}</span></li>`).join('')}</ol>
+    </div>`;
+}
+
+const RD_PRIMARY = ['cal', 'vote', 'coord', 'results'];
+function renderTabs() {
+  const vis = TABS.filter(([k]) => k !== 'admin' || S.user?.isAdmin);
+  const prim = new Set(RD_PRIMARY);
+  const secOn = vis.some(([k]) => !prim.has(k) && S.tab === k);
+  const btn = ([k, l]) => `<button class="${S.tab === k ? 'on' : ''}${prim.has(k) ? '' : ' sec'}" data-tab="${k}">${l}</button>`;
+  $('#tabs').innerHTML = vis.map(btn).join('')
+    + `<button class="more${secOn ? ' on' : ''}" data-more aria-haspopup="true" aria-expanded="false">${secOn ? esc((vis.find(([k]) => k === S.tab) || [, '더보기'])[1]) : '더보기'}</button>`
+    + `<div class="tabmore" hidden>${vis.filter(([k]) => !prim.has(k)).map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>`;
+  document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); }));
+  const mb = document.querySelector('#tabs [data-more]'), menu = document.querySelector('#tabs .tabmore');
+  if (mb && menu) {
+    mb.addEventListener('click', e => { e.stopPropagation(); menu.hidden = !menu.hidden; mb.setAttribute('aria-expanded', String(!menu.hidden)); });
+    document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== mb) { menu.hidden = true; mb.setAttribute('aria-expanded', 'false'); } });
+  }
+}
+
+/* ---------------- 주간 캘린더 컴포넌트 ---------------- */
+function calCtx(weekIdx) {
+  const c = cycle();
+  const isNext = weekIdx === c.targetWeek;
+  return {
+    weekIdx,
+    results: isNext ? S.results : S.curResults,
+    sched: isNext ? S.sched : S.curSched,
+    adm: isNext ? S.adm : S.curAdm,
+    votes: isNext ? S.votes : null,
+  };
+}
+function calendarHtml(weekIdx, mini) {
+  const ctx = calCtx(weekIdx);
+  const dayAssign = ctx.results?.dayAssign || {};
+  const eff = optEffectiveSchedule(ctx.results || {}, ctx.sched, ctx.adm);
+  const canEdit = !!(S.user && (S.user.optics || S.user.isAdmin) && editableWeek(weekIdx) && ctx.results);
+  // 관리자는 발표 전(투표 기간)에도 Repair·방문측정 블록을 잡을 수 있어야 함
+  const admEdit = canAdminBlock(weekIdx);
+  const cellCls = (canEdit || admEdit) ? 'cell editable' : 'cell';
+
+  // 헤더 (요일 당첨자 + 관리자 블록으로 인한 가용시간 표시)
+  let hd = `<div class="hd"></div>`;
+  for (let d = 0; d < 7; d++) {
+    const qa = (ctx.results && ctx.results.quarterAssign && ctx.results.quarterAssign[String(d)]) || null;
+    const owners = qa ? [...new Set(Object.values(qa))] : (dayAssign[String(d)] ? [dayAssign[String(d)]] : []);
+    const owner = owners.length === 1 ? owners[0] : null;
+    const free = optFreeSlotCount(ctx.adm, d);
+    const blocked = free < OPT_SLOTS_PER_DAY;
+    const admNote = !blocked ? ''
+      : (free === 0 ? ' · <b style="color:var(--red)">관리자 점유(종일)</b>' : ` · <b style="color:var(--risk)">관리자 ${(OPT_SLOTS_PER_DAY - free) / 2}h</b>`);
+    const ownerNote = owner ? ' · ' + esc(memberName(owner))
+      : (owners.length > 1 ? ' · ' + esc(owners.map(memberName).join('/')) : '');
+    hd += `<div class="hd">${OPT_DAYS[d]}<small>${fmtDate(optDayDate(weekIdx, d))}${ownerNote}${admNote}</small></div>`;
+  }
+  // 희망순위 오버레이 행
+  let ov = '';
+  if (S.overlay) {
+    const votes = ctx.votes || {};
+    ov = `<div class="rankchips"></div>`;
+    for (let d = 0; d < 7; d++) {
+      let chips = '';
+      for (const [mid, r] of Object.entries(votes)) {
+        [['r1', 1], ['r2', 2], ['r3', 3]].forEach(([k, n]) => {
+          const nm = optNormRank(r[k]);
+          if (!nm || nm.d !== d) return;
+          const qt = nm.q.length === 4 ? '' : ' ' + optQuartersLabel(nm.q);
+          chips += `<span class="rankchip rc${n}">${'①②③'[n - 1]} ${esc(memberName(mid))}${esc(qt)}</span>`;
+        });
+      }
+      ov += `<div class="rankchips">${chips || '<span class="muted" style="font-size:10px">-</span>'}</div>`;
+    }
+  }
+  // 본문 (48행)
+  let body = '';
+  for (let s = 0; s < OPT_SLOTS_PER_DAY; s++) {
+    const hour = s % 2 === 0;
+    const tlab = mini ? (s % 4 === 0 ? String(s / 2) + '시' : '') : (hour ? optSlotLabel(s) : '');
+    body += `<div class="tl">${tlab}</div>`;
+    for (let d = 0; d < 7; d++) {
+      const o = eff[d][s];
+      const isAdm = optIsAdminOwner(o);
+      const runStart = o !== null && (s === 0 || eff[d][s - 1] !== o);
+      let style = '';
+      if (o) { const col = memberColor(o); style = ` style="background:${col.bg}"`; }
+      const lbl = runStart ? `<span class="lbl" style="color:${o ? memberColor(o).fg : ''}">${isAdm ? '🔒 ' : ''}${esc(ownerLabel(o))}</span>` : '';
+      body += `<div class="${cellCls}${hour ? ' hour' : ''}${isAdm ? ' admblock' : ''}" data-day="${d}" data-slot="${s}" data-week="${weekIdx}"${isAdm ? ' data-adm="1"' : ''}${style}>${lbl}</div>`;
+    }
+  }
+  return `<div class="calwrap"><div class="cal${mini ? ' mini' : ''}" data-calweek="${weekIdx}" data-editable="${(canEdit || admEdit) ? 1 : 0}" data-canedit="${canEdit ? 1 : 0}" data-admedit="${admEdit ? 1 : 0}">${hd}${ov}${body}</div></div>`;
+}
+
+/* 해당 주의 관리자 블록 요약 HTML (요일별 구간 나열). 없으면 '' */
+function admSummaryHtml(weekIdx, adm) {
+  const parts = [];
+  for (let d = 0; d < 7; d++) {
+    const blocks = optAdminBlocksOfDay(adm, d);
+    if (!blocks.length) continue;
+    const free = optFreeSlotCount(adm, d);
+    parts.push(`<li><b>${OPT_DAYS[d]} (${fmtDate(optDayDate(weekIdx, d))})</b> — ` +
+      blocks.map(b => `<span class="badge b-red">${esc(optAdminLabel(b.owner))} ${optRangeLabel(b.start, b.end)}</span>`).join(' ') +
+      (free === 0 ? ' <b style="color:var(--red)">→ 이 요일은 종일 사용 불가 (당첨자 가용 시간 없음)</b>' : ` <span class="muted">→ 나머지 ${free / 2}시간은 정상 사용 가능</span>`) +
+      '</li>');
+  }
+  if (!parts.length) return '';
+  return `<div class="note" style="border:1.5px solid var(--red);background:var(--red-soft)">
+    <b>🔒 관리자 지정 일정 (Repair · 외부인 방문측정)</b> — 아래 시간대는 <b>예약·조율 대상에서 제외</b>됩니다.
+    요일 당첨자도 이 시간을 제외한 나머지 시간만 사용합니다.
+    <ul style="margin:6px 0 0 18px">${parts.join('')}</ul></div>`;
+}
+
+/* ---------------- 탭: 스케줄 ---------------- */
+function renderCal() {
+  const c = cycle();
+  const w = viewWeekIdx();
+  const ctx = calCtx(w);
+  const canEdit = !!(S.user && (S.user.optics || S.user.isAdmin) && editableWeek(w) && ctx.results);
+  let note;
+  if (!ctx.results) {
+    note = w === c.targetWeek
+      ? `아직 배정 발표 전입니다 (발표: ${fmtDT(c.announce)}). 발표 후 이 화면에서 전원이 자유롭게 수정·조율할 수 있습니다.`
+      : '이 주의 배정 데이터가 없습니다.';
+  } else if (canEdit) {
+    note = rdIsPhone() && !S.rdGrid ? '수정하려면 <b>표로 보기</b>를 누르세요.'
+      : '칸을 <b>클릭</b>하거나 <b>드래그</b>해서 30분 단위로 수정하세요. 변경은 즉시 모두에게 반영되고 1분 내 구글캘린더에 동기화됩니다.'
+      + (rdIsPhone() ? ' <span class="muted">요일 칸을 위아래로 쓸면 범위 선택, 화면 스크롤은 왼쪽 시간 눈금에서.</span>' : '');
+  } else {
+    note = S.user ? '이 주는 수정 가능 기간이 아닙니다.' : '수정하려면 로그인하세요.';
+  }
+  if (canAdminBlock(w)) {
+    note += ' <b>[관리자]</b> 발표 전이라도 칸을 클릭·드래그해 <b>Repair / 외부인 방문측정</b> 블록을 지정할 수 있습니다.';
+  }
+  const listMode = rdIsPhone() && !S.rdGrid && !!ctx.results;
+  return `${nowCardHtml()}<div class="card">
+    <div class="flexrow" style="margin-bottom:10px">
+      <h2 style="margin:0">주간 일정</h2>
+      ${ctx.results ? `<button class="btn sm viewtoggle" data-rdview="${listMode ? 'grid' : 'list'}">${listMode ? '표로 보기' : '목록으로'}</button>` : ''}
+      <span class="weekchips">
+        <button data-vw="cur" class="${S.viewWeek === 'cur' ? 'on' : ''}">이번 주 (${weekLabel(c.votingWeek)})</button>
+        <button data-vw="next" class="${S.viewWeek === 'next' ? 'on' : ''}">다음 주 (${weekLabel(c.targetWeek)})</button>
+      </span>
+      <label class="muted" style="margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="ovToggle" ${S.overlay ? 'checked' : ''} style="accent-color:var(--accent)">
+        희망순위 표시 <span class="rankchip rc1" style="opacity:1">①1순위</span><span class="rankchip rc2" style="opacity:1">②2순위</span><span class="rankchip rc3" style="opacity:1">③3순위</span>
+      </label>
+    </div>
+    <p class="muted" style="margin-bottom:10px">${note}</p>
+    ${admSummaryHtml(w, ctx.adm)}
+    ${listMode ? dayListHtml(w) : calendarHtml(w, false)}
+  </div>`;
+}
+
+/* ---------------- 탭: 순위 투표 ---------------- */
+function renderVote() {
+  const c = cycle();
+  if (!S.user) return `<div class="card"><h2>사전 투표 (요일 · 시간대)</h2><p class="muted">투표하려면 먼저 로그인해주세요.</p></div>`;
+  if (!S.user.optics) return `<div class="card"><h2>사전 투표 (요일 · 시간대)</h2><p class="muted">광학 스케줄 참여가 활성화되지 않은 계정입니다. 관리자에게 활성화를 요청하세요.</p></div>`;
+  if (c.phase !== 'VOTING') {
+    const my = S.votes[S.user.id];
+    const mine = ['r1', 'r2', 'r3'].map(k => optNormRank((my || {})[k])).filter(Boolean);
+    return `<div class="card"><h2>사전 투표 (요일 · 시간대)</h2>
+      <p class="muted">지금은 투표 기간이 아닙니다. 투표는 <b>매주 월 00:00 ~ 수 24:00</b>. 다음 시작: <b>${fmtDT(weekStartMs(c.votingWeek + 1))}</b></p>
+      ${mine.length ? `<div class="note">이번 주 내 투표(마감됨): ${mine.map((n, i) => `${i + 1}순위 ${OPT_DAYS[n.d]} <b>${optQuartersLabel(n.q)}</b>`).join(', ')}</div>` : ''}</div>`;
+  }
+  if (S.pendingRanks === null) S.pendingRanks = optNormRanks(S.votes[S.user.id]);
+  const p = S.pendingRanks;
+  const norm = k => optNormRank(p[k]);
+  const saved = optCanonicalVotesJson({ x: S.votes[S.user.id] || {} }) === optCanonicalVotesJson({ x: p });
+  const myPick = d => {           // 이 요일이 몇 순위이고 어떤 분기를 골랐는지
+    for (const [k, n] of [['r1', 1], ['r2', 2], ['r3', 3]]) {
+      const v = norm(k);
+      if (v && v.d === d) return { rank: n, q: v.q };
+    }
+    return null;
+  };
+  // 요일별 순위 집계 + 분기별 지원자 수 (남들이 어느 시간대를 원하는지 보고 고를 수 있게)
+  const agg = Array.from({ length: 7 }, () => [0, 0, 0]);
+  const qAgg = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+  for (const r of Object.values(S.votes)) {
+    [['r1', 0], ['r2', 1], ['r3', 2]].forEach(([k, i]) => {
+      const n = optNormRank(r[k]);
+      if (!n) return;
+      agg[n.d][i]++;
+      n.q.forEach(q => qAgg[n.d][q - 1]++);
+    });
+  }
+  const cards = Array.from({ length: 7 }, (_, d) => {
+    const pick = myPick(d);
+    const a = agg[d];
+    // 관리자 블록(Repair/방문측정)은 투표 시점에 반드시 보여야 함 — 당첨돼도 그 시간은 못 씀
+    const blocks = optAdminBlocksOfDay(S.adm, d);
+    const free = optFreeSlotCount(S.adm, d);
+    const admHtml = !blocks.length ? ''
+      : `<div class="agg" style="color:var(--risk);line-height:1.5">🔒 ${blocks.map(b => esc(optAdminLabel(b.owner)) + ' ' + optRangeLabel(b.start, b.end)).join('<br>')}
+         ${free === 0 ? '<br><b style="color:var(--red)">종일 사용 불가</b>' : ''}</div>`;
+    // 분기 칩: 고른 요일이면 내 선택 표시, 아니면 눌러서 '그 시간대만' 바로 지원
+    const qs = OPT_QUARTERS.map(o => {
+      const on = pick && pick.q.indexOf(o.q) >= 0;
+      const cnt = qAgg[d][o.q - 1];
+      return `<button class="qchip${on ? ' on' : ''}" data-votq="${d}|${o.q}"
+        title="${o.key} ${o.label} ${o.range}시${cnt ? ` · 현재 ${cnt}명 지원` : ''}">
+        <span class="qk">${o.label}</span><span class="qr">${o.range}</span>
+        ${cnt ? `<span class="qn">${cnt}</span>` : ''}</button>`;
+    }).join('');
+    return `<div class="daycard ${pick ? 'picked' : ''}${free === 0 ? ' fullblocked' : ''}">
+      ${pick ? `<span class="myrank">${'①②③'[pick.rank - 1]}</span>` : ''}
+      <div class="dayhit" data-votday="${d}">
+        <b>${OPT_DAYS[d]}</b><div class="date">${fmtDate(optDayDate(c.targetWeek, d))}</div>
+        <div class="agg">${a[0] + a[1] + a[2] ? `①${a[0]} ②${a[1]} ③${a[2]}` : '지원 없음'}</div>
+      </div>
+      <div class="qchips">${qs}</div>
+      ${pick ? `<div class="qsum">${esc(optQuartersLabel(pick.q))}</div>` : ''}
+      ${admHtml}
+    </div>`;
+  }).join('');
+  const picks = ['r1', 'r2', 'r3'].map(norm).filter(Boolean);
+  return `<div class="card">
+    <h2>사전 투표 (요일 · 시간대) — ${weekLabel(c.targetWeek)} 대상</h2>
+    <p class="muted" style="margin:6px 0 12px">
+      요일 이름을 누르면 <b>그 요일 종일</b>로 1순위 → 2순위 → 3순위 순서로 지정됩니다 (다시 누르면 해제, 아래 순위는 자동으로 당겨짐).<br>
+      하루 전체가 필요 없다면 <b>새벽 / 오전 / 오후 / 저녁</b> 칩을 눌러 원하는 시간대만 남기세요 — 칩을 바로 누르면 <b>그 시간대만</b> 지원됩니다.
+      배정도 그 시간대 단위로 이뤄지므로, 필요 없는 시간을 나중에 취소할 필요가 없습니다.<br>
+      3개를 모두 채울 필요는 없으며, <b>적게 투표할수록 동순위 경쟁에서 우선</b>합니다. 칩의 작은 숫자는 현재 그 시간대 지원자 수입니다.</p>
+    <div class="flexrow" style="margin-bottom:10px">
+      <span>내 투표: ${picks.length ? picks.map((n, i) => `<span class="badge b-accent">${i + 1}순위 ${OPT_DAYS[n.d]} ${esc(optQuartersLabel(n.q))}</span>`).join(' ') : '<span class="muted">없음</span>'}</span>
+      <span style="margin-left:auto" class="${saved ? 'muted' : 'verify-bad'}">${saved ? '저장됨 ✓' : '변경사항 있음 — 저장 필요!'}</span>
+    </div>
+    ${admSummaryHtml(c.targetWeek, S.adm)}
+    <div class="daycards">${cards}</div>
+    <div class="flexrow" style="margin-top:14px">
+      <button class="btn primary" id="btnSaveVote" ${saved ? 'disabled' : ''}>투표 저장</button>
+      <button class="btn" id="btnResetVote">저장된 상태로 되돌리기</button>
+      <button class="btn danger" id="btnClearVote">투표 전체 취소</button>
+      <span class="muted">마감: ${fmtDT(c.voteClose)} (수요일 24시)</span>
+    </div></div>`;
+}
+
+/* ---------------- 탭: 일정 조율 (미니 스케줄 + 채팅) ---------------- */
+function renderCoord() {
+  const c = cycle();
+  const w = viewWeekIdx();
+  const msgs = S.chat.map(m => {
+    const mine = S.user && m.memberId === S.user.id;
+    const t = m.createdAt?.toMillis ? m.createdAt.toMillis() : (typeof m.createdAt === 'number' ? m.createdAt : Date.now());
+    return `<div class="msg ${mine ? 'mine' : ''}">
+      <div class="meta">${esc(memberName(m.memberId))} · ${fmtDT(t)}</div>
+      <div class="bubble">${esc(m.text)}</div></div>`;
+  }).join('');
+  return `<div class="card">
+    <div class="flexrow" style="margin-bottom:10px">
+      <h2 style="margin:0">실시간 예약 · 일정 조율</h2>
+      <span class="weekchips">
+        <button data-vw="cur" class="${S.viewWeek === 'cur' ? 'on' : ''}">이번 주</button>
+        <button data-vw="next" class="${S.viewWeek === 'next' ? 'on' : ''}">다음 주</button>
+      </span>
+      <label class="muted" style="margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="ovToggleCoord" ${S.overlay ? 'checked' : ''} style="accent-color:var(--accent)">
+        희망순위 표시 <span class="rankchip rc1" style="opacity:1">①1순위</span><span class="rankchip rc2" style="opacity:1">②2순위</span><span class="rankchip rc3" style="opacity:1">③3순위</span>
+      </label>
+    </div>
+    <p class="muted" style="margin-bottom:10px">미니 스케줄에서 바로 수정 → 즉시 반영${S.overlay ? ' · 희망순위는 다음 주 스케줄에서만 표시됩니다' : ''} · 🔒 표시 구간은 관리자 지정 일정으로 예약·조율 불가
+      · 📱 모바일: 요일 칸을 쓸면 범위 선택, 화면 스크롤은 왼쪽 시간 눈금이나 표 바깥에서</p>
+    ${admSummaryHtml(w, calCtx(w).adm)}
+    <div class="coord">
+      <div>${calendarHtml(w, true)}</div>
+      <div class="chatbox">
+        <div class="chatlog" id="chatlog">${msgs || '<p class="muted" style="text-align:center;margin-top:20px">아직 메시지가 없습니다.<br>배정 결과를 두고 자유롭게 조율하세요!</p>'}</div>
+        <div class="chatin">
+          <input id="chatText" placeholder="${S.user?.optics ? '메시지 입력 후 Enter' : '광학 활성 멤버만 채팅 가능'}" ${S.user?.optics ? '' : 'disabled'} maxlength="500">
+          <button class="btn primary" id="btnChatSend" ${S.user?.optics ? '' : 'disabled'}>전송</button>
+        </div>
+        ${S.user?.isAdmin ? '<div style="padding:6px 10px;border-top:1px solid var(--line);background:var(--subtle);text-align:right"><button class="btn sm danger" id="btnChatClear">🗑 채팅 전체 초기화 (관리자)</button></div>' : ''}
+      </div>
+    </div></div>`;
+}
+/* 채팅 수신 시 로그만 갱신(입력 초기화 방지). 성공 시 true */
+function renderChatLogOnly() {
+  const el = $('#chatlog');
+  if (!el || S.tab !== 'coord') return false;
+  const msgs = S.chat.map(m => {
+    const mine = S.user && m.memberId === S.user.id;
+    const t = m.createdAt?.toMillis ? m.createdAt.toMillis() : (typeof m.createdAt === 'number' ? m.createdAt : Date.now());
+    return `<div class="msg ${mine ? 'mine' : ''}"><div class="meta">${esc(memberName(m.memberId))} · ${fmtDT(t)}</div><div class="bubble">${esc(m.text)}</div></div>`;
+  }).join('');
+  el.innerHTML = msgs;
+  el.scrollTop = el.scrollHeight;
+  return true;
+}
+
+/* ---------------- 탭: 배정 결과 ---------------- */
+function renderResults() {
+  const c = cycle();
+  const weekOpts = [];
+  for (let w = c.targetWeek; w >= c.targetWeek - 8; w--) weekOpts.push(w);
+  const sel = S.resultsWeek ?? c.targetWeek;
+  const isCurrent = sel === c.targetWeek;
+  const data = isCurrent ? { results: S.results, votes: S.votes, adm: S.adm } : S.histCache[sel];
+  let body = '';
+  if (!isCurrent && !data) {
+    body = '<p class="muted">불러오는 중...</p>';
+    store.loadHistory(sel).then(async d => {
+      let verify = null;
+      if (d.results) { try { verify = await store.verifyResults(sel, d.results); } catch (e) {} }
+      S.histCache[sel] = { ...d, verify }; render();
+    }).catch(() => { S.histCache[sel] = { results: null, votes: {} }; render(); });
+  } else if (!data?.results) {
+    body = isCurrent && c.phase !== 'BOOKING'
+      ? `<p class="muted">배정 발표 전입니다. 발표: <b>${fmtDT(c.announce)}</b> (목요일 12:00). 발표 즉시 자동 표시됩니다.</p>`
+      : '<p class="muted">해당 주차의 배정 데이터가 없습니다.</p>';
+  } else {
+    const r = data.results;
+    const verify = isCurrent ? S.verify : (data.verify && { ok: data.verify.ok });
+    const vbadge = verify == null ? '<span class="badge b-gray">검증 중...</span>'
+      : verify.ok ? '<span class="badge b-green">✓ 검증 완료 — 투표 데이터로부터 재계산한 결과와 일치</span>'
+      : '<span class="badge b-red">⚠ 검증 불일치 — 관리자에게 결과 재생성을 요청하세요</span>';
+    const adm = data.adm || {};
+    const rows = Array.from({ length: 7 }, (_, d) => {
+      const qa = (r.quarterAssign || {})[String(d)];
+      const m = (r.dayAssign || {})[String(d)];
+      // 분기별 소유자를 사람 단위로 묶어 '이샘플 00-12시' 처럼 표기
+      let who;
+      if (qa && Object.keys(qa).length) {
+        const byMid = {};
+        for (let k = 1; k <= 4; k++) if (qa[String(k)]) (byMid[qa[String(k)]] = byMid[qa[String(k)]] || []).push(k);
+        const parts = Object.keys(byMid).sort((a, b) => Math.min(...byMid[a]) - Math.min(...byMid[b]))
+          .map(mid => `<b>${esc(memberName(mid))}</b> <span class="muted">${esc(optQuartersLabel(byMid[mid]))}</span>`);
+        const usedQ = Object.keys(qa).length;
+        who = parts.join('<br>') + (usedQ < 4 ? `<br><span class="muted">나머지 시간은 비어 있음 — 자유 조율 가능</span>` : '');
+      } else if (m) {
+        who = '<b>' + esc(memberName(m)) + '</b> <span class="muted">종일</span>';
+      } else {
+        who = '<span class="muted">미배정 — 자유 조율 가능</span>';
+      }
+      const blocks = optAdminBlocksOfDay(adm, d);
+      const free = optFreeSlotCount(adm, d);
+      const admCell = !blocks.length ? '<span class="muted">–</span>'
+        : blocks.map(b => `<span class="badge b-red">${esc(optAdminLabel(b.owner))} ${optRangeLabel(b.start, b.end)}</span>`).join(' ')
+          + (free === 0 ? ' <b style="color:var(--red)">가용 시간 없음</b>' : ` <span class="muted">(가용 ${free / 2}h)</span>`);
+      return `<tr><td>${OPT_DAYS[d]} (${fmtDate(optDayDate(sel, d))})</td>
+        <td>${who}</td>
+        <td>${admCell}</td></tr>`;
+    }).join('');
+    body = `
+      <div class="flexrow" style="margin-bottom:10px">${vbadge}</div>
+      <table class="list"><tr><th>요일</th><th>배정 (시간대별)</th><th>관리자 지정 일정</th></tr>${rows}</table>
+      <p class="muted" style="margin-top:6px">배정은 <b>새벽/오전/오후/저녁 4개 시간대 단위</b>로 이뤄집니다. 대표가 지원하지 않은 시간대에 <b>다른 지원자의 희망 시간대가 통째로 들어가면 그 사람도 함께 배정</b>됩니다.
+      배정자는 <b>관리자 지정 일정(Repair·외부인 방문측정)을 제외한 나머지 시간</b>을 사용합니다. 관리자 블록은 추첨 알고리즘과 무관한 별도 레이어이므로 위 검증 결과에 영향을 주지 않습니다.</p>
+      <h3>아쉽게 배정받지 못한 인원</h3>
+      <p class="muted">${(r.unassignedMembers || []).length ? r.unassignedMembers.map(m => esc(memberName(m))).join(', ') + ' — 실시간 예약 탭에서 협의해 시간을 나눠 쓸 수 있습니다.' : '없음 (투표자 전원 배정)'}</p>
+      <h3>공정성 증빙</h3>
+      <p class="muted" style="word-break:break-all">배정 기준: ① 무당첨자 우선 → ② 순위 → ③ 투표 수 적은 사람 → ④ 시드 무작위. (대표 선정 후 남은 시간대에 대해 같은 기준으로 추가 배정)
+      시드(투표 데이터 SHA-256): <code class="k">${esc(r.seed || '')}</code><br>
+      시드가 투표 내용 자체에서 결정되므로 누구도 결과를 조작·예측할 수 없으며, 모든 접속자가 독립 재검증합니다.</p>`;
+  }
+  return `<div class="card">
+    <div class="flexrow"><h2 style="margin:0">투표 결과 (요일 배정)</h2>
+      <select id="selWeek" style="margin-left:auto;border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-family:inherit">
+        ${weekOpts.map(w => `<option value="${w}" ${w === sel ? 'selected' : ''}>${weekLabel(w)}${w === c.targetWeek ? ' (다음 주)' : w === c.votingWeek ? ' (이번 주)' : ''}</option>`).join('')}
+      </select></div>
+    <div style="margin-top:10px">${body}</div></div>`;
+}
+
+/* =====================================================================
+ * Weekly Optics Scheduler - 앱 (3/3): Hardware Log·명단·규칙·관리자·이벤트
+ * ===================================================================== */
+
+/* ---------------- Hardware Log ---------------- */
+function defaultHw() {
+  return {
+    laser: [],
+    turret: [],
+    snspd: [1, 2, 3, 4].map(ch => ({ ch, range: '', detFiber: false, ttl: false, ttlPower: false, updatedAt: 0, updatedBy: '' })),
+    powermeter: [1, 2, 3].map(no => ({ no, detector: '', position: '', updatedAt: 0, updatedBy: '' })),
+    extras: [],
+  };
+}
+function hwMeta(row) {
+  if (!row.updatedAt) return '<span class="meta">-</span>';
+  return `<span class="meta">${optFmtDateDow(row.updatedAt)}<br>${esc(memberName(row.updatedBy))}</span>`;
+}
+const hwEdit = { section: null }; // 현재 편집 중 섹션
+
+function renderHw() {
+  const hw = S.hw ? JSON.parse(JSON.stringify(S.hw)) : defaultHw();
+  ['laser', 'turret', 'snspd', 'powermeter', 'extras'].forEach(k => { if (!hw[k]) hw[k] = defaultHw()[k]; });
+  const canEdit = !!(S.user && (S.user.optics || S.user.isAdmin));
+  const ed = s => hwEdit.section === s;
+  const editBtn = s => canEdit ? (ed(s)
+    ? `<button class="btn sm primary" data-hwsave="${s}">저장</button> <button class="btn sm" data-hwcancel>취소</button>`
+    : `<button class="btn sm" data-hwedit="${s}">수정</button>`) : '';
+  const txt = (s, i, f, v, ph = '') => ed(s)
+    ? `<input type="text" data-hw="${s}.${i}.${f}" value="${esc(v || '')}" placeholder="${ph}">`
+    : (v ? esc(v) : '<span class="muted">-</span>');
+  const chk = (s, i, f, v, label) => `<label style="white-space:nowrap;font-size:12.5px"><input type="checkbox" data-hw="${s}.${i}.${f}" ${v ? 'checked' : ''} ${ed(s) ? '' : 'disabled'} style="accent-color:var(--accent)"> ${label}</label>`;
+
+  const laserRows = hw.laser.map((r, i) => `<tr>
+    <td>${txt('laser', i, 'band', r.band, '예: 633 nm')}</td>
+    <td>${txt('laser', i, 'controller', r.controller, '연결 컨트롤러')}</td>
+    <td>${txt('laser', i, 'turret', r.turret, 'Align된 Turret #')}</td>
+    <td>${hwMeta(r)}</td>
+    ${ed('laser') ? `<td><button class="btn sm danger" data-hwdel="laser.${i}">삭제</button></td>` : ''}</tr>`).join('')
+    || `<tr><td colspan="5" class="muted">등록된 레이저가 없습니다.</td></tr>`;
+
+  const turretRows = hw.turret.map((r, i) => `<tr>
+    <td>${txt('turret', i, 'no', r.no, 'Turret 번호')}</td>
+    <td>${txt('turret', i, 'mirror', r.mirror, '장착 Mirror')}</td>
+    <td>${hwMeta(r)}</td>
+    ${ed('turret') ? `<td><button class="btn sm danger" data-hwdel="turret.${i}">삭제</button></td>` : ''}</tr>`).join('')
+    || `<tr><td colspan="4" class="muted">등록된 Turret이 없습니다.</td></tr>`;
+
+  const snspdRows = hw.snspd.map((r, i) => `<tr>
+    <td><b>SNSPD ${r.ch}</b></td>
+    <td>${txt('snspd', i, 'range', r.range, '연결 채널 파장범위')}</td>
+    <td>${chk('snspd', i, 'detFiber', r.detFiber, 'Detector(Fiber)')}<br>${chk('snspd', i, 'ttl', r.ttl, 'TTL converter')}<br>${chk('snspd', i, 'ttlPower', r.ttlPower, 'TTL Power cable')}</td>
+    <td>${hwMeta(r)}</td></tr>`).join('');
+
+  const pmRows = hw.powermeter.map((r, i) => `<tr>
+    <td><b>Powermeter ${r.no}</b></td>
+    <td>${txt('powermeter', i, 'detector', r.detector, 'Connected detector')}</td>
+    <td>${txt('powermeter', i, 'position', r.position, 'Position')}</td>
+    <td>${hwMeta(r)}</td></tr>`).join('');
+
+  const logRows = S.hwLog.map(l => {
+    const t = l.tsMs || (l.createdAt?.toMillis ? l.createdAt.toMillis() : 0);
+    return `<tr><td class="meta" style="white-space:nowrap">${t ? optFmtDateDow(t) : '-'}</td>
+      <td><b>${esc(memberName(l.memberId))}</b></td><td><span class="badge b-gray">${esc(l.section)}</span></td>
+      <td style="white-space:pre-wrap">${esc(l.summary)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">아직 변경 이력이 없습니다.</td></tr>';
+
+  return `<div class="card hw">
+    <h2>🛠 변경사항 (Hardware Log) — 현재 장비 구성 현황판</h2>
+    <p class="muted" style="margin:6px 0 4px">측정 전 반드시 확인하고, <b>부품을 추가·제거·변경하면 즉시 여기서 수정</b>하세요. 저장 시 변경 내용이 자동으로 기록되고 Slack 채널에 1분 내 공지됩니다.</p>
+    <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--red);font-weight:700">
+      ⚠ ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구
+    </div>
+    ${canEdit ? '' : '<div class="note">수정하려면 광학 활성 멤버로 로그인하세요.</div>'}
+
+    <h3>LASER ${editBtn('laser')} ${ed('laser') ? '<button class="btn sm" data-hwadd="laser">+ 파장 추가</button>' : ''}</h3>
+    <table class="list"><tr><th>파장대역</th><th>연결 컨트롤러</th><th>Align Turret #</th><th>최종 변경</th>${ed('laser') ? '<th></th>' : ''}</tr>${laserRows}</table>
+
+    <h3>Microscope Turret ${editBtn('turret')} ${ed('turret') ? '<button class="btn sm" data-hwadd="turret">+ Turret 추가</button>' : ''}</h3>
+    <table class="list"><tr><th>Turret #</th><th>장착 Mirror</th><th>최종 변경</th>${ed('turret') ? '<th></th>' : ''}</tr>${turretRows}</table>
+
+    <h3>SNSPD ${editBtn('snspd')}</h3>
+    <table class="list"><tr><th>채널</th><th>연결 채널 파장범위</th><th>연결 상태</th><th>최종 변경</th></tr>${snspdRows}</table>
+
+    <h3>Powermeter ${editBtn('powermeter')}</h3>
+    <table class="list"><tr><th>번호</th><th>Connected detector</th><th>Position</th><th>최종 변경</th></tr>${pmRows}</table>
+
+    <h3>최근 변경 이력</h3>
+    <div class="hwlog"><table class="list"><tr><th>일시</th><th>유저</th><th>구분</th><th>변경 내용</th></tr>${logRows}</table></div>
+  </div>`;
+}
+
+const HW_SECTION_LABEL = { laser: 'LASER', turret: 'Microscope Turret', snspd: 'SNSPD', powermeter: 'Powermeter', extras: '기타 요소' };
+/* 편집 저장: DOM 입력 수집 → diff 요약 생성 → 저장+로그 */
+async function saveHwSection(section) {
+  const cur = S.hw ? JSON.parse(JSON.stringify(S.hw)) : defaultHw();
+  ['laser', 'turret', 'snspd', 'powermeter', 'extras'].forEach(k => { if (!cur[k]) cur[k] = defaultHw()[k]; });
+  const before = JSON.parse(JSON.stringify(cur[section]));
+  // 입력값 반영
+  document.querySelectorAll(`[data-hw^="${section}."]`).forEach(inp => {
+    const [, i, f] = inp.dataset.hw.split('.');
+    if (!cur[section][i]) return;
+    cur[section][i][f] = inp.type === 'checkbox' ? inp.checked : inp.value.trim();
+  });
+  // diff 요약
+  const label = row => row.band || ('Turret ' + (row.no || '?')) || row.item;
+  const fields = {
+    laser: [['band', '파장'], ['controller', '컨트롤러'], ['turret', 'Align Turret']],
+    turret: [['no', '번호'], ['mirror', 'Mirror']],
+    snspd: [['range', '파장범위'], ['detFiber', 'Detector(Fiber)'], ['ttl', 'TTL converter'], ['ttlPower', 'TTL Power cable']],
+    powermeter: [['detector', 'Detector'], ['position', 'Position']],
+    extras: [['item', '품목'], ['location', '위치']],
+  }[section];
+  const lines = [];
+  const fmtV = v => v === true ? '연결' : v === false ? '해제' : (v || '(없음)');
+  const nameOfRow = (row) => section === 'laser' ? (row.band || '(무명)') : section === 'turret' ? ('Turret ' + (row.no || '?'))
+    : section === 'snspd' ? ('SNSPD ' + row.ch) : section === 'powermeter' ? ('Powermeter ' + row.no) : (row.item || '(무명)');
+  const maxLen = Math.max(before.length, cur[section].length);
+  for (let i = 0; i < maxLen; i++) {
+    const b = before[i], a = cur[section][i];
+    if (b && !a) { lines.push(`- ${nameOfRow(b)}: 제거됨`); continue; }
+    if (!b && a) { lines.push(`- ${nameOfRow(a)}: 신규 추가 (${fields.map(([f, l]) => `${l}=${fmtV(a[f])}`).join(', ')})`); a.updatedAt = Date.now(); a.updatedBy = S.user.id; continue; }
+    const diffs = fields.filter(([f]) => JSON.stringify(b[f]) !== JSON.stringify(a[f]));
+    if (diffs.length) {
+      lines.push(`- ${nameOfRow(a)}: ` + diffs.map(([f, l]) => `${l} ${fmtV(b[f])} → ${fmtV(a[f])}`).join(', '));
+      a.updatedAt = Date.now(); a.updatedBy = S.user.id;
+    }
+  }
+  if (!lines.length) { hwEdit.section = null; render(); toast('변경사항이 없습니다.'); return; }
+  try {
+    await store.saveHardware(cur, HW_SECTION_LABEL[section], lines.join('\n'));
+    hwEdit.section = null;
+    toast('저장되었습니다. 변경 내용이 Slack에 곧 공지됩니다.', 'okk');
+  } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+}
+
+/* ---------------- Remark (특이사항, 최근 10개만 보관) ---------------- */
+function renderRemark() {
+  const canWrite = !!(S.user && (S.user.optics || S.user.isAdmin));
+  const rows = (S.remarks || []).map(e => {
+    const mine = S.user && (e.memberId === S.user.id || S.user.isAdmin);
+    return `<tr>
+      <td class="meta" style="white-space:nowrap;width:1%">${e.tsMs ? optFmtDateDow(e.tsMs) : '-'}</td>
+      <td style="white-space:nowrap;width:1%"><b>${esc(memberName(e.memberId))}</b></td>
+      <td style="white-space:pre-wrap;word-break:break-word">${esc(e.text)}</td>
+      <td style="width:1%;white-space:nowrap">${mine ? `<button class="btn sm danger" data-remdel="${e.tsMs}|${esc(e.memberId)}">삭제</button>` : ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">기록된 특이사항이 없습니다.</td></tr>';
+  return `<div class="card">
+    <h2>📝 특이사항 기록</h2>
+    <p class="muted" style="margin:6px 0 12px">측정·장비·실험실 관련 특이사항을 자유롭게 남기세요. 날짜와 이름은 자동 기록됩니다.
+      <b>최근 10개만 보관</b>되며, 새 기록이 추가되면 가장 오래된 항목부터 자동 삭제됩니다.</p>
+    ${canWrite ? `
+    <div class="flexrow" style="align-items:flex-start;margin-bottom:14px">
+      <textarea id="remarkText" maxlength="500" rows="2" placeholder="특이사항 입력 (500자 이내)"
+        style="flex:1;min-width:240px;border:1.5px solid var(--line);border-radius:9px;padding:9px 12px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
+      <button class="btn primary" id="btnAddRemark">기록</button>
+    </div>` : '<div class="note">기록하려면 광학 활성 멤버로 로그인하세요.</div>'}
+    <table class="list"><tr><th style="width:1%;white-space:nowrap">날짜</th><th style="width:1%;white-space:nowrap">이름</th><th>특이사항</th><th style="width:1%"></th></tr>${rows}</table>
+  </div>`;
+}
+
+/* ---------------- 명단 / 규칙 / 관리자 ---------------- */
+function renderMembers() {
+  const ms = Object.values(S.members).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  const rows = ms.map(m => `<tr>
+    <td><b>${esc(m.name)}</b>${m.isAdmin ? ' <span class="badge b-violet">관리자</span>' : ''}</td>
+    <td>${m.opticsActive === true ? '<span class="badge b-green">광학 활성</span>' : '<span class="badge b-gray">광학 비활성</span>'}</td>
+    <td>${m.active === true ? '<span class="badge b-accent">합성 활성</span>' : '<span class="badge b-gray">합성 비활성</span>'}</td>
+    <td>${m.pinHash ? '<span class="badge b-green">등록 완료</span>' : '<span class="badge b-amber">미등록</span>'}</td></tr>`).join('');
+  return `<div class="card"><h2>명단 (광학 활성 ${ms.filter(m => m.opticsActive === true).length}명)</h2>
+    <p class="muted" style="margin-bottom:8px">명단·PIN·기기 인증은 Synthesis Scheduler와 공유되며, 광학/합성 활성 여부는 별도로 관리됩니다. 광학 활성 멤버만 사전 투표·일정 수정·채팅·변경사항 기록이 가능합니다.</p>
+    <table class="list"><tr><th>이름</th><th>광학</th><th>합성</th><th>계정</th></tr>${rows}</table></div>`;
+}
+
+function renderRules() {
+  return `<div class="card rules"><h2>📖 광학방 운영 규칙</h2>
+
+  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--risk);font-size:14px">
+    <b>⚠ 최우선 주의사항</b> — ① 확보한 시간을 못 쓰게 되면 <b>즉시 스케줄에서 비우고</b> 채팅으로 알리세요.
+    ② 부품(레이저·미러·SNSPD·파워미터 등)을 추가·제거·변경하면 <b>즉시 변경사항 탭(Hardware Log)에 기록</b>하세요. 다음 측정자의 시간과 데이터를 지키는 약속입니다.
+    ③ <b style="color:var(--red)">ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구</b>가 원칙입니다.
+  </div>
+
+  <h3>1. 주간 사이클 (모든 시각 KST, 서버 강제)</h3>
+  <ul>
+    <li><b>월 00:00 ~ 수 24:00</b> — 사전 투표(요일 순위, 다음 주 대상). 기간 중 자유 수정/취소.</li>
+    <li><b>목 12:00</b> — 요일 배정 자동 발표 + Slack 공지. 이후 <b>전원 자유 조율</b> 시작.</li>
+    <li>조율(스케줄 수정)은 발표 직후부터 <b>해당 주 일요일 24시까지</b> 계속 가능.</li>
+  </ul>
+
+  <h3>2. 투표 방식</h3>
+  <ul>
+    <li>1인당 <b>1/2/3순위 요일</b>을 투표 (반드시 3개를 채울 필요 없음, 같은 요일 중복 불가).</li>
+    <li><b>요일마다 필요한 시간대만 고를 수 있음</b> — 하루는 <b>새벽(00-06) / 오전(06-12) / 오후(12-18) / 저녁(18-24)</b> 4개 구간으로 나뉜다. 요일 이름을 누르면 <b>종일</b>, 시간대 칩을 누르면 <b>그 구간만</b> 지원. 필요 없는 시간을 받아 나중에 취소할 필요가 없다.</li>
+    <li>적게 투표할수록 동순위 경쟁에서 유리함 (아래 배정 기준 ③). 지원 시간대의 길이는 경쟁에 <b>영향을 주지 않는다</b> — 짧게 지원한다고 유리하거나 불리하지 않음.</li>
+  </ul>
+
+  <h3>3. 요일 배정 기준 (목 12:00, 이 순서대로 판정)</h3>
+  <ul>
+    <li>① <b>무당첨자 절대 우선</b> — 이번 주 아직 아무 요일도 배정받지 못한 사람이, 이미 배정받은 사람보다 순위와 무관하게 우선.</li>
+    <li>② 해당 요일에 대한 <b>순위가 높은</b> 사람 우선.</li>
+    <li>③ 동순위면 <b>전체 투표 수가 적은</b> 사람 우선 (더 간절함).</li>
+    <li>④ 그래도 같으면 <b>시드 기반 무작위 추첨</b> (시드 = 마감된 전체 투표의 SHA-256 → 조작·예측 불가, 전원 재검증).</li>
+    <li>요일은 월→일 순서로 처리하며, 당첨 누적은 다음 요일 판정에 즉시 반영됨. 경쟁이 없으면 한 사람이 여러 요일 배정 가능.</li>
+    <li><b>대표는 자기가 지원한 시간대만</b> 가져감 (종일 지원이면 하루 전체).</li>
+    <li><b>빈 시간대 추가 배정</b>: 대표가 쓰지 않고 남은 구간에 <b>다른 지원자의 희망 시간대가 통째로 들어가면</b> 그 사람도 같은 기준(①~④)으로 함께 배정된다. 더 들어갈 사람이 없을 때까지 반복. <b>일부만 겹치면 넣지 않는다</b>(쪼개서 억지로 끼우지 않음).<br>
+        예) A=새벽+오전, B=오후+저녁, C=오전+오후 가 같은 요일 동일 순위로 경쟁 →
+        <b>C가 대표면</b> 새벽·저녁만 남아 아무도 통째로 못 들어가므로 C 단독,
+        <b>A가 대표면</b> 오후+저녁이 비므로 B가 그대로 들어가 A와 B 둘 다 배정.</li>
+    <li>추가 배정도 <b>'당첨 1회'로 계산</b>되므로, 그 주 다른 요일 판정에서 무당첨자에게 밀린다 (①이 실제 사용 기회 기준으로 작동).</li>
+    <li>아무도 지원하지 않은 시간대는 <b>빈 상태</b>로 남으며 자유 조율로 누구나 쓸 수 있음.</li>
+  </ul>
+
+  <h3>4. 자유 조율 (발표 후)</h3>
+  <ul>
+    <li>광학 활성 멤버 <b>전원</b>이 스케줄을 30분 단위로 수정 가능 (클릭 또는 드래그 → 사용자 지정/비우기).</li>
+    <li>수정 전 <b>실시간 예약 탭에서 채팅으로 협의</b>하는 것이 원칙. 미니 스케줄에서 바로 수정하면 즉시 전체 반영.</li>
+    <li><b>📱 모바일 조작</b>: 표의 <b>요일 칸을 위아래로 쓸면 시간 범위 선택</b>(화면이 따라 스크롤되지 않음), <b>좌우로 쓸면 다른 요일</b>이 보입니다. <b>화면을 위아래로 넘기려면 표 왼쪽의 시간 눈금이나 표 바깥 영역</b>을 쓸어주세요. 화면 한 번에 안 잡히는 긴 구간은 <b>나눠서 두 번 지정</b>하면 이어진 하나로 합쳐집니다.</li>
+    <li>일정 탭과 실시간 예약 탭의 <b>희망순위 표시 토글</b>로 각자의 1/2/3순위 희망을 반투명으로 확인 가능 — 조율 시 참고.</li>
+    <li>변경은 1분 내 공용 구글캘린더에 자동 반영. <b>캘린더에서 직접 수정 금지</b> (자동 원상복구됨).</li>
+  </ul>
+
+  <h3>5. 관리자 지정 일정 (Repair / 외부인 방문측정)</h3>
+  <ul>
+    <li>장비 수리(<b>Repair</b>)나 <b>외부인 방문측정</b>처럼 연구실 전체가 비켜야 하는 일정은 <b>관리자 계정만</b> 등록할 수 있음. 스케줄에는 개인 이름 대신 <b>사유(+선택 메모)</b>가 🔒 표시와 함께 나타남.</li>
+    <li>등록은 «일정»·«실시간 예약» 탭의 캘린더에서 칸 클릭·드래그 → 배정 대상에서 🔒 항목 선택. <b>투표 기간·발표 전에도 등록 가능</b>하며 대상은 이번 주·다음 주.</li>
+    <li>관리자 지정 구간은 <b>사전 투표 화면(요일 카드)·실시간 예약·투표 결과 탭에 모두 표시</b>되므로, 투표 전에 미리 확인하고 요일을 고를 것.</li>
+    <li><b>우선순위: 관리자 지정 &gt; 자유 조율 &gt; 요일 기본 배정.</b> 즉 어떤 요일에 관리자 지정 일정이 있으면, 그 요일 <b>당첨자는 지정 구간을 제외한 나머지 시간만</b> 사용함. 일반 멤버는 이 구간을 수정·예약할 수 없음.</li>
+    <li>요일 전체(00-24시)가 지정되면 그 요일 당첨자의 가용 시간은 0이 되며, 화면에 <b>"가용 시간 없음"</b> 경고가 표시됨 (추첨 자체는 정상 진행 — 배정 알고리즘·시드 검증에는 영향 없음).</li>
+    <li><b>수정·해제(관리자)</b>: 등록한 구간을 다시 클릭·드래그하면 현재 종류·메모가 채워진 채로 열림 — 바꿔서 «적용»하면 갱신, "🔓 관리자 지정 해제"를 고르면 원래 배정으로 복귀, 멤버 이름·«비우기»를 고르면 확인 후 지정 해제와 배정 변경이 함께 처리됨. 구간 축소는 줄일 부분만 드래그해 해제. 관리자 탭의 «관리자 지정 일정» 목록에서도 구간 단위로 해제 가능.</li>
+    <li>구글캘린더에는 <b>[광학] Repair</b> / <b>[광학] 외부인 방문측정</b> 형태로 자동 등록됨 (1분 내 동기화).</li>
+  </ul>
+
+  <h3>6. 변경사항 (Hardware Log) 기록 의무</h3>
+  <ul>
+    <li>측정 시작 전 현황판 확인, 구성 변경 시 즉시 기록 (LASER 컨트롤러/Turret Align, Turret Mirror, SNSPD 채널·연결 3종, Powermeter).</li>
+    <li><b style="color:var(--red)">ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구</b> (현황판 등록 대상이 아니며, 남겨두지 않는 것이 원칙).</li>
+    <li>저장하면 변경 내용·일시(요일)·유저가 이력에 남고, Slack 채널에 1분 내 자동 공지됨.</li>
+  </ul>
+
+  <h3>7. 특이사항 (Remark)</h3>
+  <ul>
+    <li>측정·장비·실험실 관련 공유사항은 <b>특이사항 탭</b>에 기록 (날짜·이름 자동 기록, 최근 10개만 보관 — 초과 시 오래된 것부터 자동 삭제).</li>
+  </ul>
+
+  <h3>8. 시스템·공정성 보장</h3>
+  <ul>
+    <li>마감시각·본인확인(PIN+기기)·투표 형식은 서버 보안규칙이 강제 — 브라우저 조작으로 우회 불가.</li>
+    <li>배정 결과는 생성 후 수정 불가, 모든 접속자가 재계산 검증 (결과 탭 배지).</li>
+    <li>명단·PIN은 Synthesis Scheduler와 공유. 광학 참여 여부(활성화)는 관리자가 별도 관리.</li>
+  </ul>
+  </div>`;
+}
+
+function renderAdmin() {
+  if (!S.user?.isAdmin) return `<div class="card"><p class="muted">관리자 전용 화면입니다.</p></div>`;
+  const c = cycle();
+  const ms = Object.values(S.members).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  const rows = ms.map(m => `<tr>
+    <td><b>${esc(m.name)}</b>${m.isAdmin ? ' <span class="badge b-violet">관리자</span>' : ''}</td>
+    <td class="muted">${m.opticsActive === true ? '광학 활성' : '광학 비활성'} · ${m.pinHash ? 'PIN 등록' : 'PIN 미등록'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn sm" data-adm="opt" data-id="${m.id}">${m.opticsActive === true ? '광학 비활성화' : '광학 활성화'}</button>
+      <button class="btn sm" data-adm="pin" data-id="${m.id}">PIN 초기화</button>
+      <button class="btn sm" data-adm="dev" data-id="${m.id}">기기 초기화</button>
+      <button class="btn sm" data-adm="adm" data-id="${m.id}">${m.isAdmin ? '관리자 해제' : '관리자 지정'}</button>
+    </td></tr>`).join('');
+  return `
+  <div class="card"><h2>멤버 관리 (합성과 공유되는 명단)</h2>
+    <div class="flexrow" style="margin-bottom:10px">
+      <input id="newMemberName" placeholder="새 멤버 이름" style="border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;font-family:inherit">
+      <button class="btn primary" id="btnAddMember">명단에 추가 (광학 활성)</button>
+      <span class="muted">합성 활성화는 Synthesis Scheduler 관리자 탭에서.</span>
+    </div>
+    <table class="list"><tr><th>이름</th><th>상태</th><th>조치</th></tr>${rows}</table>
+    <div class="note">멤버 삭제·합성 활성 토글은 Synthesis Scheduler 관리자 탭 이용. 기존 합성 멤버는 여기서 "광학 활성화"만 눌러주면 같은 PIN으로 바로 참여 가능.</div>
+  </div>
+  ${renderAdminBlocksPanel(c)}
+  <div class="card"><h2>투표 결과 관리</h2>
+    <p class="muted" style="margin-bottom:8px">검증 불일치가 표시된 경우에만 사용. 삭제 후 자동 재생성되며 결정론적이므로 동일 투표에서는 동일 결과.</p>
+    <button class="btn danger" id="btnDelResults">이번 사이클(${weekLabel(c.targetWeek)}) 결과 삭제 후 재생성</button>
+  </div>`;
+}
+
+/* 관리자 지정 일정(Repair / 외부인 방문측정) 등록·해제 패널 */
+function renderAdminBlocksPanel(c) {
+  const weeks = [{ w: c.votingWeek, label: '이번 주' }, { w: c.targetWeek, label: '다음 주' }];
+  const lists = weeks.map(({ w, label }) => {
+    const adm = w === c.targetWeek ? S.adm : S.curAdm;
+    const rows = [];
+    for (let d = 0; d < 7; d++) {
+      optAdminBlocksOfDay(adm, d).forEach(b => {
+        rows.push(`<tr>
+          <td>${OPT_DAYS[d]} (${fmtDate(optDayDate(w, d))})</td>
+          <td><span class="badge b-red">${esc(optAdminLabel(b.owner))}</span></td>
+          <td>${optRangeLabel(b.start, b.end)}</td>
+          <td><button class="btn sm danger" data-admdel="${w}|${d}|${b.start}|${b.end}">해제</button></td></tr>`);
+      });
+    }
+    return `<h3 style="margin-bottom:6px">${label} (${weekLabel(w)})</h3>` + (rows.length
+      ? `<table class="list"><tr><th>날짜</th><th>사유</th><th>시간</th><th>조치</th></tr>${rows.join('')}</table>`
+      : '<p class="muted">등록된 관리자 지정 일정이 없습니다.</p>');
+  }).join('');
+  return `<div class="card"><h2>관리자 지정 일정 (Repair / 외부인 방문측정)</h2>
+    <p class="muted" style="margin-bottom:10px">
+      <b>등록</b>: «일정» 또는 «실시간 예약» 탭의 캘린더에서 칸을 클릭·드래그 → 배정 대상에서 🔒 Repair / 🔒 외부인 방문측정 선택 (메모 선택 입력).
+      투표 기간·발표 전에도 등록할 수 있으며, 등록 즉시 사전 투표 화면·실시간 예약 화면·구글캘린더에 반영됩니다.<br>
+      <b>수정</b>: 같은 방식으로 그 구간을 다시 클릭·드래그하면 현재 종류·메모가 채워진 상태로 열립니다 — 바꿔서 «적용»하면 갱신,
+      🔓 «관리자 지정 해제»를 고르면 원래 배정으로 복귀, 멤버 이름이나 «비우기»를 고르면 확인 후 지정 해제와 배정 변경이 함께 처리됩니다.
+      구간을 줄이려면 줄이려는 부분만 드래그해 해제하면 됩니다. 아래 표의 «해제» 버튼으로도 구간 단위 해제가 가능합니다.<br>
+      이 블록은 <b>요일 당첨자와 자유 조율 결과를 모두 덮으므로</b>, 당첨자는 블록을 제외한 나머지 시간만 사용하게 됩니다.
+      대상 주는 이번 주·다음 주로 제한됩니다(서버 규칙).</p>
+    ${lists}</div>`;
+}
+
+/* ---------------- 로그인 모달 ---------------- */
+function openLogin() {
+  const list = Object.values(S.members).filter(m => m.opticsActive === true || m.isAdmin);
+  if (!list.length) {
+    showModal(`<h2>멤버 없음</h2><p class="muted">아직 광학 활성 멤버가 없습니다. Synthesis Scheduler에서 관리자로 로그인한 뒤, 이 앱의 관리자 탭에서 멤버들의 "광학 활성화"를 켜주세요. (명단·PIN 공유)</p>
+      <div class="flexrow"><button class="btn" data-close>닫기</button></div>`);
+    return;
+  }
+  const opts = list.sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+    .map(m => `<option value="${m.id}">${esc(m.name)}${m.pinHash ? '' : ' (첫 로그인)'}</option>`).join('');
+  showModal(`
+    <h2>멤버 로그인</h2>
+    <p class="muted" style="margin-bottom:10px">Synthesis Scheduler와 같은 계정(이름+PIN)입니다.</p>
+    <div class="field"><label>이름</label><select id="loginMember">${opts}</select></div>
+    <div class="field"><label>PIN</label><input id="loginPin" type="password" inputmode="numeric"></div>
+    <div class="flexrow"><button class="btn primary" id="btnDoLogin">로그인</button><button class="btn" data-close>취소</button></div>
+    <p class="muted" style="margin-top:10px">⚠ 첫 로그인 시 입력한 PIN이 그대로 등록되니 신중히 입력하세요. PIN 분실 시 관리자에게 초기화를 요청하세요.</p>`);
+  $('#btnDoLogin').addEventListener('click', async () => {
+    const id = $('#loginMember').value, pin = $('#loginPin').value.trim();
+    if (pin.length < 4) return toast('PIN은 4자리 이상이어야 합니다.', 'err');
+    try { await store.claim(id, pin); closeModal(); toast(`${memberName(id)}님, 환영합니다!`, 'okk'); }
+    catch (e) { toast(e.message, 'err'); }
+  });
+}
+function showModal(html) {
+  $('#modalRoot').innerHTML = `<div class="modal-bg" id="modalBg"><div class="modal">${html}</div></div>`;
+  $('#modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+}
+function closeModal() { $('#modalRoot').innerHTML = ''; }
+
+/* ---------------- 셀 편집 팝업 (클릭/드래그 공통) ---------------- */
+function openCellPop(weekIdx, day, s0, s1, x, y, opt) {
+  document.querySelector('.cellpop')?.remove();
+  const o = opt || {};
+  const canEdit = o.canEdit !== false;               // 일반 조율(멤버 배정) 가능 여부
+  const admEdit = !!o.admEdit;                       // 관리자 블록 지정 가능 여부
+  const adm = admOf(weekIdx);
+  // 선택 구간에 이미 걸려 있는 관리자 블록
+  const admArr = optAdminSlotArr(adm, day);
+  let hasAdm = false;
+  for (let s = s0; s <= s1; s++) if (admArr[s] !== null) hasAdm = true;
+  // 구간 전체가 '같은' 관리자 블록이면 현재 종류·메모를 미리 채워 그대로 수정할 수 있게 한다
+  let curAdm = null;
+  if (hasAdm) {
+    let uniform = true;
+    for (let s = s0; s <= s1; s++) if (admArr[s] !== admArr[s0]) uniform = false;
+    if (uniform && admArr[s0]) curAdm = optAdminParse(admArr[s0]);
+  }
+
+  const list = Object.values(S.members).filter(m => m.opticsActive === true)
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  /* 선택 구간의 현재 배정(관리자 블록 제외) — 누구 칸을 바꾸는지 보여 주고, 남의 칸이면 확인 */
+  const effDay = optEffectiveSchedule(calCtx(weekIdx).results || {}, calCtx(weekIdx).sched, calCtx(weekIdx).adm)[day] || [];
+  const curOwners = [...new Set(effDay.slice(s0, s1 + 1).filter(v => v && !optIsAdminOwner(v)))];
+  const curEmpty = effDay.slice(s0, s1 + 1).some(v => !v);
+  const curLabel = curOwners.length
+    ? curOwners.map(memberName).join(', ') + (curEmpty ? ' · 일부 빈 칸' : '')
+    : '비어 있음';
+  const div = document.createElement('div');
+  div.className = 'cellpop';
+  const memberOpts = canEdit ? `
+      ${S.user?.optics ? `<option value="${S.user.id}"${curOwners.length === 1 && curOwners[0] !== S.user.id ? '' : ' selected'}>${esc(S.user.name)} (본인)</option>` : ''}
+      ${list.filter(m => !S.user || m.id !== S.user.id).map(m => `<option value="${m.id}"${curOwners.length === 1 && curOwners[0] === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}
+      <option value="">(비우기)</option>` : '';
+  const admOpts = admEdit ? `<optgroup label="관리자 지정 (예약 불가 구간)">
+      ${OPT_ADMIN_KINDS.map(k => `<option value="${OPT_ADMIN_MARK}${k.code}"${curAdm && curAdm.code === k.code ? ' selected' : ''}>🔒 ${esc(k.label)}</option>`).join('')}
+      ${hasAdm ? '<option value="__admclear__">🔓 관리자 지정 해제</option>' : ''}
+    </optgroup>` : '';
+  const notice = !hasAdm ? ''
+    : admEdit
+      ? `<p class="muted" style="color:var(--risk);margin:0 0 8px">🔒 현재 <b>${esc(curAdm ? optAdminLabel(admArr[s0]) : '관리자 지정 일정')}</b> 구간입니다.
+         종류·메모를 바꿔 저장하거나 <b>🔓 해제</b>할 수 있고, <b>멤버를 지정하거나 비우면 관리자 지정이 함께 해제</b>됩니다.</p>`
+      : '<p class="muted" style="color:var(--risk);margin:0 0 8px">🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.</p>';
+  div.innerHTML = `
+    <h4>${OPT_DAYS[day]} ${optSlotLabel(s0)} ~ ${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}</h4>
+    ${notice}
+    ${canEdit ? `<p class="muted" style="margin:0 0 8px">현재 배정: <b>${esc(curLabel)}</b></p>` : ''}
+    <div class="field"><label>배정 대상</label><select id="popMember">${memberOpts}${admOpts}</select></div>
+    <div class="field" id="popMemoWrap" style="display:none"><label>메모 (선택)</label>
+      <input id="popMemo" maxlength="40" placeholder="예: A대 김○○ 측정" value="${esc(curAdm ? curAdm.memo : '')}"></div>
+    <div class="flexrow">
+      <button class="btn primary sm" id="popApply">적용</button>
+      ${canEdit ? '<button class="btn sm" id="popClear">비우기</button>' : ''}
+      <button class="btn sm" id="popClose">닫기</button>
+    </div>`;
+  document.body.appendChild(div);
+  /* 메모 입력칸이 나타나면 팝업 높이가 커지므로 그때마다 위치를 다시 잡는다
+   * (그렇지 않으면 '적용' 버튼이 화면 밖으로 밀려나 눌리지 않음) */
+  const place = () => {
+    const W = div.offsetWidth || 230, H = div.offsetHeight || 170;
+    div.style.left = Math.max(6, Math.min(x, window.innerWidth - W - 10)) + 'px';
+    div.style.top = Math.max(6, Math.min(y, window.innerHeight - H - 10)) + 'px';
+  };
+  place();
+
+  const sel = div.querySelector('#popMember');
+  const memoWrap = div.querySelector('#popMemoWrap');
+  const syncMemo = () => { memoWrap.style.display = optIsAdminOwner(sel.value) ? '' : 'none'; place(); };
+  sel.addEventListener('change', syncMemo); syncMemo();
+
+  /* 일반 조율 적용.
+   * 관리자 블록이 걸린 구간은 일반 멤버가 덮어쓸 수 없다.
+   * 관리자는 가능하되, 블록이 최상위 레이어라 그냥 덮어쓰면 화면에 반영되지 않으므로
+   * 확인 후 '관리자 지정 해제 → 배정 기록'을 한 번에 수행한다. */
+  const applySched = async (mid) => {
+    if (hasAdm) {
+      if (!admEdit) return toast('관리자 지정 일정(Repair·외부인 방문측정) 구간은 수정할 수 없습니다. 관리자에게 요청하세요.', 'err');
+      if (!confirm('이 구간에는 관리자 지정 일정(Repair·외부인 방문측정)이 있습니다.\n\n관리자 지정을 해제하고 선택한 내용으로 바꿀까요?')) return;
+    }
+    /* 다른 사람의 배정을 바꾸는 경우: 확인 + 조율 채팅에 기록(누가 무엇을 바꿨는지 남긴다) */
+    const others = curOwners.filter(o => o !== mid && (!S.user || o !== S.user.id));
+    const range = `${OPT_DAYS[day]} ${optSlotLabel(s0)}~${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}`;
+    const toLabel = mid ? memberName(mid) : '빈 칸';
+    if (others.length && !confirm(`${range} 에 배정된 ${others.map(memberName).join(', ')} 님의 시간을 「${toLabel}」(으)로 바꿉니다.\n\n조율 채팅에 변경 기록이 남습니다. 계속할까요?`)) return;
+    const changes = {};
+    for (let s = s0; s <= s1; s++) changes[String(s)] = mid;
+    try {
+      if (hasAdm) {
+        const clear = {};
+        for (let s = s0; s <= s1; s++) clear[String(s)] = '';
+        await store.setAdminBlock(weekIdx, day, clear);
+      }
+      await store.setSlots(weekIdx, day, changes);
+      div.remove();
+      if (others.length) {
+        try { await store.sendChat(`[자동 기록] ${S.user ? S.user.name : ''} — ${optDayLabel(weekIdx, day)} ${optSlotLabel(s0)}~${s1 + 1 >= 48 ? '24:00' : optSlotLabel(s1 + 1)}: ${others.map(memberName).join(', ')} → ${toLabel}`); } catch (e) {}
+      }
+      if (hasAdm) toast('관리자 지정을 해제하고 배정을 변경했습니다. (캘린더에 곧 반영)', 'okk');
+      else toast(`${range} → ${toLabel}`, 'okk');
+    } catch (e) { toast('수정 실패: ' + e.message, 'err'); }
+  };
+  /* 관리자 블록 지정/해제 */
+  const applyAdm = async (value) => {
+    const changes = {};
+    for (let s = s0; s <= s1; s++) changes[String(s)] = value;
+    try {
+      await store.setAdminBlock(weekIdx, day, changes);
+      div.remove();
+      toast(value === '' ? '관리자 지정이 해제되었습니다.' : '관리자 지정 일정이 등록되었습니다. (캘린더에 곧 반영)', 'okk');
+    } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+  };
+  div.querySelector('#popApply').addEventListener('click', () => {
+    const v = sel.value;
+    if (v === '__admclear__') return applyAdm('');
+    if (optIsAdminOwner(v)) {
+      const p = optAdminParse(v);
+      return applyAdm(optAdminOwner(p.code, div.querySelector('#popMemo').value));
+    }
+    applySched(v);
+  });
+  div.querySelector('#popClear')?.addEventListener('click', () => applySched(''));
+  div.querySelector('#popClose').addEventListener('click', () => div.remove());
+}
+
+/* ---------------- 이벤트 바인딩 ---------------- */
+/* ── rd3 초안: '지금 할 일 + 내 시간' 카드 (Optics) ── */
+function rdMyBlocks(weekIdx) {
+  if (!S.user) return [];
+  const ctx = calCtx(weekIdx);
+  if (!ctx.results) return [];
+  const eff = optEffectiveSchedule(ctx.results || {}, ctx.sched, ctx.adm);
+  const out = [];
+  for (let d = 0; d < 7; d++) for (const b of optMergeBlocks(eff[d])) if (b.owner === S.user.id) {
+    const endMs = optDayDate(weekIdx, d) + b.end * 1800000;
+    out.push({ d, start: b.start, end: b.end, h: (b.end - b.start) / 2, past: now() >= endMs });
+  }
+  return out;
+}
+function rdSlotChips(weekIdx, blocks) {
+  return blocks.map(b => `<span class="${b.past ? 'past' : ''}">${OPT_DAYS[b.d]} ${fmtDate(optDayDate(weekIdx, b.d))} ${optRangeLabel(b.start, b.end)}</span>`).join('');
+}
+function nowCardHtml() {
+  const c = cycle(), P = c.phase;
+  if (!S.user) return `<div class="card nowcard"><div><h2>지금 할 일</h2>
+      <div class="nowsub">로그인하면 내 투표·배정 시간이 여기 모입니다.</div></div>
+      <div><button class="btn primary" data-rdlogin>멤버 로그인</button></div></div>`;
+  let line = '', sub = '', act = '';
+  const v = S.votes && S.votes[S.user.id];
+  const nv = v ? optNormRanks(v) : null;
+  const rankTxt = nv ? ['r1', 'r2', 'r3'].map((k, i) => nv[k] ? `${'①②③'[i]}${OPT_DAYS[nv[k].d]}${nv[k].q && nv[k].q.length < 4 ? ' ' + optQuartersLabel(nv[k].q) : ''}` : '').filter(Boolean).join(' ') : '';
+  if (P === 'VOTING') {
+    line = nv ? `사전 투표 <b>완료</b> — ${esc(rankTxt)}` : `사전 투표를 <b>아직 안 했습니다</b>`;
+    sub = `마감 ${fmtDT(c.voteClose)} · 투표는 선택입니다`;
+    act = `<button class="btn ${nv ? '' : 'primary'}" data-rdgo="vote">${nv ? '투표 수정' : '투표하기'}</button>`;
+  } else if (P === 'WAITING') {
+    line = `배정 발표 대기 — ${fmtDT(c.announce)}`;
+    sub = nv ? `내 투표: ${esc(rankTxt)}` : '이번 투표에는 참여하지 않았습니다';
+  } else {
+    const nxt = rdMyBlocks(c.targetWeek), cur = rdMyBlocks(c.votingWeek);
+    const hN = nxt.reduce((a, b) => a + b.h, 0), hC = cur.filter(b => !b.past).reduce((a, b) => a + b.h, 0);
+    line = `다음 주 내 시간 <b>${hN}시간</b>` + (cur.length ? ` · 이번 주 남은 시간 <b>${hC}시간</b>` : '');
+    sub = nxt.length ? `<div class="myslots">${rdSlotChips(c.targetWeek, nxt)}</div>` : '다음 주에 배정된 시간이 없습니다. 조율·채팅에서 빈 시간을 요청할 수 있습니다.';
+    act = `<button class="btn" data-rdgo="coord">조율·채팅</button>`;
+  }
+  return `<div class="card nowcard"><div><h2>지금 할 일</h2><div class="nowline">${line}</div><div class="nowsub">${sub}</div></div><div>${act}</div></div>`;
+}
+/* ── rd3 초안: 휴대폰 요일별 목록 (Optics) ── */
+function rdIsPhone() { return !!(window.matchMedia && window.matchMedia('(max-width:720px)').matches); }
+function dayListHtml(weekIdx) {
+  const ctx = calCtx(weekIdx);
+  const eff = optEffectiveSchedule(ctx.results || {}, ctx.sched, ctx.adm);
+  const todayIdx = Math.floor((now() - weekStartMs(weekIdx)) / DAY_MS);
+  let h = '';
+  for (let d = 0; d < 7; d++) {
+    const blocks = optMergeBlocks(eff[d]);
+    const qa = ctx.results?.quarterAssign?.[String(d)];
+    const owners = qa ? [...new Set(Object.values(qa))] : (ctx.results?.dayAssign?.[String(d)] ? [ctx.results.dayAssign[String(d)]] : []);
+    const rows = blocks.map(b => {
+      const col = memberColor(b.owner), mine = S.user && b.owner === S.user.id;
+      return `<div class="blk${mine ? ' mine' : ''}"><span class="t">${optRangeLabel(b.start, b.end)}</span>
+        <span class="who" style="background:${col.bg};color:${col.fg}">${optIsAdminOwner(b.owner) ? '🔒 ' : ''}${esc(ownerLabel(b.owner))}</span>
+        <span class="h">${(b.end - b.start) / 2}h</span></div>`;
+    }).join('');
+    h += `<div class="dayl${d === todayIdx ? ' today' : ''}"><h3>${OPT_DAYS[d]} <small>${fmtDate(optDayDate(weekIdx, d))}${owners.length ? ' · 배정 ' + esc(owners.map(memberName).join('/')) : ''}${d === todayIdx ? ' · 오늘' : ''}</small></h3>
+      ${rows || '<div class="empty">비어 있음</div>'}</div>`;
+  }
+  return `<div class="daylist">${h}</div>`;
+}
+function bindRd() {
+  document.querySelectorAll('[data-rdgo]').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.rdgo; render(); }));
+  document.querySelectorAll('[data-rdlogin]').forEach(b => b.addEventListener('click', openLogin));
+  document.querySelectorAll('[data-rdview]').forEach(b => b.addEventListener('click', () => { S.rdGrid = b.dataset.rdview === 'grid'; render(); }));
+}
+function bindMain() {
+  bindRd();
+  // 스케줄 주 선택 / 오버레이
+  document.querySelectorAll('[data-vw]').forEach(b => b.addEventListener('click', () => { S.viewWeek = b.dataset.vw; render(); }));
+  $('#ovToggle')?.addEventListener('change', e => { S.overlay = e.target.checked; render(); });
+  $('#ovToggleCoord')?.addEventListener('change', e => { S.overlay = e.target.checked; render(); });
+
+  // 캘린더 드래그/클릭 (Pointer Events; 터치 포함)
+  // 터치에서 세로 스와이프가 화면 스크롤로 새지 않도록 CSS touch-action 으로 제스처를 분리하고
+  // (표 안쪽 요일 칸 = 범위 선택 / 시간 눈금·헤더·표 바깥 = 화면 스크롤),
+  // 브라우저가 제스처를 가져가는 경우(pointercancel)에는 드래그 상태를 안전하게 정리한다.
+  document.querySelectorAll('.cal[data-editable="1"]').forEach(cal => {
+    const weekIdx = parseInt(cal.dataset.calweek, 10);
+    const popOpt = { canEdit: cal.dataset.canedit === '1', admEdit: cal.dataset.admedit === '1' };
+    cal.addEventListener('pointerdown', e => {
+      const cell = e.target.closest('.cell');
+      if (!cell) return;
+      e.preventDefault();
+      S.drag = { weekIdx, day: +cell.dataset.day, s0: +cell.dataset.slot, s1: +cell.dataset.slot };
+      // 포인터 캡처: 손가락/커서가 표 밖으로 나가도 드래그가 끊기지 않음
+      try { cal.setPointerCapture(e.pointerId); } catch (err) {}
+      updateDragSel(cal);
+      showDragTip(e.clientX, e.clientY);
+    });
+    cal.addEventListener('pointermove', e => {
+      if (!S.drag) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = el?.closest?.('.cell');
+      if (cell && +cell.dataset.day === S.drag.day && cell.closest('.cal') === cal) {
+        S.drag.s1 = +cell.dataset.slot;
+        updateDragSel(cal);
+      }
+      showDragTip(e.clientX, e.clientY);
+    });
+    cal.addEventListener('pointerup', e => {
+      hideDragTip();
+      if (!S.drag) return;
+      const d = S.drag; S.drag = null;
+      try { cal.releasePointerCapture(e.pointerId); } catch (err) {}
+      updateDragSel(cal);
+      const s0 = Math.min(d.s0, d.s1), s1 = Math.max(d.s0, d.s1);
+      openCellPop(d.weekIdx, d.day, s0, s1, e.clientX + 6, e.clientY + 6, popOpt);
+    });
+    // 브라우저가 제스처를 스크롤 등으로 가져간 경우 — 팝업을 띄우지 않고 조용히 취소
+    cal.addEventListener('pointercancel', () => { S.drag = null; updateDragSel(cal); hideDragTip(); });
+  });
+  document.addEventListener('pointerup', () => { if (S.drag) S.drag = null; hideDragTip(); }, { once: true });
+
+  // 투표 — 요일 이름을 누르면 '종일', 시간대 칩을 누르면 그 칩만 (또는 토글)
+  /* 순위는 지정 순서대로 r1→r2→r3 로 채워지고, 해제 시 아래 순위가 당겨진다. */
+  const rankKeys = ['r1', 'r2', 'r3'];
+  const pickedKeyOfDay = d => rankKeys.find(k => { const n = optNormRank((S.pendingRanks || {})[k]); return n && n.d === d; });
+  const compact = obj => {                       // 빈 자리 없이 r1부터 다시 채움
+    const vals = rankKeys.map(k => obj[k]).filter(v => v !== undefined && v !== null);
+    const out = {};
+    vals.forEach((v, i) => { out[rankKeys[i]] = v; });
+    return out;
+  };
+  const setDay = (d, quarters) => {              // 지정/갱신
+    const p = { ...(S.pendingRanks || {}) };
+    const k = pickedKeyOfDay(d);
+    if (k) { p[k] = { d, q: quarters }; S.pendingRanks = p; return true; }
+    const slot = rankKeys.find(x => p[x] === undefined || p[x] === null);
+    if (!slot) { toast('순위는 최대 3개까지입니다. 기존 순위를 해제 후 지정하세요.', 'err'); return false; }
+    p[slot] = { d, q: quarters };
+    S.pendingRanks = p;
+    return true;
+  };
+  const clearDay = d => {
+    const k = pickedKeyOfDay(d);
+    if (!k) return;
+    const p = { ...(S.pendingRanks || {}) };
+    delete p[k];
+    S.pendingRanks = compact(p);
+  };
+  document.querySelectorAll('[data-votday]').forEach(el => el.addEventListener('click', () => {
+    const d = +el.dataset.votday;
+    if (pickedKeyOfDay(d) !== undefined) clearDay(d);   // 이미 고른 요일 → 해제
+    else if (!setDay(d, OPT_ALL_QUARTERS.slice())) return;
+    render();
+  }));
+  document.querySelectorAll('[data-votq]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    const [ds, qs] = el.dataset.votq.split('|');
+    const d = +ds, q = +qs;
+    const k = pickedKeyOfDay(d);
+    if (k === undefined) { if (setDay(d, [q])) render(); return; }   // 안 고른 요일 → 그 시간대만 지원
+    const cur = optNormRank(S.pendingRanks[k]).q;
+    const next = cur.includes(q) ? cur.filter(x => x !== q) : cur.concat(q).sort((a, b) => a - b);
+    if (!next.length) clearDay(d);                                   // 전부 해제 = 요일 해제
+    else setDay(d, next);
+    render();
+  }));
+  $('#btnSaveVote')?.addEventListener('click', async () => {
+    const err = optValidateVote(S.pendingRanks || {});
+    if (err) return toast(err, 'err');
+    try {
+      if (!Object.keys(S.pendingRanks || {}).length) {
+        if ((S.votes[S.user.id] && Object.keys(S.votes[S.user.id]).length)) await store.deleteVote();
+      } else await store.saveVote(S.pendingRanks);
+      toast('투표가 저장되었습니다.', 'okk');
+    } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+  });
+  $('#btnResetVote')?.addEventListener('click', () => { S.pendingRanks = optNormRanks(S.votes[S.user.id]); render(); });
+  $('#btnClearVote')?.addEventListener('click', async () => {
+    if (!confirm('이번 주 순위 투표를 전부 취소할까요?')) return;
+    try {
+      if (S.votes[S.user.id]) await store.deleteVote();
+      S.pendingRanks = {}; render(); toast('투표가 취소되었습니다.', 'okk');
+    } catch (e) { toast(e.message, 'err'); }
+  });
+
+  // 채팅
+  const send = async () => {
+    const inp = $('#chatText');
+    const text = (inp?.value || '').trim();
+    if (!text) return;
+    inp.value = '';
+    try { await store.sendChat(text); } catch (e) { toast('전송 실패: ' + e.message, 'err'); }
+  };
+  $('#btnChatSend')?.addEventListener('click', send);
+  $('#btnChatClear')?.addEventListener('click', async () => {
+    if (!S.user?.isAdmin) return;
+    if (!confirm('조율 채팅을 전체 삭제하고 백지로 초기화할까요?\n(모든 멤버에게 즉시 반영되며 되돌릴 수 없습니다)')) return;
+    try { await store.clearChat(); toast('채팅이 초기화되었습니다.', 'okk'); }
+    catch (e) { toast('초기화 실패: ' + e.message, 'err'); }
+  });
+  $('#chatText')?.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) send(); });
+  if (S.tab === 'coord') { const el = $('#chatlog'); if (el) el.scrollTop = el.scrollHeight; }
+
+  // 결과 주차
+  $('#selWeek')?.addEventListener('change', e => { S.resultsWeek = parseInt(e.target.value, 10); render(); });
+
+  // Hardware
+  document.querySelectorAll('[data-hwedit]').forEach(b => b.addEventListener('click', () => { hwEdit.section = b.dataset.hwedit; render(); }));
+  document.querySelectorAll('[data-hwcancel]').forEach(b => b.addEventListener('click', () => { hwEdit.section = null; render(); }));
+  document.querySelectorAll('[data-hwsave]').forEach(b => b.addEventListener('click', () => saveHwSection(b.dataset.hwsave)));
+  document.querySelectorAll('[data-hwadd]').forEach(b => b.addEventListener('click', () => {
+    const sec = b.dataset.hwadd;
+    // 현재 입력값 보존을 위해 DOM에서 수집 후 행 추가
+    const cur = S.hw ? JSON.parse(JSON.stringify(S.hw)) : defaultHw();
+    ['laser', 'turret', 'snspd', 'powermeter', 'extras'].forEach(k => { if (!cur[k]) cur[k] = defaultHw()[k]; });
+    document.querySelectorAll(`[data-hw^="${sec}."]`).forEach(inp => {
+      const [, i, f] = inp.dataset.hw.split('.');
+      if (cur[sec][i]) cur[sec][i][f] = inp.type === 'checkbox' ? inp.checked : inp.value.trim();
+    });
+    cur[sec].push(sec === 'laser' ? { id: 'l' + Date.now(), band: '', controller: '', turret: '', updatedAt: 0, updatedBy: '' }
+      : sec === 'turret' ? { id: 't' + Date.now(), no: '', mirror: '', updatedAt: 0, updatedBy: '' }
+      : { id: 'e' + Date.now(), item: '', location: '', updatedAt: 0, updatedBy: '' });
+    S.hw = cur; render();
+  }));
+  document.querySelectorAll('[data-hwdel]').forEach(b => b.addEventListener('click', () => {
+    const [sec, i] = b.dataset.hwdel.split('.');
+    const cur = S.hw ? JSON.parse(JSON.stringify(S.hw)) : defaultHw();
+    document.querySelectorAll(`[data-hw^="${sec}."]`).forEach(inp => {
+      const [, j, f] = inp.dataset.hw.split('.');
+      if (cur[sec][j]) cur[sec][j][f] = inp.type === 'checkbox' ? inp.checked : inp.value.trim();
+    });
+    const removed = cur[sec].splice(+i, 1)[0];
+    S.hw = cur; render();
+    toast(`행이 제거 대기 상태입니다 — "저장"을 눌러야 확정됩니다.`);
+  }));
+
+  // Remark
+  $('#btnAddRemark')?.addEventListener('click', async () => {
+    const el = $('#remarkText');
+    const text = (el?.value || '').trim();
+    if (!text) return toast('특이사항 내용을 입력하세요.', 'err');
+    try { await store.addRemark(text); toast('기록되었습니다.', 'okk'); }
+    catch (e) { toast('기록 실패: ' + e.message, 'err'); }
+  });
+  document.querySelectorAll('[data-remdel]').forEach(b => b.addEventListener('click', async () => {
+    const [ts, mid] = b.dataset.remdel.split('|');
+    if (!confirm('이 특이사항 기록을 삭제할까요?')) return;
+    try { await store.deleteRemark(parseInt(ts, 10), mid); toast('삭제되었습니다.', 'okk'); }
+    catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
+  }));
+
+  // 관리자
+  $('#btnAddMember')?.addEventListener('click', async () => {
+    const name = $('#newMemberName').value.trim();
+    if (!name) return toast('이름을 입력하세요.', 'err');
+    if (Object.values(S.members).some(m => m.name === name)) return toast('동일한 이름이 이미 있습니다.', 'err');
+    try { await store.admin.addMember(name); toast('멤버가 추가되었습니다 (광학 활성).', 'okk'); }
+    catch (e) { toast(e.message, 'err'); }
+  });
+  document.querySelectorAll('[data-adm]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.id, act = b.dataset.adm, m = S.members[id];
+    const isSelf = id === S.user?.id;
+    const adminCount = Object.values(S.members).filter(x => x.isAdmin && (x.active === true || x.opticsActive === true)).length;
+    try {
+      if (act === 'opt') {
+        if (m.opticsActive === true && isSelf && m.active !== true) return toast('본인 계정의 유일한 활성 상태는 끌 수 없습니다. (잠금 방지)', 'err');
+        if (confirm(`${m.name}의 광학 참여를 ${m.opticsActive === true ? '비활성화' : '활성화'}할까요?`)) await store.admin.setOptics(id, m.opticsActive !== true);
+      }
+      if (act === 'pin' && confirm(`${m.name}의 PIN을 초기화할까요?`)) await store.admin.resetPin(id);
+      if (act === 'dev' && confirm(`${m.name}의 연결 기기를 모두 해제할까요?`)) await store.admin.resetDevices(id);
+      if (act === 'adm') {
+        if (m.isAdmin && adminCount <= 1) return toast('마지막 관리자의 권한은 해제할 수 없습니다.', 'err');
+        if (confirm(`${m.name}을(를) ${m.isAdmin ? '관리자에서 해제' : '관리자로 지정'}할까요?`)) await store.admin.setAdmin(id, !m.isAdmin);
+      }
+    } catch (e) { toast(e.message, 'err'); }
+  }));
+  // 관리자 지정 일정 해제
+  document.querySelectorAll('[data-admdel]').forEach(b => b.addEventListener('click', async () => {
+    const [w, d, s0, s1] = b.dataset.admdel.split('|').map(Number);
+    if (!confirm(`${OPT_DAYS[d]} ${optRangeLabel(s0, s1)} 관리자 지정 일정을 해제할까요?\n해제하면 해당 시간은 요일 당첨자·자유 조율 대상으로 즉시 복귀합니다.`)) return;
+    const changes = {};
+    for (let s = s0; s < s1; s++) changes[String(s)] = '';
+    try { await store.setAdminBlock(w, d, changes); toast('해제되었습니다. (캘린더에 곧 반영)', 'okk'); }
+    catch (e) { toast('해제 실패: ' + e.message, 'err'); }
+  }));
+  $('#btnDelResults')?.addEventListener('click', async () => {
+    if (!confirm('이번 사이클 배정 결과를 삭제하고 재생성할까요?')) return;
+    try { await store.admin.deleteResults(cycle().targetWeek); S.verify = null; toast('삭제됨 — 잠시 후 자동 재생성됩니다.', 'okk'); }
+    catch (e) { toast(e.message, 'err'); }
+  });
+}
+function updateDragSel(cal) {
+  cal.querySelectorAll('.cell.sel').forEach(c => c.classList.remove('sel'));
+  if (!S.drag) return;
+  const a = Math.min(S.drag.s0, S.drag.s1), b = Math.max(S.drag.s0, S.drag.s1);
+  for (let s = a; s <= b; s++) cal.querySelector(`.cell[data-day="${S.drag.day}"][data-slot="${s}"]`)?.classList.add('sel');
+}
+
+/* 드래그 중 선택 범위 말풍선 — 모바일에서는 손가락에 칸이 가려져 이게 유일한 피드백이 된다 */
+function showDragTip(x, y) {
+  if (!S.drag) return hideDragTip();
+  const a = Math.min(S.drag.s0, S.drag.s1), b = Math.max(S.drag.s0, S.drag.s1);
+  let tip = document.querySelector('.dragtip');
+  if (!tip) { tip = document.createElement('div'); tip.className = 'dragtip'; document.body.appendChild(tip); }
+  tip.textContent = `${OPT_DAYS[S.drag.day]} ${optRangeLabel(a, b + 1)} (${(b - a + 1) / 2}h)`;
+  const w = tip.offsetWidth || 150, h = tip.offsetHeight || 30;
+  tip.style.left = Math.max(6, Math.min(x + 14, window.innerWidth - w - 8)) + 'px';
+  tip.style.top = Math.max(6, Math.min(y - h - 14, window.innerHeight - h - 8)) + 'px';
+}
+function hideDragTip() { document.querySelector('.dragtip')?.remove(); }
+
+/* ---------------- 카운트다운 & 시작 ---------------- */
+setInterval(() => {
+  document.querySelectorAll('.countdown[data-target]').forEach(el => {
+    const t = parseInt(el.dataset.target, 10);
+    el.textContent = fmtDur(t - now());
+    if (t - now() < -2000) render();
+  });
+}, 1000);
+
+store = IS_DEMO ? makeDemoStore() : makeFirestoreStore();
+store.start();
+render();
+
+</script>
+<script>window.INNO_UX = Object.assign({ apps: [{"name": "NanoLab", "desc": "합성 계획 · ICP", "url": "https://inno-kaist.github.io/INNO-NanoLab/", "icon": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22swnan%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%235a3526%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%233a241b%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23swnan%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Cpath d=%22M27.5 13h9M29 13v12.2a14.5 14.5 0 1 0 6 0V13%22 stroke=%22%23e8b598%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M19.6 40.5a12.5 12.5 0 0 0 24.8 0z%22 fill=%22%23e8b598%22 opacity=%22.38%22/%3E%3Ccircle cx=%2232%22 cy=%2239.5%22 r=%225.2%22 fill=%22%23F4F6F1%22/%3E%3Ccircle cx=%2232%22 cy=%2239.5%22 r=%228.4%22 fill=%22none%22 stroke=%22%23F4F6F1%22 stroke-width=%221.8%22 opacity=%22.7%22/%3E%3C/svg%3E", "current": false}, {"name": "Prism", "desc": "광학 측정 데이터 분석", "url": "https://inno-kaist.github.io/INNO-Prism/", "icon": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22swpri%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23363263%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%2323213f%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23swpri%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Cpath d=%22M30 14 14.5 47h31z%22 stroke=%22%23bdb9ec%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M6 38.5 24.5 33%22 stroke=%22%23F4F6F1%22 stroke-width=%223.2%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M37.5 30.5 57 23%22 stroke=%22%23F4F6F1%22 stroke-width=%223.2%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M38.5 33.5 57 32.5%22 stroke=%22%23bdb9ec%22 stroke-width=%223.2%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M39.5 36.5 57 42%22 stroke=%22%23bdb9ec%22 stroke-width=%223.2%22 stroke-linecap=%22round%22 opacity=%22.55%22/%3E%3C/svg%3E", "current": false}, {"name": "Ledger", "desc": "측정 계획 · 이력", "url": "https://inno-kaist.github.io/INNO-Ledger/", "icon": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22swled%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%2323505c%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%2316323a%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23swled%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Crect x=%2215%22 y=%2215%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%239fcad3%22 opacity=%221%22/%3E%3Crect x=%2227%22 y=%2215%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%239fcad3%22 opacity=%221%22/%3E%3Crect x=%2239%22 y=%2215%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%239fcad3%22 opacity=%220.4%22/%3E%3Crect x=%2215%22 y=%2227%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%239fcad3%22 opacity=%221%22/%3E%3Crect x=%2227%22 y=%2227%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%239fcad3%22 opacity=%220.4%22/%3E%3Crect x=%2240.1%22 y=%2228.1%22 width=%227.8%22 height=%227.8%22 rx=%222%22 fill=%22none%22 stroke=%22%239fcad3%22 stroke-width=%222.2%22 opacity=%22.55%22/%3E%3Crect x=%2215%22 y=%2239%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%239fcad3%22 opacity=%220.4%22/%3E%3Crect x=%2227%22 y=%2239%22 width=%2210%22 height=%2210%22 rx=%222.6%22 fill=%22%23F4F6F1%22/%3E%3Crect x=%2240.1%22 y=%2240.1%22 width=%227.8%22 height=%227.8%22 rx=%222%22 fill=%22none%22 stroke=%22%239fcad3%22 stroke-width=%222.2%22 opacity=%22.55%22/%3E%3C/svg%3E", "current": false}, {"name": "Analytics", "desc": "STEM · EDS 분석", "url": "https://inno-kaist.github.io/INNO-Analytics/", "icon": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22swana%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%234f3048%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%2333202f%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23swana%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2219%22 stroke=%22%23e1b7d5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M19 40h5l3.5-15 3.5 15h3l2.5-7 2.5 7H45%22 stroke=%22%23F4F6F1%22 stroke-width=%223.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3C/svg%3E", "current": false}, {"name": "Scheduler", "desc": "장비 주간 스케줄", "url": "https://inno-kaist.github.io/INNO-Scheduler/", "icon": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22swsch%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23264466%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%231a2e42%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23swsch%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Crect x=%2214%22 y=%2218%22 width=%2236%22 height=%2232%22 rx=%226%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M14 27.5h36%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22/%3E%3Cpath d=%22M24 12.5v9M40 12.5v9%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Crect x=%2220.5%22 y=%2233%22 width=%228%22 height=%228%22 rx=%222%22 fill=%22%23a9c7e5%22 opacity=%22.45%22/%3E%3Crect x=%2234%22 y=%2233%22 width=%229.5%22 height=%229.5%22 rx=%222.4%22 fill=%22%23F4F6F1%22/%3E%3C/svg%3E", "current": true}, {"name": "RefAtlas", "desc": "연구실 문헌 지도", "url": "https://inno-refatlas.pages.dev/site/", "icon": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22swref%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%2328504a%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%231b3533%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23swref%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Cpath d=%22M32 31.5 17 19%22 stroke=%22%23a6c6ad%22 stroke-width=%223.4%22 stroke-linecap=%22round%22 opacity=%22.6%22/%3E%3Cpath d=%22M32 31.5 47 16%22 stroke=%22%23a6c6ad%22 stroke-width=%223.4%22 stroke-linecap=%22round%22 opacity=%22.6%22/%3E%3Cpath d=%22M32 31.5 48 46%22 stroke=%22%23a6c6ad%22 stroke-width=%223.4%22 stroke-linecap=%22round%22 opacity=%22.6%22/%3E%3Cpath d=%22M32 31.5 17 46%22 stroke=%22%23a6c6ad%22 stroke-width=%223.4%22 stroke-linecap=%22round%22 opacity=%22.6%22/%3E%3Cpath d=%22M47 16 48 46%22 stroke=%22%23a6c6ad%22 stroke-width=%223.4%22 stroke-linecap=%22round%22 opacity=%22.6%22/%3E%3Ccircle cx=%2217%22 cy=%2219%22 r=%226%22 fill=%22%23a6c6ad%22/%3E%3Ccircle cx=%2247%22 cy=%2216%22 r=%225%22 fill=%22%23a6c6ad%22/%3E%3Ccircle cx=%2248%22 cy=%2246%22 r=%226.5%22 fill=%22%23a6c6ad%22/%3E%3Ccircle cx=%2217%22 cy=%2246%22 r=%224.6%22 fill=%22%23a6c6ad%22/%3E%3Ccircle cx=%2232%22 cy=%2231.5%22 r=%228%22 fill=%22%23F4F6F1%22/%3E%3C/svg%3E", "current": false}] }, {
+  overlay: ".modal-bg, .cellpop", panel: ".modal, .cellpop", closeBtn: "[data-close], #popClose",
+  closeOverlay: ov => { if (ov.classList.contains("cellpop")) ov.remove(); else if (typeof closeModal === "function") closeModal(); else ov.remove(); },
+  clickables: ["td[data-act]", "[data-votday]"],
+  tablists: [{ list: "#tabs", tab: "button", active: "on" }],
+  live: ["#toast"],
+  switcherHost: "header"
+});</script>
+<script>/* ════════ INNO suite UX layer (2026-09-29) ════════
+   6개 INNO 앱이 같은 규칙으로 동작하도록 붙이는 공통 층. 앱 코드는 거의 건드리지 않고,
+   DOM 을 지켜보다가(MutationObserver) 필요한 속성·동작을 덧붙인다.
+     1) 대화창·서랍: role=dialog, 열면 포커스를 안으로, 닫으면 원래 자리로, Tab 순환,
+        Esc 로 닫기, 입력을 고친 채 바깥을 누르면 확인.
+     2) 키보드: 클릭으로만 열리던 행·칸·항목에 tabindex·role 부여, Enter/Space 로 실행.
+     3) 탭 목록: role=tablist/tab, aria-selected.
+     4) 토스트: aria-live 로 화면낭독기에도 전달.
+     5) 앱 전환: 상단 크롬에 INNO 앱 목록 버튼.
+   설정은 window.INNO_UX = {...} (이 스크립트보다 먼저). */
+(function () {
+  "use strict";
+  const C = window.INNO_UX || {};
+  const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]';
+  const visible = el => !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+
+  /* ---------- 1) 대화창 ---------- */
+  const stack = [];   // {ov, panel, ret, snap}
+  const overlaySel = C.overlay || ".overlay";
+  const panelSel = C.panel || ".modal,.drawer";
+  const isOpen = ov => ov.isConnected && (C.isOpen ? C.isOpen(ov) : (getComputedStyle(ov).display !== "none" && (!C.openClass || ov.classList.contains(C.openClass))));
+  function snapshot(panel) {
+    return [...panel.querySelectorAll("input,textarea,select")].map(e => e.type === "checkbox" || e.type === "radio" ? e.checked : e.value).join("\u0001");
+  }
+  function onOpen(ov) {
+    if (stack.some(s => s.ov === ov)) return;
+    const panel = ov.matches(panelSel) ? ov : (ov.querySelector(panelSel) || ov);
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    const h = panel.querySelector("h1,h2,h3");
+    if (h && !panel.getAttribute("aria-label")) panel.setAttribute("aria-label", h.textContent.trim().slice(0, 80));
+    const entry = { ov, panel, ret: document.activeElement, snap: null };
+    stack.push(entry);
+    /* 앱이 같은 대화창의 내용을 통째로 다시 그리면(저장·발급 뒤 재렌더) 그 시점을 새 기준으로 */
+    entry.mo = new MutationObserver(() => requestAnimationFrame(() => { entry.snap = snapshot(panel); }));
+    entry.mo.observe(panel, { childList: true });
+    requestAnimationFrame(() => {
+      entry.snap = snapshot(panel);
+      if (panel.contains(document.activeElement)) return;
+      const first = [...panel.querySelectorAll(FOCUSABLE)].find(e => visible(e) && !e.classList.contains("closex"));
+      if (first && /^(INPUT|TEXTAREA|SELECT)$/.test(first.tagName)) first.focus({ preventScroll: true });
+      else { if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "-1"); panel.focus({ preventScroll: true }); }
+    });
+  }
+  function onClose(entry) {
+    const i = stack.indexOf(entry); if (i >= 0) stack.splice(i, 1);
+    if (entry.mo) entry.mo.disconnect();
+    if (entry.ret && entry.ret.isConnected && typeof entry.ret.focus === "function") entry.ret.focus({ preventScroll: true });
+  }
+  function dirty(entry) {
+    if (C.noDirty && entry.ov.matches(C.noDirty)) return false;   // 입력이 자동 저장되는 창
+    return entry.snap != null && snapshot(entry.panel) !== entry.snap;
+  }
+  function closeTop() {
+    const e = stack[stack.length - 1]; if (!e) return false;
+    if (dirty(e) && !confirm("입력한 내용이 저장되지 않았습니다. 닫을까요?")) return true;
+    e._confirmed = true;
+    const btn = e.panel.querySelector(C.closeBtn || ".closex,[data-close]");
+    if (btn && visible(btn)) btn.click();
+    else if (C.closeOverlay) C.closeOverlay(e.ov);
+    else e.ov.remove();
+    return true;
+  }
+  function scan() {
+    document.querySelectorAll(overlaySel).forEach(ov => { if (isOpen(ov)) onOpen(ov); });
+    for (const e of stack.slice()) if (!isOpen(e.ov)) onClose(e);
+  }
+  // 바깥(배경) 클릭 — 입력을 고쳤으면 확인 (캡처 단계에서 앱 핸들러보다 먼저)
+  document.addEventListener("click", ev => {
+    const e = stack[stack.length - 1]; if (!e || ev.target !== e.ov || e._confirmed) return;
+    if (dirty(e) && !confirm("입력한 내용이 저장되지 않았습니다. 닫을까요?")) { ev.stopImmediatePropagation(); ev.preventDefault(); }
+  }, true);
+  document.addEventListener("keydown", ev => {
+    const top = stack[stack.length - 1];
+    if (ev.key === "Escape" && top) {
+      if (document.querySelector(".inno-apps.open")) return;   // 앱 메뉴가 먼저 (메뉴 쪽 핸들러가 닫는다)
+      if (closeTop()) { ev.preventDefault(); ev.stopPropagation(); }
+      return;
+    }
+    if (ev.key === "Tab" && top) {   // 포커스 순환
+      const f = [...top.panel.querySelectorAll(FOCUSABLE)].filter(visible);
+      if (!f.length) return;
+      const a = f[0], z = f[f.length - 1];
+      if (!top.panel.contains(document.activeElement)) { ev.preventDefault(); a.focus(); }
+      else if (ev.shiftKey && document.activeElement === a) { ev.preventDefault(); z.focus(); }
+      else if (!ev.shiftKey && document.activeElement === z) { ev.preventDefault(); a.focus(); }
+    }
+  }, true);
+
+  /* ---------- 2) 키보드로 여는 행·칸 ---------- */
+  const clickSel = (C.clickables || []).join(",");
+  function markClickables(root) {
+    if (!clickSel) return;
+    (root.querySelectorAll ? root : document).querySelectorAll(clickSel).forEach(el => {
+      if (/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+      if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+      if (!el.hasAttribute("role")) el.setAttribute("role", "button");
+    });
+  }
+  document.addEventListener("keydown", ev => {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    const el = ev.target;
+    if (!clickSel || !el.matches || !el.matches(clickSel) || /^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+    ev.preventDefault(); el.click();
+  });
+
+  /* ---------- 3) 탭 목록 ---------- */
+  function markTabs() {
+    (C.tablists || []).forEach(t => {
+      document.querySelectorAll(t.list).forEach(list => {
+        list.setAttribute("role", "tablist");
+        list.querySelectorAll(t.tab).forEach(b => {
+          b.setAttribute("role", "tab");
+          b.setAttribute("aria-selected", b.classList.contains(t.active) ? "true" : "false");
+          if (b.tagName !== "BUTTON" && !b.hasAttribute("tabindex")) b.setAttribute("tabindex", "0");
+        });
+      });
+    });
+  }
+
+  /* ---------- 4) 토스트 ---------- */
+  function markLive() { (C.live || []).forEach(s => document.querySelectorAll(s).forEach(el => { el.setAttribute("aria-live", "polite"); el.setAttribute("role", "status"); })); }
+
+  /* ---------- 5) 앱 전환 ---------- */
+  function buildSwitcher() {
+    if (!C.apps || !C.switcherHost) return;
+    const host = document.querySelector(C.switcherHost);
+    if (!host || host.querySelector(".inno-apps")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "inno-apps";
+    wrap.innerHTML = `<button type="button" class="inno-apps-btn" aria-haspopup="true" aria-expanded="false" title="INNO 앱" aria-label="INNO 앱 전환">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><g fill="currentColor"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></g></svg></button>
+      <div class="inno-apps-menu" role="menu">
+        ${C.apps.map(a => `<a role="menuitem" href="${a.url}" ${a.current ? 'aria-current="page"' : 'target="_blank" rel="noopener"'} class="${a.current ? "cur" : ""}">
+          <img src="${a.icon}" width="36" height="36" alt=""><span><b>${a.name}</b><small>${a.desc}</small></span></a>`).join("")}
+      </div>`;
+    const place = C.switcherBefore ? host.querySelector(C.switcherBefore) : null;
+    host.insertBefore(wrap, place || null);
+    const btn = wrap.querySelector(".inno-apps-btn");
+    /* 메뉴는 body 에 붙인다 — 상단 크롬이 clip-path(전체 폭 띠)라 그 안에 두면 잘린다 */
+    const menu = wrap.querySelector(".inno-apps-menu");
+    menu.classList.add("inno-apps-pop"); document.body.appendChild(menu);
+    const set = open => {
+      wrap.classList.toggle("open", open); menu.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) {
+        const r = btn.getBoundingClientRect();
+        menu.style.top = Math.round(r.bottom + 8) + "px";
+        menu.style.right = Math.max(12, Math.round(window.innerWidth - r.right)) + "px";
+        const c = menu.querySelector("a.cur") || menu.querySelector("a"); c && c.focus();
+      }
+    };
+    btn.addEventListener("click", e => { e.stopPropagation(); set(!wrap.classList.contains("open")); });
+    document.addEventListener("click", e => { if (!wrap.contains(e.target) && !menu.contains(e.target)) set(false); });
+    window.addEventListener("resize", () => set(false));
+    const onKey = e => {
+      if (e.key === "Escape") { set(false); btn.focus(); e.stopPropagation(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const it = [...menu.querySelectorAll("a")], i = it.indexOf(document.activeElement);
+        it[(i + (e.key === "ArrowDown" ? 1 : -1) + it.length) % it.length].focus(); e.preventDefault();
+      }
+    };
+    menu.addEventListener("keydown", onKey);
+    wrap.addEventListener("keydown", e => { if (e.key === "Escape") { set(false); e.stopPropagation(); } if (e.key === "ArrowDown" && !wrap.classList.contains("open")) { set(true); e.preventDefault(); } });
+  }
+
+  function all() { scan(); markClickables(document); markTabs(); markLive(); buildSwitcher(); if (C.after) C.after(); }
+  let pending = false;
+  const mo = new MutationObserver(() => { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; all(); }); });
+  function start() { all(); mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] }); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  window.INNO_UX_API = { closeTop };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INNO Scheduler</title>
+<!-- 파비콘: 외부 파일 없이 SVG 를 data URI 로 인라인 (단일 HTML 배포 유지)
+     그라디언트 id 는 파일마다 고유해야 함 — 여러 SVG 를 한 문서에 인라인하면 url(#id) 가 뒤섞임 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3ClinearGradient id=%22isch%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23264466%22/%3E%3Cstop offset=%22.62%22 stop-color=%22%231a2e42%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22url%28%23isch%29%22/%3E%3Crect x=%22.75%22 y=%22.75%22 width=%2262.5%22 height=%2262.5%22 rx=%2214.3%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.10%22 stroke-width=%221.5%22/%3E%3Crect x=%2214%22 y=%2218%22 width=%2236%22 height=%2232%22 rx=%226%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M14 27.5h36%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22/%3E%3Cpath d=%22M24 12.5v9M40 12.5v9%22 stroke=%22%23a9c7e5%22 stroke-width=%224.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 fill=%22none%22/%3E%3Crect x=%2220.5%22 y=%2233%22 width=%228%22 height=%228%22 rx=%222%22 fill=%22%23a9c7e5%22 opacity=%22.45%22/%3E%3Crect x=%2234%22 y=%2233%22 width=%229.5%22 height=%229.5%22 rx=%222.4%22 fill=%22%23F4F6F1%22/%3E%3C/svg%3E">
+<meta name="theme-color" content="#1a2e42">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<style>
+  /* INNO suite — 공통 틀 + Scheduler 강조색 */
+  :root{--page:#f5f6f3;--surface:#ffffff;--surface-2:#eef1ed;--surface-3:#e6eae5;--ink:#243433;--ink-2:#4a5a56;--muted:#62706b;--faint:#8b978f;--border:#dde3dc;--border-strong:#c9d3c8;--grid:#e4e8e2;--ok:#2a7141;--ok-soft:#e3f0e5;--warn:#8a5f0a;--warn-soft:#f7ecd3;--risk:#ab3f35;--risk-soft:#f6e1dd;--info:#2f5f9e;--info-soft:#e2eaf5;--scrim:rgba(20,32,30,.42);--shadow:0 1px 2px rgba(24,40,37,.05),0 6px 20px rgba(24,40,37,.06);--shadow-lg:0 24px 70px rgba(24,40,37,.18);--accent:#2b5f8e;--accent-strong:#214b71;--accent-soft:#e3ebf4;--focus:#5b88b4;--chrome:#1a2e42;--chrome-mark:#a9c7e5;--font:"DM Sans","Noto Sans KR",system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;--chrome-ink:#f1f4ef;--chrome-ink-2:rgba(241,244,239,.72)}
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--page); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .band { background: var(--chrome); color: var(--chrome-ink); padding: 56px 20px 92px; text-align: center; }
+  .band h1 { font-size: 26px; font-weight: 700; letter-spacing: .01em; margin: 0; }
+  .band h1 em { font-style: normal; color: var(--chrome-mark); }
+  p.sub { color: var(--chrome-ink-2); font-size: 14px; }
+  .wrap { max-width: 600px; margin: -60px auto 40px; padding: 0 20px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 480px) { .cards { grid-template-columns: 1fr; } }
+  a.card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+           padding: 28px 18px; text-decoration: none; color: var(--ink); text-align: center;
+           box-shadow: var(--shadow-lg); transition: border-color .15s, transform .15s; }
+  a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  a.card:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+  a.card .emoji { font-size: 32px; display: block; margin-bottom: 10px; }
+  a.card b { font-size: 16.5px; font-weight: 600; display: block; margin-bottom: 4px; }
+  a.card span { font-size: 12.5px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { a.card { transition: none; } a.card:hover { transform: none; } }
+
+.brand-mark{display:block;flex:none;width:30px;height:30px;border-radius:8px}
+</style>
+</head>
+<body>
+  <header class="band">
+    <svg style="display:block;margin:0 auto 14px;border-radius:13px" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="56" height="56"><defs><linearGradient id="scix" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#264466"/><stop offset=".62" stop-color="#1a2e42"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#scix)"/><rect x=".75" y=".75" width="62.5" height="62.5" rx="14.3" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1.5"/><rect x="14" y="18" width="36" height="32" rx="6" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M14 27.5h36" stroke="#a9c7e5" stroke-width="4.5"/><path d="M24 12.5v9M40 12.5v9" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="20.5" y="33" width="8" height="8" rx="2" fill="#a9c7e5" opacity=".45"/><rect x="34" y="33" width="9.5" height="9.5" rx="2.4" fill="#F4F6F1"/></svg>
+    <h1>INNO <em>Scheduler</em></h1>
+  </header>
+  <main class="wrap">
+    <div class="cards">
+      <a class="card" href="./Synthesis_scheduler.html">
+        <span class="emoji">🧪</span><b>Synthesis Scheduler</b>
+        <span>합성방 · 토큰 투표 & 실시간 예약</span>
+      </a>
+      <a class="card" href="./Optics_scheduler.html">
+        <span class="emoji">🔬</span><b>Optics Scheduler</b>
+        <span>광학방 · 순위 투표 & 자유 조율 & Hardware Log</span>
+      </a>
+    </div>
+  </main>
+</body>
+</html>
