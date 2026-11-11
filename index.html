@@ -33,6 +33,8 @@
   @media (prefers-reduced-motion: reduce) { a.card { transition: none; } a.card:hover { transform: none; } }
 
   .band { position: relative; }
+  /* 띠(.band)가 position:relative 라 그대로 두면 위로 당겨 올린 카드를 덮는다 → 카드 쪽을 위 층으로 */
+  .wrap { position: relative; z-index: 1; }
   .langsw { position: absolute; top: 14px; right: 16px; }
 /* 언어 전환 KOR/ENG (우상단) — 로그인 버튼(채운 하늘색)과 구분되도록 '테두리만 있는 둥근 알약 + 지구 아이콘',
    선택된 쪽은 채우지 않고 살짝 밝힌 흰 글자. 높이 34px 은 앱 전환 버튼과 맞춤. */
