@@ -641,8 +641,18 @@ const SLACK_MENTION = {
   'Suresh': 'U0BN58RT9LZ',   // Suresh K
   'Alikhan': 'U0BTXGQ1SPP',   // Alikhan Kalmakhanbet
 };
-function mention_(name) {
-  return SLACK_MENTION[name] ? '<@' + SLACK_MENTION[name] + '>' : name;
+/* Slack 멤버 ID: 명단(members.slackId, 웹 «명단» 탭에서 관리)이 우선이고,
+ * 비어 있으면 위 표(SLACK_MENTION, 이름 기준 — 구버전 호환)를 쓴다.
+ * 인자는 멤버 문서 또는 이름 문자열. */
+function slackIdOf_(m) {
+  if (!m) return '';
+  const sid = typeof m === 'object' ? String(m.slackId || '').trim() : '';
+  if (/^[UW][A-Z0-9]{6,}$/.test(sid)) return sid;
+  return SLACK_MENTION[typeof m === 'object' ? m.name : m] || '';
+}
+function mention_(m) {
+  const sid = slackIdOf_(m);
+  return sid ? '<@' + sid + '>' : (typeof m === 'object' ? m.name : m);
 }
 
 /* ---------------- HTTP / Firestore REST (합성 봇과 동일 헬퍼) ---------------- */
@@ -799,7 +809,7 @@ function postToSlack_(text) {
 function buildOptRemindMessage_(targetWeek, voteClose, opticsMembers, votedIds) {
   const nowMs = Date.now();
   const voted = opticsMembers.filter(function (m) { return votedIds[m.id]; });
-  const notVoted = opticsMembers.filter(function (m) { return !votedIds[m.id] && SLACK_MENTION[m.name]; });
+  const notVoted = opticsMembers.filter(function (m) { return !votedIds[m.id] && slackIdOf_(m); });
   const leftMs = voteClose - nowMs;
   const leftH = Math.floor(leftMs / 3600000);
   const leftStr = leftH >= 24 ? Math.floor(leftH / 24) + '일 ' + (leftH % 24) + '시간' : leftH + '시간 ' + Math.floor(leftMs % 3600000 / 60000) + '분';
@@ -810,7 +820,7 @@ function buildOptRemindMessage_(targetWeek, voteClose, opticsMembers, votedIds) 
   lines.push(isLastDay ? '⚠ *오늘 자정(수 24:00) 마감입니다!*' : '투표 마감까지 *' + leftStr + '* (수요일 24:00 KST 마감)');
   lines.push('✅ 투표 완료: *' + voted.length + '명* / 광학 활성 ' + opticsMembers.length + '명');
   if (notVoted.length) {
-    lines.push('⏳ 아직 투표하지 않은 분들: ' + notVoted.map(function (m) { return mention_(m.name); }).join(' '));
+    lines.push('⏳ 아직 투표하지 않은 분들: ' + notVoted.map(function (m) { return mention_(m); }).join(' '));
   }
   lines.push('');
   lines.push('• 원하는 요일에 1/2/3순위 지정 (3개 다 채울 필요 없음, 적게 낼수록 동순위 경쟁 우선) · 발표: 목 12:00');
@@ -826,7 +836,7 @@ function remindJob() {
   const voteDocs = fsQueryByWeek_(token, 'opticsVotes', c.targetWeek);
   const votedIds = {};
   voteDocs.forEach(function (d) { if (d.ranks && Object.keys(d.ranks).length) votedIds[d.memberId] = true; });
-  const notVoted = opticsMembers.filter(function (m) { return !votedIds[m.id] && SLACK_MENTION[m.name]; });
+  const notVoted = opticsMembers.filter(function (m) { return !votedIds[m.id] && slackIdOf_(m); });
   if (!notVoted.length) { Logger.log('채널 멤버 전원 투표 완료 — 리마인드 생략'); return; }
   postToSlack_(buildOptRemindMessage_(c.targetWeek, c.voteClose, opticsMembers, votedIds));
   Logger.log('리마인드 발송 완료 (채널 내 미투표 ' + notVoted.length + '명)');

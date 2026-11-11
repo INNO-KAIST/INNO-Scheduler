@@ -436,8 +436,18 @@ function postToSlack_(text) {
   });
   if (r.code !== 200) throw new Error('Slack 전송 실패(' + r.code + '): ' + r.text.slice(0, 200));
 }
-function mention_(name) {
-  return SLACK_MENTION[name] ? '<@' + SLACK_MENTION[name] + '>' : name;
+/* Slack 멤버 ID: 명단(members.slackId, 웹 «명단» 탭에서 관리)이 우선이고,
+ * 비어 있으면 위 표(SLACK_MENTION, 이름 기준 — 구버전 호환)를 쓴다.
+ * 인자는 멤버 문서 또는 이름 문자열. */
+function slackIdOf_(m) {
+  if (!m) return '';
+  const sid = typeof m === 'object' ? String(m.slackId || '').trim() : '';
+  if (/^[UW][A-Z0-9]{6,}$/.test(sid)) return sid;
+  return SLACK_MENTION[typeof m === 'object' ? m.name : m] || '';
+}
+function mention_(m) {
+  const sid = slackIdOf_(m);
+  return sid ? '<@' + sid + '>' : (typeof m === 'object' ? m.name : m);
 }
 
 /* ---------------- 메시지 구성 ---------------- */
@@ -465,7 +475,7 @@ function buildAnnounceMessage_(targetWeek, results, bookings, members, config) {
   const prio = results.priorityMembers || [];
   const prioMin = (config && config.priorityWindowMin != null) ? config.priorityWindowMin : 60;
   if (prio.length && prioMin > 0) {
-    lines.push('🎗 *Day 우선예약 대상* (Day 지원했으나 미선정): ' + prio.map(function (id) { return mention_(nameOf(id)); }).join(', '));
+    lines.push('🎗 *Day 우선예약 대상* (Day 지원했으나 미선정): ' + prio.map(function (id) { return members[id] ? mention_(members[id]) : nameOf(id); }).join(', '));
     lines.push('   → 지금부터 *' + prioMin + '분간* 위 인원만 빈 슬롯 선착순 예약 가능, 이후 전체 오픈');
   } else {
     lines.push('⚡ 빈 슬롯 실시간 예약이 *지금부터* 전체 오픈되었습니다 (1인 횟수 제한 없음)');
@@ -481,7 +491,7 @@ function buildRemindMessage_(targetWeek, voteClose, activeMembers, votesByMember
   const voted = activeMembers.filter(function (m) { return (votesByMember[m.id] || []).length > 0; });
   // 멘션 대상: Slack 채널 멤버(SLACK_MENTION 등재자) 중 아직 토큰을 1개도 쓰지 않은 인원만
   const notVoted = activeMembers.filter(function (m) {
-    return (votesByMember[m.id] || []).length === 0 && SLACK_MENTION[m.name];
+    return (votesByMember[m.id] || []).length === 0 && slackIdOf_(m);
   });
   const leftMs = voteClose - nowMs;
   const leftH = Math.floor(leftMs / 3600000);
@@ -494,7 +504,7 @@ function buildRemindMessage_(targetWeek, voteClose, activeMembers, votesByMember
   lines.push(isLastDay ? '⚠ *오늘 자정(수 24:00) 마감입니다!*' : '투표 마감까지 *' + leftStr + '* (수요일 24:00 KST 마감)');
   lines.push('✅ 투표 완료: *' + voted.length + '명* / 전체 ' + activeMembers.length + '명');
   if (notVoted.length) {
-    lines.push('⏳ 아직 투표하지 않은 분들: ' + notVoted.map(function (m) { return mention_(m.name); }).join(' '));
+    lines.push('⏳ 아직 투표하지 않은 분들: ' + notVoted.map(function (m) { return mention_(m); }).join(' '));
   }
   lines.push('');
   lines.push('• 1인당 토큰 4개 · 같은 시간표에 2개 이상 배치 시 우선권(묶음 처리) · 결과 발표: 목 12:00');
@@ -515,7 +525,7 @@ function remindJob() {
   voteDocs.forEach(function (d) { votesByMember[d.memberId] = Object.keys(d.cells || {}); });
   // 채널 멤버(SLACK_MENTION 등재자) 중 미투표자가 있을 때만 발송
   const notVoted = activeMembers.filter(function (m) {
-    return (votesByMember[m.id] || []).length === 0 && SLACK_MENTION[m.name];
+    return (votesByMember[m.id] || []).length === 0 && slackIdOf_(m);
   });
   if (!notVoted.length) { Logger.log('채널 멤버 전원 투표 완료 — 리마인드 생략'); return; }
   postToSlack_(buildRemindMessage_(c.targetWeek, c.voteClose, activeMembers, votesByMember));
