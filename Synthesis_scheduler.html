@@ -375,6 +375,15 @@ nav.tabs > button[data-tab=vote]{--ico:url("data:image/svg+xml,%3Csvg xmlns='htt
 nav.tabs > button[data-tab=book]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E")}
 nav.tabs > button[data-tab=results]{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='3'/%3E%3Ccircle cx='8' cy='8' r='1.2'/%3E%3Ccircle cx='16' cy='16' r='1.2'/%3E%3Ccircle cx='12' cy='12' r='1.2'/%3E%3C/svg%3E")}
 nav.tabs > button.more{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13M8 12h13M8 18h13'/%3E%3Ccircle cx='3.5' cy='6' r='1'/%3E%3Ccircle cx='3.5' cy='12' r='1'/%3E%3Ccircle cx='3.5' cy='18' r='1'/%3E%3C/svg%3E")}
+
+/* 언어 전환 KOR/ENG (우상단) — 로그인 버튼(채운 하늘색)과 구분되도록 '테두리만 있는 둥근 알약 + 지구 아이콘',
+   선택된 쪽은 채우지 않고 살짝 밝힌 흰 글자. 높이 34px 은 앱 전환 버튼과 맞춤. */
+.langsw{display:inline-flex;align-items:center;gap:2px;flex:none;height:34px;padding:3px 3px 3px 9px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:transparent}
+.langsw-ic{flex:none;margin-right:3px;color:var(--chrome-ink-2,rgba(241,244,239,.72))}
+.langsw button{font:inherit;font-size:11px;font-weight:600;letter-spacing:.06em;height:26px;padding:0 9px;border:0;border-radius:999px;background:transparent;color:var(--chrome-ink-2,rgba(241,244,239,.72));cursor:pointer;transition:background .15s,color .15s}
+.langsw button:hover{color:var(--chrome-ink,#f1f4ef)}
+.langsw button.on{background:rgba(255,255,255,.16);color:var(--chrome-ink,#f1f4ef);box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+.langsw button:focus-visible{outline:2px solid var(--focus,#5b88b4);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -382,6 +391,7 @@ nav.tabs > button.more{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3
   <header>
     <svg class="brand-mark" style="width:34px;height:34px;border-radius:9px" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="26" height="26"><defs><linearGradient id="scmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#264466"/><stop offset=".62" stop-color="#1a2e42"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#scmk)"/><rect x=".75" y=".75" width="62.5" height="62.5" rx="14.3" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1.5"/><rect x="14" y="18" width="36" height="32" rx="6" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M14 27.5h36" stroke="#a9c7e5" stroke-width="4.5"/><path d="M24 12.5v9M40 12.5v9" stroke="#a9c7e5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="20.5" y="33" width="8" height="8" rx="2" fill="#a9c7e5" opacity=".45"/><rect x="34" y="33" width="9.5" height="9.5" rx="2.4" fill="#F4F6F1"/></svg><div class="logo">Weekly Synthesis Scheduler<small id="weekLabel"></small></div>
     <div class="head-right" id="headRight"></div>
+    <div class="langsw" translate="no" role="group" aria-label="Language"><svg class="langsw-ic" aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1.9 8h12.2M8 1.75c1.8 1.8 2.6 3.9 2.6 6.25S9.8 12.45 8 14.25M8 1.75C6.2 3.55 5.4 5.65 5.4 8s.8 4.45 2.6 6.25" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><button type="button" data-lang="ko" aria-pressed="true">KOR</button><button type="button" data-lang="en" aria-pressed="false">ENG</button></div>
   </header>
   <div id="demoBanner"></div>
   <div id="botBanner"></div>
@@ -393,6 +403,222 @@ nav.tabs > button.more{--ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3
 <div id="toast"></div>
 
 <!-- Firebase SDK (compat) -->
+<script>
+/* ════════ INNO Scheduler 언어 전환 (KOR / ENG) ════════
+ * KOR = 원래 화면 그대로. ENG = 화면에 그려진 글자를 사전으로 바꿔 보여 준다(DOM 번역 층).
+ * - 앱 코드는 그대로 한국어로 그리고, MutationObserver 가 새로 그려진 글자·속성을 즉시 바꾼다.
+ * - translate="no" 안(채팅·특이사항 본문 등 사용자가 쓴 글)과 멤버 이름은 바꾸지 않는다.
+ * - 원문은 노드별로 기억해 두었다가 KOR 로 돌아갈 때 되돌린다.
+ * - Slack 공지·구글 캘린더 제목은 모두가 함께 보는 것이라 한국어 그대로다.
+ * 두 앱(Optics/Synthesis)에서 이 블록은 글자 하나까지 같아야 한다. */
+(function () {
+  'use strict';
+  const LS = 'inno_lang';
+  const HANGUL = /[가-힣]/;
+  const DICT = [["— 가상 데이터로 동작 중 (저장 안 됨). 국면 미리보기:","— running on sample data (nothing is saved). Preview a phase:"],["— 실시간 예약 탭에서 협의해 시간을 나눠 쓸 수 있습니다.","— you can agree to split the time in the Live booking tab."],["— 아래 시간대는","— the time ranges below are"],["— 자동 동기화 봇의 마지막 정상 동작:","— the sync bot last ran successfully"],["— Firebase 설정이 비어 있어 가상 데이터로 동작 중입니다 (새로고침 시 초기화, 다른 사람과 공유 안 됨). 설치 가이드에 따라 FIREBASE_CONFIG를 입력하면 실제 모드로 전환됩니다. 국면 미리보기:","— Firebase is not configured, so the app is running on sample data (reset on reload, not shared with anyone). Fill in FIREBASE_CONFIG per the setup guide to switch to live mode. Preview a phase:"],[", 당첨자는 블록을 제외한 나머지 시간만 사용하게 됩니다. 대상 주는 이번 주·다음 주로 제한됩니다(서버 규칙).",", so the day's winner only gets the time outside the block. Only this week and next week can be targeted (server rule)."],[", U로 시작).",", starts with U)."],[": «일정» 또는 «실시간 예약» 탭의 캘린더에서 칸을 클릭·드래그 → 배정 대상에서 🔒 Repair / 🔒 외부인 방문측정 선택 (메모 선택 입력). 투표 기간·발표 전에도 등록할 수 있으며, 등록 즉시 사전 투표 화면·실시간 예약 화면·구글캘린더에 반영됩니다.",": click or drag cells in the calendar on the «Schedule» or «Live booking» tab → choose 🔒 Repair / 🔒 External visit as the assignee (memo optional). You can register even during voting or before the announcement; it appears immediately on the pre-vote screen, the live booking screen and Google Calendar."],[": 같은 방식으로 그 구간을 다시 클릭·드래그하면 현재 종류·메모가 채워진 상태로 열립니다 — 바꿔서 «적용»하면 갱신, 🔓 «관리자 지정 해제»를 고르면 원래 배정으로 복귀, 멤버 이름이나 «비우기»를 고르면 확인 후 지정 해제와 배정 변경이 함께 처리됩니다. 구간을 줄이려면 줄이려는 부분만 드래그해 해제하면 됩니다. 아래 표의 «해제» 버튼으로도 구간 단위 해제가 가능합니다.",": click or drag the same range again and it opens pre-filled with the current type and memo — change them and press «Apply» to update, choose 🔓 «Remove admin block» to restore the original assignment, or choose a member or «Clear» to remove the block and change the assignment in one step (after confirming). To shorten a block, drag over just the part to remove. You can also remove whole ranges with the «Remove» button in the table below."],[": 신규 추가 (",": newly added (",1],[": 제거됨",": removed",1],[". 다음 시작:",". Next opens:"],[". 이후 전체 오픈됩니다.",". After that it opens to everyone.",1],["· 🔒 표시 구간은 관리자 지정 일정으로 예약·조율 불가 · 📱 모바일: 요일 칸을 쓸면 범위 선택, 화면 스크롤은 왼쪽 시간 눈금이나 표 바깥에서","· 🔒 ranges are admin blocks and cannot be booked or changed · 📱 Mobile: swipe a day column to select a range; scroll the page from the time ruler on the left or outside the table"],["· 광학","· Optics"],["· 기기","· Devices"],["· 배정","· Assigned"],["· 오늘","· Today"],["· 이번 주 남은 시간","· Remaining this week"],["· 일부 빈 칸","· Some slots open"],["· 투표는 선택입니다","· Voting is optional"],["· 현재","· currently"],["· 희망순위는 다음 주 스케줄에서만 표시됩니다","· Preferences are shown only on next week's schedule"],["' 이름이 이미 있습니다","' already exists",1],["'(으)로 바꿉니다. Slack ID가 비어 있으면 봇의 이름 기준 태그가 끊길 수 있습니다. 그래도 저장할까요?","'. With an empty Slack ID, the bot's name-based tag may stop working. Save anyway?",1],["(가용","(available"],["(관리자: 예약 취소)","(Admin: cancel booking)"],["(관리자: 확정 취소)","(Admin: cancel confirmation)"],["(나)","(me)"],["(다음 주)","(next week)"],["(데모) 요일 배정 결과가 확정·발표되었습니다.","(Demo) Day assignments have been finalized and announced."],["(데모) 추첨 결과가 확정·발표되었습니다.","(Demo) Lottery results have been finalized and announced."],["(목요일 12:00). 발표 즉시 이 화면에 자동 표시됩니다.","(Thursday 12:00). Results appear here automatically as soon as they are announced."],["(목요일 12:00). 발표 즉시 자동 표시됩니다.","(Thursday 12:00). Results appear automatically as soon as they are announced."],["(무명)","(no name)"],["(본인)","(me)"],["(비우기)","(clear)"],["(삭제된 멤버:","(deleted member:"],["(삭제한 멤버 목록에서 되살릴 수 있습니다)","(you can restore it from the deleted members list)"],["(선택 · 예: U0123ABCDEF)","(optional · e.g. U0123ABCDEF)"],["(수요일 24시)","(Wednesday 24:00)"],["(알 수 없음)","(unknown)"],["(없음)","(none)"],["(우선예약 시간 종료됨)","(priority window ended)"],["(월) ~","(Mon) ~",1],["(이번 주)","(this week)"],["(일)","(Sun)",1],["(첫 로그인)","(first login)"],["(콘솔에서 익명 로그인 활성화 필요)","(enable anonymous sign-in in the console)"],["(클릭해 취소)","(click to cancel)"],["(클릭해 확정 취소)","(click to cancel confirmation)"],["(Day에 토큰을 냈으나 한 번도 선정되지 못한 인원):","(members who spent tokens on Day slots but won none):"],[") 결과 삭제 후 재생성",")",1],[") 진행 현황",") progress",1],[") 하나에","): a bundle of",1],[") 확정 스케줄",") confirmed schedule",1],["). 발표 후 이 화면에서 전원이 자유롭게 수정·조율할 수 있습니다.","). After the announcement everyone can edit and coordinate freely on this screen.",1],["[관리자 조치]","[Admin action]"],["[관리자]","[Admin]"],["[이번 주]","[This week]"],["[자동 기록]","[Auto log]"],["」(으)로 바꿉니다. 조율 채팅에 변경 기록이 남습니다. 계속할까요?","」. The change will be logged in the coordination chat. Continue?",1],["→ 나머지","→ the remaining"],["→ 이 요일은 종일 사용 불가 (당첨자 가용 시간 없음)","→ this day is unavailable all day (no time left for the winner)"],["+ 멤버 추가","+ Add member"],["+ 파장 추가","+ Add wavelength"],["+ Turret 추가","+ Add turret"],["⚠ 검증 불일치 — 관리자에게 결과 재생성을 요청하세요","⚠ Verification mismatch — ask an admin to regenerate the results"],["⚠ 첫 로그인 시 입력한 PIN이 그대로 등록되니 신중히 입력하세요. PIN 분실 시 관리자에게 초기화를 요청하세요.","⚠ The PIN you enter on your first login is registered as-is, so type it carefully. If you forget it, ask an admin to reset it."],["⚠ ND / Pinhole / Filter 등의 기타 추가요소는 사용 후 해체하여 원상복구","⚠ Remove any extra elements such as ND / pinholes / filters after use and restore the original setup"],["✓ 검증 완료 — 투표 데이터로부터 재계산한 결과와 일치","✓ Verified — matches the result recomputed from the vote data"],["🎗 회원님은","🎗 You are a"],["📝 특이사항 기록","📝 Remarks"],["🔒 관리자 지정 일정 (Repair · 외부인 방문측정)","🔒 Admin blocks (Repair · External visit)"],["🔒 이 구간은 관리자 지정 일정(Repair·외부인 방문측정)입니다. 관리자만 변경할 수 있습니다.","🔒 This range is an admin block (Repair · External visit). Only an admin can change it."],["🔒 현재","🔒 This range is"],["🔓 관리자 지정 해제","🔓 Remove admin block"],["🔓 해제","🔓 remove it"],["🗑 채팅 전체 초기화 (관리자)","🗑 Clear entire chat (admin)"],["🛠 변경사항 (Hardware Log) — 현재 장비 구성 현황판","🛠 Hardware Log — current setup board"],["①1순위","① 1st"],["1단계 · 사전 투표 중","Step 1 · Pre-vote open"],["1단계 · 사전 투표 진행중","Step 1 · Pre-vote open"],["②2순위","② 2nd"],["2단계 · 배정 대기","Step 2 · Awaiting assignment"],["2단계 · 투표 마감 — 추첨 대기","Step 2 · Voting closed — awaiting lottery"],["③3순위","③ 3rd"],["3개를 모두 채울 필요는 없으며,","You don't have to fill all three;"],["3단계 · 실시간 예약 진행중","Step 3 · Live booking open"],["3단계 · 우선예약 진행중 (Day 탈락자 전용)","Step 3 · Priority booking (Day non-winners only)"],["3단계 · 자유 조율 중","Step 3 · Open coordination"],["633 nm 레이저 파워가 평소보다 10% 낮게 측정됨 — 컨트롤러 재부팅 후 정상. 참고 바랍니다.","633 nm laser power read 10% lower than usual — normal after rebooting the controller. FYI."],["가용 시간 없음","No time available"],["같은 요일을 중복 순위로 투표할 수 없습니다.","You can't rank the same day more than once."],["개","",1],["개 남음"," left",1],["개 배치 묶음은 Day 주간 2개 제한과 전부-또는-전무 규칙상 당첨이 불가능하여 차단됩니다."," batches can never win under the 2-per-week Day limit and the all-or-nothing rule, so it is blocked.",1],["개가 자동 지급됩니다. 명단 추가·편집·삭제는 관리자로 로그인하면 이 탭에서 바로 할 수 있습니다."," tokens every Monday at 00:00. Admins can add, edit and remove members right here in this tab.",1],["개까지입니다."," per week.",1],["건)",")",1],["검증 불일치가 표시된 경우에만 사용. 삭제 후 자동 재생성되며 결정론적이므로 동일 투표에서는 동일 결과.","Use only when a verification mismatch is shown. The results are regenerated automatically after deletion and are deterministic, so the same votes give the same result."],["검증 불일치가 표시된 경우에만 사용하세요. 삭제 후 아무 접속자의 화면에서든 자동 재생성되며, 결정론적이므로 동일 투표 데이터에서는 항상 동일한 결과가 나옵니다.","Use only when a verification mismatch is shown. After deletion the results are regenerated automatically by any connected client, and because the process is deterministic the same vote data always yields the same result."],["검증 중...","Verifying..."],["계정","Account"],["계정 상태","Account status"],["공정성 증빙","Fairness proof"],["관리자","Admin"],["관리자 권한으로 예약합니다. 본인 또는 다른 멤버를 지정할 수 있습니다.","You are booking with admin rights. You can choose yourself or another member."],["관리자 등록 완료!","Admin registered!"],["관리자 전용 화면입니다.","This screen is for admins only."],["관리자 점유(종일)","Admin block (all day)"],["관리자 지정 일정","Admin blocks"],["관리자 지정 일정 (Repair / 외부인 방문측정)","Admin blocks (Repair / External visit)"],["관리자 지정 일정(Repair·외부인 방문측정) 구간은 수정할 수 없습니다. 관리자에게 요청하세요.","Admin blocks (Repair · External visit) can't be edited. Please ask an admin."],["관리자 지정 일정(Repair·외부인 방문측정)을 제외한 나머지 시간","the remaining time outside admin blocks (Repair · External visit)"],["관리자 지정 일정을 해제할까요? 해제하면 해당 시간은 요일 당첨자·자유 조율 대상으로 즉시 복귀합니다.","Remove this admin block? The time immediately returns to the day's winner and open coordination."],["관리자 지정 일정이 등록되었습니다. (캘린더에 곧 반영)","Admin block registered. (Calendar updates shortly)"],["관리자 지정을 해제하고 배정을 변경했습니다. (캘린더에 곧 반영)","Admin block removed and assignment changed. (Calendar updates shortly)"],["관리자 지정이 해제되었습니다.","Admin block removed."],["관리자는 바로 삭제할 수 없습니다. «편집»에서 관리자를 해제한 뒤 삭제하세요.","Admins can't be deleted directly. Remove admin rights in «Edit» first, then delete."],["관리자는 합성·광학 중 하나 이상 참여해야 로그인할 수 있습니다.","An admin must take part in Synthesis or Optics (at least one) to be able to log in."],["관리자로 시작","Start as admin"],["광학","Optics"],["광학 — 요일 투표·조율·기록","Optics — day voting, coordination, logs"],["광학 비활성","Optics off"],["광학 스케줄 참여가 활성화되지 않은 계정입니다. 관리자에게 활성화를 요청하세요.","This account isn't enabled for the Optics schedule. Ask an admin to enable it."],["광학 측정 데이터 분석","Optical measurement analysis"],["광학 활성","Optics on"],["광학 활성 멤버만 채팅 가능","Only Optics members can chat"],["광학방 · 순위 투표 & 자유 조율 & Hardware Log","Optics room · ranked voting, open coordination & hardware log"],["광학방 주간 스케줄 · 대상 주:","Optics room weekly schedule · target week:"],["광학테이블 오른쪽 커버 나사 하나 분실. 임시로 테이프 고정해둠.","One screw missing from the right cover of the optical table. Taped in place for now."],["구간입니다. 종류·메모를 바꿔 저장하거나","range. You can change the type or memo and save, or"],["구글 캘린더 동기화가 멈춰 있습니다","Google Calendar sync has stopped"],["구분","Item"],["규칙","Rules"],["그 시간대만","just that time block"],["그 요일 종일","that whole day"],["금","Fri"],["금요일 (전일)","Friday (all day)"],["기기 연결을 해제했습니다.","Devices disconnected."],["기기 초기화","Reset devices"],["기록","Post"],["기록 실패:","Failed to post:"],["기록되었습니다.","Posted."],["기록된 특이사항이 없습니다.","No remarks yet."],["기록하려면 광학 활성 멤버로 로그인하세요.","Log in as an Optics member to post."],["기타 요소","Other elements"],["까지 우선적으로 예약할 수 있습니다."," — you can book with priority until then.",1],["까지 이분들만 예약 가능"," — only these members can book until then",1],["까지). 대상자:","). Eligible:",1],["꺼짐","off"],["나머지 시간은 비어 있음 — 자유 조율 가능","Remaining time is open — free to coordinate"],["날짜","Date"],["남은 토큰:","Tokens left:"],["내 예약 (","My bookings ("],["내 예약 칸","your booked cell"],["내 추첨 확정 칸","your lottery-confirmed cell"],["내 칸","your cell"],["내 토큰","My tokens"],["내 토큰 (이번 주):","My tokens (this week):"],["내 토큰/추첨 확정","My token / confirmed"],["내 투표:","My vote:"],["님 이름으로 예약되었습니다. (캘린더에 곧 반영)"," — booked under this name. (Calendar updates shortly)",1],["님, 환영합니다!",", welcome!",1],["님의","'s",1],["님의 시간을 「"," — their time will be changed to 「"],["다른 지원자의 희망 시간대가 통째로 들어가면 그 사람도 함께 배정","if another applicant's requested blocks fit there entirely, they are assigned too"],["다음 주","Next week"],["다음 주 (","Next week ("],["다음 주 내 시간","My time next week"],["다음 주 스케줄의 예약·취소는","To book or cancel on next week's schedule, use the"],["다음 주에 배정된 시간이 없습니다. 조율·채팅에서 빈 시간을 요청할 수 있습니다.","You have no time assigned next week. You can ask for open time in Coordinate · Chat."],["닫기","Close"],["대","",1],["대상",""],["대상 주 종료까지","Until the target week ends"],["대상 주:","Target week:"],["더보기","More"],["데모 모드","Demo mode"],["데이터 수신 오류:","Data error:"],["동일 슬롯·배치에 중복 투표할 수 없습니다.","You can't vote for the same slot and batch twice."],["되며, 새 기록이 추가되면 가장 오래된 항목부터 자동 삭제됩니다.","; when a new one is added, the oldest is removed automatically."],["되살리기","Restore"],["됩니다.","."],["됩니다. 배정자는",". The assignee uses"],["됩니다. 요일 당첨자도 이 시간을 제외한 나머지 시간만 사용합니다.",". The day's winner also uses only the time outside these ranges."],["드래그","drag"],["등록","Register"],["등록 완료","Registered"],["등록된 관리자 지정 일정이 없습니다.","No admin blocks registered."],["등록된 레이저가 없습니다.","No lasers registered."],["등록된 Turret이 없습니다.","No turrets registered."],["또는","or"],["로 1순위 → 2순위 → 3순위 순서로 지정됩니다 (다시 누르면 해제, 아래 순위는 자동으로 당겨짐)."," as 1st → 2nd → 3rd choice in that order (tap again to remove; lower choices move up automatically)."],["로 이뤄집니다. 대표가 지원하지 않은 시간대에",". In blocks the lead winner did not request,"],["로그아웃","Log out"],["로그인","Log in"],["로그인하면 내 토큰 현황이 표시됩니다.","Log in to see your tokens."],["로그인하면 내 투표·배정 시간이 여기 모입니다.","Log in to see your votes and assigned time here."],["를 누르세요.","."],["마감","Closes"],["마감:","Closes:"],["마감·배정 대기","Closed · awaiting assignment"],["마감·추첨 대기","Closed · awaiting lottery"],["마지막 관리자입니다. 먼저 다른 멤버를 관리자로 지정하세요.","This is the last admin. Make another member an admin first."],["매주 월 00:00 ~ 수 24:00","every Mon 00:00 – Wed 24:00"],["매주 월요일 00:00 ~ 수요일 24:00","every Monday 00:00 – Wednesday 24:00"],["메모 (선택)","Memo (optional)"],["메시지 입력 후 Enter","Type a message and press Enter"],["멤버 관리","Member management"],["멤버 로그인","Member login"],["멤버 없음","No members"],["멤버 추가","Add member"],["멤버 편집","Edit member"],["멤버 ID 복사","Copy member ID"],["멤버를 지정하거나 비우면 관리자 지정이 함께 해제","assigning a member or clearing it removes the admin block as well"],["멤버를 찾을 수 없습니다.","Member not found."],["명","",1],["명 · 합성"," · Synthesis",1],["명 지원"," applied",1],["명 활성)"," active)",1],["명)",")",1],["명단","Roster"],["명단 (","Roster ("],["명단 (광학 활성","Roster (Optics active:"],["명단 관리","Roster management"],["명단 탭으로 가기","Go to Roster tab"],["명단·PIN·기기 인증은 Synthesis Scheduler와 공유되며, 광학/합성 활성 여부는 별도로 관리됩니다. 광학 활성 멤버만 사전 투표·일정 수정·채팅·변경사항 기록이 가능합니다.","The roster, PINs and device sign-in are shared with Synthesis Scheduler; Optics and Synthesis participation are managed separately. Only Optics members can pre-vote, edit the schedule, chat and log hardware changes."],["목","Thu"],["목 00:00 ~ 12:00","Thu 00:00 – 12:00"],["목 12:00 (","Thu 12:00 ("],["목 12:00 발표 → 전원 실시간 수정·채팅 조율","Thu 12:00 announcement → everyone edits live and coordinates in chat"],["목록으로","List view"],["목요일 06-18시","Thursday 06–18h"],["목요일 12:00 추첨 발표 직후","right after the Thursday 12:00 lottery announcement"],["목요일 18시-금 06시","Thursday 18h – Fri 06h"],["목요일 오전만 쓰고 오후는 비울게요. 필요하신 분?","I'll only use Thursday morning and free up the afternoon. Anyone need it?"],["묶음(전부 당첨 또는 전부 탈락)","bundle (all win or all lose)"],["미니 스케줄에서 바로 수정 → 즉시 반영","Edit directly in the mini schedule → applied instantly"],["미등록","Not registered"],["미등록 (첫 로그인 대기)","Not registered (awaiting first login)"],["미배정 — 자유 조율 가능","Unassigned — free to coordinate"],["발표 + 우선예약","Announcement + priority booking"],["발표 + 자유 조율","Announcement + open coordination"],["발표 전이라도 칸을 클릭·드래그해","Even before the announcement you can click or drag cells to set a"],["발표·예약","Announced · booking"],["발표·조율","Announced · coordination"],["방금 다른 예약이 먼저 들어갔습니다.","Someone else's booking just got in first."],["방식","Type"],["배정 (시간대별)","Assignment (by time block)"],["배정 결과","Results"],["배정 결과를 두고 자유롭게 조율하세요!","Coordinate freely around the results!"],["배정 기준: ① 무당첨자 우선 → ② 순위 → ③ 투표 수 적은 사람 → ④ 시드 무작위. (대표 선정 후 남은 시간대에 대해 같은 기준으로 추가 배정) 시드(투표 데이터 SHA-256):","Assignment order: ① members with no win yet → ② rank → ③ fewer votes → ④ seeded random. (After the lead winner is chosen, remaining blocks are assigned by the same criteria.) Seed (SHA-256 of vote data):"],["배정 대상","Assign to"],["배정 발표 대기 —","Awaiting announcement —"],["배정 발표 전입니다. 발표:","Assignments are not announced yet. Announcement:"],["배정 발표까지","Until announcement"],["배정은","Assignment is made in"],["배정자","Assignee"],["번호","No."],["변경 내용","Change"],["변경사항 있음 — 저장 필요!","Unsaved changes — save needed!"],["변경사항이 없습니다.","No changes."],["본인 계정은 삭제할 수 없습니다. (잠금 방지)","You can't delete your own account. (lock-out protection)"],["본인 계정의 참여를 모두 끌 수는 없습니다. (잠금 방지)","You can't turn off all participation for your own account. (lock-out protection)"],["본인의 관리자 권한은 해제할 수 없습니다. (잠금 방지)","You can't remove your own admin rights. (lock-out protection)"],["부터 가능합니다. 오픈까지:",". Opens in:"],["부품을 추가·제거·변경하면 즉시 여기서 수정","update this board immediately whenever you add, remove or change a component"],["분","min"],["분 전","min ago"],["분간)"," min)",1],["불러오는 중...","Loading..."],["블록을 지정할 수 있습니다.","block."],["비어 있음","Open"],["비우기","Clear"],["비활성","Inactive"],["빈 슬롯","Open slot"],["빈 슬롯(점선)을 누르면 즉시 예약됩니다. 예약은 서버에서 원자적으로 처리되어 정확히 선착순이 보장됩니다.","Tap an open slot (dashed) to book it instantly. Bookings are processed atomically on the server, so first-come-first-served is guaranteed."],["빈 칸","Open"],["빈 칸(점선)을 클릭해 즉시 신청","click an open cell (dashed) to claim it instantly"],["사유","Reason"],["사전 투표","Pre-vote"],["사전 투표 (요일 · 시간대)","Pre-vote (day · time block)"],["사전 투표 (요일 · 시간대) —","Pre-vote (day · time block) —"],["사전 투표 (토큰)","Pre-vote (tokens)"],["사전 투표 (토큰) —","Pre-vote (tokens) —"],["사전 투표를","Pre-vote:"],["삭제","Delete"],["삭제 실패:","Delete failed:"],["삭제는 '숨김'입니다 — 명단·로그인·투표·예약에서 빠지고 연결 기기가 해제되지만, 과거 배정·예약·기록의 이름은 그대로 남고 언제든 되살릴 수 있습니다. Slack ID는 봇의 리마인드·발표 태그에 쓰입니다 (Slack 프로필 → ⋮ →","Deleting only hides a member — they leave the roster, login, voting and booking, and their devices are disconnected, but their name stays on past assignments, bookings and logs, and they can be restored any time. The Slack ID is used by the bot to tag people in reminders and announcements (Slack profile → ⋮ →"],["삭제되었습니다.","Deleted."],["삭제됨 — 잠시 후 자동 재생성됩니다.","Deleted — will be regenerated automatically in a moment."],["삭제한 멤버","Deleted members:"],["새벽","Dawn"],["새벽 / 오전 / 오후 / 저녁","Dawn / Morning / Afternoon / Evening"],["새벽/오전/오후/저녁 4개 시간대 단위","four time blocks: Dawn / Morning / Afternoon / Evening"],["샘플 앞","In front of sample"],["선착순 예약 단계에도 Day 주간 2배치 제한 적용 (UI 강제)","Apply the 2-batches-per-week Day limit to first-come booking too (enforced in UI)"],["설정 저장","Save settings"],["설정이 저장되었습니다.","Settings saved."],["수","Wed"],["수요일 06-18시","Wednesday 06–18h"],["수요일 18시-목 06시","Wednesday 18h – Thu 06h"],["수정","Edit"],["수정 실패:","Edit failed:"],["수정하려면","To edit, tap"],["수정하려면 광학 활성 멤버로 로그인하세요.","Log in as an Optics member to edit."],["수정하려면 로그인하세요.","Log in to edit."],["순위는 1순위부터 순서대로 지정해야 합니다.","Choices must be set in order, starting from 1st."],["순위는 최대 3개까지입니다. 기존 순위를 해제 후 지정하세요.","You can pick up to 3 choices. Remove one first."],["슬롯","Slot"],["슬롯을 예약할까요?","slot — book it?"],["시","h",1],["시간은 정상 사용 가능"," h remain usable as normal",1],["시간표","Timetable"],["시드가 투표 내용 자체에서 결정되므로 누구도 결과를 조작·예측할 수 없으며, 모든 접속자가 독립 재검증합니다.","The seed is derived from the votes themselves, so no one can manipulate or predict the result, and every client re-verifies it independently."],["시드는 마감된 투표 내용 자체로부터 결정되므로 누구도(관리자 포함) 추첨 결과를 조작하거나 미리 알 수 없으며, 모든 접속자의 브라우저가 결과를 독립적으로 재계산하여 위 배지로 일치 여부를 표시합니다.","The seed is derived from the closed votes themselves, so no one (admins included) can manipulate or foresee the lottery result. Every visitor's browser recomputes the result independently and shows whether it matches with the badge above."],["신청 가능","Open to claim"],["실시간 예약","Live booking"],["실시간 예약 —","Live booking —"],["실시간 예약 · 일정 조율","Live booking · schedule coordination"],["실시간 예약 (","Live bookings ("],["실시간 예약 슬롯","Live-booked slot"],["실시간 예약 탭","Live booking tab"],["실시간 예약뿐 아니라 추첨 확정 칸도 취소 가능","you can cancel lottery-confirmed cells as well as live bookings"],["아쉽게 배정받지 못한 인원","Members who missed out"],["아직 광학 활성 멤버가 없습니다. Synthesis Scheduler에서 관리자로 로그인한 뒤, 이 앱의 관리자 탭에서 멤버들의 \"광학 활성화\"를 켜주세요. (명단·PIN 공유)","There are no Optics members yet. Log in as an admin and turn on Optics participation for members in the Roster tab. (Roster and PINs are shared.)"],["아직 등록된 멤버가 없습니다.","No members registered yet."],["아직 메시지가 없습니다.","No messages yet."],["아직 명단이 비어 있습니다. 이 시스템의 첫 관리자를 등록하세요. 이후 관리자 탭에서 멤버를 추가할 수 있습니다.","The roster is empty. Register the first admin of this system; you can add members afterwards."],["아직 배정 발표 전입니다 (발표:","Assignments are not announced yet (announcement:"],["아직 변경 이력이 없습니다.","No change history yet."],["아직 안 했습니다","not done yet"],["아직 없습니다.","None yet."],["아직 없음","None yet"],["없음","None"],["없음 (투표자 전원 배정)","None (every voter was assigned)"],["에 배정된"," is assigned to"],["에 진행됩니다. 다음 투표 시작:",". Next voting opens:"],["에게 등록돼 있습니다.",".",1],["에서 진행하세요.","."],["연결","Connection"],["연결 기기","Devices"],["연결 상태","Connections"],["연결 오류","Connection error"],["연결 채널 파장범위","Channel wavelength range"],["연결 컨트롤러","Controller"],["연구실 문헌 지도","Lab literature map"],["예: 633 nm","e.g. 633 nm"],["예: 홍길동","e.g. Gildong Hong"],["예: A대 김○○ 측정","e.g. measurement by visitor from Univ. A"],["예약","Book"],["예약 —","Book —"],["예약 가능","Bookable"],["예약 가능(빈 슬롯)","Bookable (open slot)"],["예약 실패:","Booking failed:"],["예약 완료!","Booked!"],["예약·조율 대상에서 제외","excluded from booking and coordination"],["예약은","Booking opens"],["예약을 취소할까요?","booking — cancel it?"],["예약이 취소되었습니다.","Booking cancelled."],["예약이 취소되었습니다. (캘린더에 곧 반영)","Booking cancelled. (Calendar updates shortly)"],["예약자","Booked by"],["예약하려면 먼저 로그인해주세요.","Please log in to book."],["오전","Morning"],["오후","Afternoon"],["완료","done"],["외부인 방문측정","External visit"],["요일","Day"],["요일 당첨자와 자유 조율 결과를 모두 덮으므로","override both the day's winner and open coordination"],["요일 배정 결과가 확정·발표되었습니다.","Day assignments have been finalized and announced."],["요일 이름을 누르면","Tap a day name to apply for"],["요일 칸을 위아래로 쓸면 범위 선택, 화면 스크롤은 왼쪽 시간 눈금에서.","Swipe a day column up/down to select a range; scroll the page from the time ruler on the left."],["우선권","priority"],["우선예약 지속 시간 (분, 0=사용 안 함)","Priority booking window (minutes, 0 = off)"],["운영 설정","Settings"],["원하는 칸을 눌러 토큰을 배치하세요. 같은 시간표에 2개 이상 배치하면 그 시간표에서","Tap cells to place tokens. Placing 2 or more on the same timetable row gives you"],["월","Mon"],["월 00:00 ~ 수 24:00","Mon 00:00 – Wed 24:00"],["월 00:00 ~ 수 24:00 · 요일 1/2/3순위 (선택)","Mon 00:00 – Wed 24:00 · 1st/2nd/3rd choice days (optional)"],["월요일 06-18시","Monday 06–18h"],["월요일 18시-화 06시","Monday 18h – Tue 06h"],["월화수목금토일","MTWTFSS"],["위치","Position"],["유저","User"],["유효하지 않은 슬롯:","Invalid slot:"],["유효하지 않은 요일 또는 시간대","Invalid day or time block"],["으로 처리됩니다. Day 시간대는 주당 최대 2배치까지만 배정됩니다.",". Day slots are capped at 2 batches per person per week."],["을 가지며,"," on that row, and they are treated as a"],["을 누르면 취소할 수 있습니다 (확정 취소는 권리 상실 — 되돌릴 수 없음)."," to cancel (cancelling a confirmation forfeits it — this can't be undone)."],["을 사용합니다. 관리자 블록은 추첨 알고리즘과 무관한 별도 레이어이므로 위 검증 결과에 영향을 주지 않습니다.",". Admin blocks are a separate layer independent of the lottery algorithm, so they don't affect the verification above."],["을 클릭하면 취소됩니다 —"," to cancel it —"],["입니다 ("," (until "],["입니다.","."],["을(를) 되살렸습니다. 참여할 앱을 켜 주세요."," was restored. Turn on the apps they take part in.",1],["을(를) 명단에 추가했습니다."," was added to the roster.",1],["을(를) 명단에서 삭제할까요? · 명단·로그인·투표·예약 대상에서 빠지고 연결 기기가 해제됩니다. · 과거 배정·예약·기록의 이름은 그대로 남습니다. · «삭제한 멤버»에서 언제든 되살릴 수 있습니다."," — delete from the roster? · They leave the roster, login, voting and booking, and their devices are disconnected. · Their name stays on past assignments, bookings and logs. · You can restore them any time from «Deleted members».",1],["을(를) 명단에서 삭제할까요?"," — delete from the roster?"],["· 명단·로그인·투표·예약 대상에서 빠지고 연결 기기가 해제됩니다.","· They leave the roster, login, voting and booking, and their devices are disconnected."],["· 과거 배정·예약·기록의 이름은 그대로 남습니다.","· Their name stays on past assignments, bookings and logs."],["· «삭제한 멤버»에서 언제든 되살릴 수 있습니다.","· You can restore them any time from «Deleted members»."],["을(를) 삭제했습니다. (되살리기 가능)"," was deleted. (can be restored)",1],["의 연결 기기를 모두 해제할까요? 다음 로그인 때 PIN으로 다시 연결합니다."," — disconnect all devices? They will reconnect with their PIN at next login.",1],["의 PIN을 초기화할까요? 다음 로그인 때 새 PIN을 등록합니다."," — reset PIN? A new PIN will be registered at next login.",1],["이 구간에는 관리자 지정 일정(Repair·외부인 방문측정)이 있습니다. 관리자 지정을 해제하고 선택한 내용으로 바꿀까요?","This range contains an admin block (Repair · External visit). Remove the admin block and replace it with your selection?"],["이 명단에 등록된 인원에게 매주 월요일 00시에 토큰","Everyone on this roster receives"],["이 블록은","These blocks"],["이 앱 안의 예약·배정은 정상이지만, 그 이후 변경이 구글 캘린더에는 반영되지 않았습니다. 관리자에게 알려주세요.","Bookings and assignments in this app are fine, but changes since then have not reached Google Calendar. Please tell an admin."],["이 연구실 설정: 선착순 예약 단계에도 Day 주간 2배치 제한이 적용됩니다.","Lab setting: the 2-batches-per-week Day limit also applies to first-come booking."],["이 주는 수정 가능 기간이 아닙니다.","This week can't be edited now."],["이 주의 배정 데이터가 없습니다.","No assignment data for this week."],["이 특이사항 기록을 삭제할까요?","Delete this remark?"],["이 Slack ID는 이미","This Slack ID is already registered to"],["이름","Name"],["이름은 40자 이내로 입력하세요.","Names must be 40 characters or fewer."],["이름을 '","Rename '"],["이름을 입력하세요.","Please enter a name."],["이미 예약된 슬롯입니다.","This slot is already booked."],["이미 종료된 시간대입니다.","This time has already passed."],["이번 사이클 배정 결과를 삭제하고 재생성할까요?","Delete and regenerate this cycle's assignments?"],["이번 사이클 추첨 결과를 삭제하고 재생성할까요? (결정론적이므로 투표가 같으면 동일한 결과가 나옵니다)","Delete and regenerate this cycle's lottery results? (It is deterministic, so the same votes give the same result.)"],["이번 사이클(","Delete & regenerate results for this cycle ("],["이번 주","This week"],["이번 주 (","This week ("],["이번 주 내 투표(마감됨):","My vote this week (closed):"],["이번 주 순위 투표를 전부 취소할까요?","Cancel all of your ranked votes for this week?"],["이번 주 투표를 전부 취소할까요? 토큰이 반환됩니다.","Cancel all of your votes this week? Your tokens will be returned."],["이번 주 확정 스케줄 데이터가 없습니다. (지난주에 시스템 미사용 또는 데이터 없음)","No confirmed schedule for this week. (The system wasn't used last week, or there's no data.)"],["이번 주 확정 스케줄 데이터가 없어 실시간 신청이 불가합니다. (지난주 시스템 미사용)","There's no confirmed schedule for this week, so live claims aren't possible. (System not used last week.)"],["이번 주 확정 스케줄입니다. 로그인하면 빈 칸을 실시간으로 신청할 수 있습니다.","This week's confirmed schedule. Log in to claim open cells in real time."],["이번 투표에는 참여하지 않았습니다","You didn't take part in this vote"],["이후 ~ 대상 주 일요일","after that – Sunday of the target week"],["일","Sun"],["일시","Date/time"],["일요일 (전일)","Sunday (all day)"],["일정","Schedule"],["입력한 내용이 저장되지 않았습니다. 닫을까요?","Your input hasn't been saved. Close anyway?"],["장비 변경","Hardware"],["장비 주간 스케줄","Weekly equipment schedule"],["장착 Mirror","Mounted mirror"],["저 목요일 오후 받을게요! 스케줄에서 바로 수정할게요.","I'll take Thursday afternoon! Updating the schedule now."],["저녁","Evening"],["저장","Save"],["저장 실패:","Save failed:"],["저장되었습니다. 변경 내용이 Slack에 곧 공지됩니다.","Saved. The change will be announced on Slack shortly."],["저장된 상태로 되돌리기","Revert to saved"],["저장됨 ✓","Saved ✓"],["적게 투표할수록 동순위 경쟁에서 우선","fewer votes win ties at the same rank"],["적용","Apply"],["전","ago"],["전송","Send"],["전송 실패:","Send failed:"],["전체 실시간 예약","Open booking for all"],["전체 예약 오픈까지","Until booking opens to all"],["정보를 저장했습니다.","— saved."],["조율 채팅을 전체 삭제하고 백지로 초기화할까요? (모든 멤버에게 즉시 반영되며 되돌릴 수 없습니다)","Delete the entire coordination chat and start fresh? (Applies to all members immediately and can't be undone.)"],["조율·채팅","Coordinate"],["조치","Actions"],["종료","Ended"],["종일","All day"],["종일 사용 불가","Unavailable all day"],["주간 일정","Weekly schedule"],["지금 할 일","To do now"],["지금은","Now is the"],["지금은 투표 기간이 아닙니다. 투표는","Voting is closed right now. Voting runs"],["지금은 Day 탈락자 우선예약 시간입니다. 잠시 후 전체 오픈됩니다.","It's currently the priority window for Day non-winners. Booking opens to everyone shortly."],["지원","Applied"],["지원 없음","No applicants"],["지원됩니다. 배정도 그 시간대 단위로 이뤄지므로, 필요 없는 시간을 나중에 취소할 필요가 없습니다.",". Assignment is made per time block too, so you won't have to cancel time you don't need later."],["지원자 수는 우측 상단 숫자","the number in the top-right corner is the applicant count"],["진행 단계","Progress"],["참여","Participation"],["참여 중","Active"],["참여·권한","Participation · role"],["채널","channel"],["채팅이 초기화되었습니다.","Chat cleared."],["처음이면 여기서 입력한 PIN이 등록됩니다","On first login, the PIN you enter here is registered"],["초기 설정 — 첫 관리자 등록","Initial setup — register the first admin"],["초기화 실패:","Reset failed:"],["최근 10개만 보관","Only the latest 10 are kept"],["최근 변경 이력","Recent changes"],["최종 변경","Last changed"],["추가","Add"],["추가·편집(이름·Slack ID·참여·관리자)·삭제·PIN/기기 초기화는 «명단» 탭에서 합니다.","Adding, editing (name, Slack ID, participation, admin), deleting and PIN/device resets are done in the «Roster» tab."],["추첨","Lottery"],["추첨 결과","Lottery results"],["추첨 결과 관리","Lottery results management"],["추첨 결과가 확정·발표되었습니다.","Lottery results have been finalized and announced."],["추첨 대기","Awaiting lottery"],["추첨 발표 전입니다. 발표:","The lottery hasn't been announced yet. Announcement:"],["추첨 발표까지","Until the lottery announcement"],["추첨 배정 (","Lottery assignments ("],["추첨 배정 없음 (투표 없음)","No lottery assignments (no votes)"],["추첨 시드(전체 투표 데이터의 SHA-256):","Lottery seed (SHA-256 of all vote data):"],["추첨 확정","Confirmed"],["추첨 확정 슬롯","Lottery-confirmed slot"],["추첨 확정을 취소할까요? ⚠ 권리가 영구히 상실되며 되돌릴 수 없습니다. 칸은 빈 슬롯으로 전환됩니다.","lottery confirmation — cancel it? ⚠ The right is permanently forfeited and can't be undone. The cell becomes an open slot."],["추첨 확정을 취소할까요?","lottery confirmation — cancel it?"],["⚠ 권리가 영구히 상실되며 되돌릴 수 없습니다. 칸은 빈 슬롯으로 전환됩니다.","⚠ The right is permanently forfeited and can't be undone. The cell becomes an open slot."],["추첨 확정이 취소되었습니다. 해당 칸은 선착순 신청이 가능합니다.","Lottery confirmation cancelled. The cell is now open first-come-first-served."],["취소","Cancel"],["취소 실패:","Cancel failed:"],["측정 계획 · 이력","Measurement plans · history"],["측정 전 반드시 확인하고,","Always check before measuring, and"],["측정·장비·실험실 관련 특이사항을 자유롭게 남기세요. 날짜와 이름은 자동 기록됩니다.","Leave any notes about measurements, equipment or the lab. Date and name are recorded automatically."],["칩을 눌러 원하는 시간대만 남기세요 — 칩을 바로 누르면","chips to keep only the blocks you want — tapping a chip directly applies for"],["칸을","Click or"],["칸의 추첨 확정을 취소할까요? ⚠ 취소 즉시 권리가 영구히 상실되며 되돌릴 수 없습니다. - 사용한 토큰은 반환되지 않습니다. - 이 칸은 빈 슬롯으로 전환되어 누구나 선착순으로 신청할 수 있게 됩니다."," — cancel this lottery confirmation? ⚠ The right is forfeited immediately and permanently; this can't be undone. - Tokens used are not returned. - The cell becomes an open slot that anyone can claim first-come-first-served."],["칸의 추첨 확정을 취소할까요?"," — cancel this lottery confirmation?"],["⚠ 취소 즉시 권리가 영구히 상실되며 되돌릴 수 없습니다.","⚠ The right is forfeited immediately and permanently; this can't be undone."],["- 사용한 토큰은 반환되지 않습니다.","- Tokens used are not returned."],["- 이 칸은 빈 슬롯으로 전환되어 누구나 선착순으로 신청할 수 있게 됩니다.","- The cell becomes an open slot that anyone can claim first-come-first-served."],["컨트롤러","Controller"],["클릭","click"],["토","Sat"],["토요일 (전일)","Saturday (all day)"],["토큰은 주당","Tokens are limited to"],["투표","Vote"],["투표 결과","Vote results"],["투표 결과 (요일 배정)","Vote results (day assignments)"],["투표 결과 관리","Vote results management"],["투표 마감까지","Until voting closes"],["투표 수정","Edit vote"],["투표 저장","Save vote"],["투표 전체 취소","Cancel all votes"],["투표 참여 인원","Voters"],["투표가 저장되었습니다.","Vote saved."],["투표가 취소되었습니다.","Vote cancelled."],["투표중","Voting"],["투표하기","Vote now"],["투표하려면 먼저 로그인해주세요.","Please log in to vote."],["투표하려면 먼저 우측 상단에서 멤버 로그인을 해주세요.","Please log in (top right) to vote."],["특이사항","Remarks"],["특이사항 내용을 입력하세요.","Please enter a remark."],["특이사항 입력 (500자 이내)","Write a remark (up to 500 characters)"],["파장","Wavelength"],["파장대역","Wavelength band"],["파장범위","Wavelength range"],["편집","Edit"],["표로 보기","Table view"],["품목","Item"],["하거나",""],["하루 전체가 필요 없다면","If you don't need the whole day, tap the"],["하세요. 저장 시 변경 내용이 자동으로 기록되고 Slack 채널에 1분 내 공지됩니다.",". Saving records the change automatically and announces it on the Slack channel within a minute."],["한발 늦었습니다 — 방금 다른 분이 예약했습니다.","Too late — someone else just booked it."],["할 수 있고,",";"],["합니다. 취소한 칸은 즉시 빈 슬롯이 되어 누구나 선착순으로 신청할 수 있습니다 (확정 취소는 되돌릴 수 없음). 이미 지난 시간대는 \"종료\"로 표시됩니다.",". A cancelled cell immediately becomes an open slot that anyone can claim first-come-first-served (cancelling a confirmation can't be undone). Times that have passed are marked \"Ended\"."],["합니다. 칩의 작은 숫자는 현재 그 시간대 지원자 수입니다.",". The small number on each chip is the current number of applicants for that block."],["합성","Synthesis"],["합성 — 토큰 투표·예약","Synthesis — token voting, booking"],["합성 계획 · ICP","Synthesis planning · ICP"],["합성 비활성","Synthesis off"],["합성 활성","Synthesis on"],["합성·광학 두 앱이 같은 명단을 씁니다. 여기서 바꾸면 양쪽에 바로 반영됩니다. 새 멤버는 첫 로그인 때 본인 PIN을 등록합니다.","Synthesis and Optics share one roster. Changes here apply to both apps immediately. New members register their own PIN on first login."],["합성방 · 토큰 투표 & 실시간 예약","Synthesis room · token voting & live booking"],["해당 주차의 배정 데이터가 없습니다.","No assignment data for that week."],["해당 주차의 추첨 결과 데이터가 없습니다.","No lottery results for that week."],["해서 30분 단위로 수정하세요. 변경은 즉시 모두에게 반영되고 1분 내 구글캘린더에 동기화됩니다."," cells to edit in 30-minute steps. Changes apply for everyone immediately and sync to Google Calendar within a minute."],["해제","Remove"],["해제 실패:","Remove failed:"],["해제되었습니다. (캘린더에 곧 반영)","Removed. (Calendar updates shortly)"],["행이 제거 대기 상태입니다 — \"저장\"을 눌러야 확정됩니다.","row(s) pending removal — press \"Save\" to confirm."],["현재","Now"],["현재 배정:","Currently assigned:"],["현재 지원자 수","Current applicants"],["형식 오류","Invalid format"],["화","Tue"],["화요일 06-18시","Tuesday 06–18h"],["화요일 18시-수 06시","Tuesday 18h – Wed 06h"],["확정 취소됨 (권리 상실)","Confirmation cancelled (forfeited)"],["확정이 취소되었습니다. (캘린더에 곧 반영)","Confirmation cancelled. (Calendar updates shortly)"],["희망순위 표시","Show preferences"],["Align된 Turret #","Aligned turret #"],["Day · 06-18시","Day · 06–18h"],["Day 슬롯(","Day slot ("],["Day 시간대는 주당 최대 2배치까지입니다 (연구실 설정).","Day slots are limited to 2 batches per week (lab setting)."],["Day 우선예약 대상자","Day priority member"],["Day 탈락자 우선예약 시간","priority window for Day non-winners"],["Firebase 인증 실패:","Firebase sign-in failed:"],["INNO 앱","INNO apps"],["INNO 앱 전환","Switch INNO app"],["Night · 18시-익일 06시","Night · 18h – 06h next day"],["Optics Scheduler와 같은 계정(이름+PIN)입니다.","Same account (name + PIN) as Optics Scheduler."],["PIN (숫자 4자리 이상)","PIN (4+ digits)"],["PIN 등록","PIN set"],["PIN 미등록","No PIN"],["PIN 초기화","Reset PIN"],["PIN은 4자리 이상이어야 합니다.","PIN must be at least 4 digits."],["PIN을 초기화했습니다.","PIN reset."],["PIN이 일치하지 않습니다.","Incorrect PIN."],["Repair / 외부인 방문측정","Repair / External visit"],["Slack 멤버 ID","Slack member ID"],["Slack 멤버 ID 형식이 아닙니다 (U로 시작하는 영문·숫자). Slack 프로필 → ⋮ → 멤버 ID 복사.","Not a Slack member ID (letters and digits starting with U). Slack profile → ⋮ → Copy member ID."],["STEM · EDS 분석","STEM · EDS analysis"],["Synthesis Scheduler와 같은 계정(이름+PIN)입니다.","Same account (name + PIN) as Synthesis Scheduler."],["Turret 번호","Turret No."],["Weekend · 금/토/일","Weekend · Fri/Sat/Sun"]];
+  const DOW = { 월: 'Mon', 화: 'Tue', 수: 'Wed', 목: 'Thu', 금: 'Fri', 토: 'Sat', 일: 'Sun' };
+  const DOWF = { 월요일: 'Monday', 화요일: 'Tuesday', 수요일: 'Wednesday', 목요일: 'Thursday', 금요일: 'Friday', 토요일: 'Saturday', 일요일: 'Sunday' };
+  const ord = n => { n = +n; const s = (n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'); return n + s; };
+
+  const exact = new Map(), phrases = [];
+  for (const [k, v, a] of DICT) { exact.set(k, v); if (k.length >= 2) phrases.push([k, v, !!a]); }
+  phrases.sort((x, y) => y[0].length - x[0].length);
+  const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const phraseMap = new Map(phrases.map(([k, v]) => [k, v]));
+  const PHRASE_RE = new RegExp(phrases.map(([k, , a]) => (a ? '' : '(?<![가-힣])') + reEsc(k)).join('|'), 'g');
+
+  // 숫자·날짜·시간처럼 런타임에 조립되는 문구 (사전보다 먼저)
+  const PRE = [
+    [/(\d+)일 (\d+)시간 전/g, '$1d $2h ago'],
+    [/(\d+)시간 (\d+)분 전/g, '$1h $2m ago'],
+    [/(\d+)시간 전/g, '$1h ago'],
+    [/(\d+)분 전/g, '$1 min ago'],
+    [/(\d+)일 (?=\d{1,2}:\d\d)/g, '$1d '],
+    [/(\d+)월 (\d+)일/g, '$1/$2'],
+  ];
+  // 사전으로 바꾸고 남은 숫자·요일 조각
+  const POST = [
+    [/(\d+)\s?순위/g, (m, n) => ord(n)],
+    [/(월|화|수|목|금|토|일)요일/g, (m) => DOWF[m]],
+    [/\((월|화|수|목|금|토|일)\)/g, (m, d) => '(' + DOW[d] + ')'],
+    [/익일 ?(?=\d)/g, 'next day '],
+    [/(\d+)\s?시간/g, '$1 h'],
+    [/(\d+)\s?시(?![간작])/g, '$1h'],
+    [/(\d+)\s?분(?![간석])/g, '$1 min'],
+    [/(\d+)\s?초/g, '$1 s'],
+    [/(\d+)\s?일간/g, '$1 days'],
+    [/(\d+)\s?주차/g, 'week $1'],
+    [/(\d+)\s?(명|개|대|건|칸|회|배치)(?![가-힣])/g, '$1'],
+    [/(^|[^가-힣])([월화수목금토일])(?![가-힣])(?!\s+(?:없|있|도|밖))/g, (m, p, d) => p + DOW[d]],   // '할 수 없' 의 '수' 는 요일이 아님
+  ];
+
+  let names = [], namesSig = '';
+  function refreshNames() {
+    let list = [];
+    try { if (typeof S !== 'undefined' && S && S.members) list = Object.values(S.members).map(m => m && m.name).filter(Boolean); } catch (e) {}
+    const sig = list.join('\u0001');
+    if (sig !== namesSig) { namesSig = sig; names = [...new Set(list)].sort((a, b) => b.length - a.length); cache.clear(); }
+  }
+  const cache = new Map();
+
+  function trCore(s) {
+    if (exact.has(s)) return exact.get(s);
+    const held = [];
+    if (names.length) {
+      for (const n of names) if (s.includes(n)) s = s.split(n).join('' + (held.push(n) - 1) + '');
+      if (held.length) { const t = s.replace(/\d+/g, '').trim(); if (exact.has(t)) s = s.replace(t, exact.get(t)); }
+    }
+    for (const [re, to] of PRE) if (HANGUL.test(s)) s = s.replace(re, to);
+    if (HANGUL.test(s)) s = s.replace(PHRASE_RE, m => phraseMap.get(m));
+    for (const [re, to] of POST) if (HANGUL.test(s)) s = s.replace(re, to);
+    return s.replace(/(\d+)/g, (m, i) => held[+i]);
+  }
+  function tr(s) {
+    if (s == null || !HANGUL.test(s)) return s;
+    let r = cache.get(s);
+    if (r !== undefined) return r;
+    const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s);
+    const core = m[2].replace(/\s+/g, ' ');
+    r = m[1] + trCore(core) + m[3];
+    if (cache.size > 5000) cache.clear();
+    cache.set(s, r);
+    return r;
+  }
+  const leftKo = s => { for (const n of names) s = s.split(n).join(''); return HANGUL.test(s); };
+  const trLines = s => {
+    s = String(s);
+    const byLine = s.split('\n').map(tr).join('\n');
+    if (!leftKo(byLine)) return byLine;          // 줄마다 바꿔서 끝나면 줄바꿈 유지
+    const whole = tr(s);                        // 아니면 여러 줄을 한 문장으로 사전에서 찾는다
+    return leftKo(whole) ? byLine : whole;
+  };
+
+  let lang = 'ko';
+  try { lang = localStorage.getItem(LS) === 'en' ? 'en' : 'ko'; } catch (e) {}
+  try { const q = new URLSearchParams(location.search).get('lang'); if (q === 'en' || q === 'ko') lang = q; } catch (e) {}
+
+  const ATTRS = ['placeholder', 'title', 'aria-label', 'data-label', 'alt'];
+  const textOrig = new WeakMap();   // Text → { ko, en }
+  const attrOrig = new WeakMap();   // Element → { attr: { ko, en } }
+  const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'NOSCRIPT']);
+  function blocked(el) {
+    for (; el && el.nodeType === 1; el = el.parentElement) {
+      if (SKIP.has(el.tagName)) return true;
+      if (el.getAttribute('translate') === 'no') return true;
+    }
+    return false;
+  }
+  function doText(n) {
+    const v = n.data;
+    const o = textOrig.get(n);
+    if (o && v === o.en) return;
+    if (!HANGUL.test(v)) { if (o) textOrig.delete(n); return; }
+    if (blocked(n.parentElement)) return;
+    refreshNames();
+    const en = tr(v);
+    textOrig.set(n, { ko: v, en });
+    if (en !== v) n.data = en;
+  }
+  function doAttrs(el) {
+    if (!el.hasAttribute) return;
+    let rec = null;
+    for (const a of ATTRS) {
+      if (!el.hasAttribute(a)) continue;
+      const v = el.getAttribute(a);
+      rec = rec || attrOrig.get(el) || {};
+      const o = rec[a];
+      if (o && v === o.en) continue;
+      if (!HANGUL.test(v)) { delete rec[a]; continue; }
+      if (el.getAttribute('translate') === 'no' || blocked(el.parentElement)) return;
+      refreshNames();
+      const en = tr(v);
+      rec[a] = { ko: v, en };
+      if (en !== v) el.setAttribute(a, en);
+    }
+    if (rec) attrOrig.set(el, rec);
+  }
+  function walkTree(root) {
+    if (!root) return;
+    if (root.nodeType === 3) { doText(root); return; }
+    if (root.nodeType !== 1 && root.nodeType !== 9 && root.nodeType !== 11) return;
+    if (root.nodeType === 1) { if (root.getAttribute('translate') === 'no' || blocked(root.parentElement)) return; doAttrs(root); if (SKIP.has(root.tagName)) return; }
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (n.nodeType === 1) {
+          if (n.getAttribute('translate') === 'no') return NodeFilter.FILTER_REJECT;
+          if (SKIP.has(n.tagName)) { if (n.tagName === 'TEXTAREA') doAttrs(n); return NodeFilter.FILTER_REJECT; }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let n;
+    while ((n = tw.nextNode())) { if (n.nodeType === 3) doText(n); else doAttrs(n); }
+  }
+  function restoreTree(root) {
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    let n = root;
+    do {
+      if (n.nodeType === 3) { const o = textOrig.get(n); if (o) { if (n.data === o.en) n.data = o.ko; textOrig.delete(n); } }
+      else if (n.nodeType === 1) {
+        const rec = attrOrig.get(n);
+        if (rec) { for (const a in rec) if (n.getAttribute(a) === rec[a].en) n.setAttribute(a, rec[a].ko); attrOrig.delete(n); }
+      }
+    } while ((n = tw.nextNode()));
+  }
+
+  let mo = null;
+  function onMut(list) {
+    for (const r of list) {
+      if (r.type === 'characterData') doText(r.target);
+      else if (r.type === 'attributes') doAttrs(r.target);
+      else for (const n of r.addedNodes) walkTree(n);
+    }
+  }
+  function startObs() {
+    if (mo || !document.documentElement) return;
+    mo = new MutationObserver(onMut);
+    mo.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+  }
+  function stopObs() { if (mo) { mo.disconnect(); mo = null; } }
+
+  const nConfirm = window.confirm.bind(window), nAlert = window.alert.bind(window), nPrompt = window.prompt.bind(window);
+  window.confirm = m => { refreshNames(); return nConfirm(lang === 'en' ? trLines(m) : m); };
+  window.alert = m => { refreshNames(); return nAlert(lang === 'en' ? trLines(m) : m); };
+  window.prompt = (m, d) => { refreshNames(); return nPrompt(lang === 'en' ? trLines(m) : m, d); };
+
+  function paintSwitch() {
+    document.querySelectorAll('.langsw button[data-lang]').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function apply() {
+    document.documentElement.lang = lang;
+    if (lang === 'en') { startObs(); walkTree(document.body || document.documentElement); }
+    else { stopObs(); if (document.body) restoreTree(document.body); }
+    paintSwitch();
+  }
+  function setLang(l) {
+    l = l === 'en' ? 'en' : 'ko';
+    if (l === lang) return;
+    lang = l;
+    try { localStorage.setItem(LS, l); } catch (e) {}
+    try { const u = new URL(location.href); if (u.searchParams.has('lang')) { u.searchParams.set('lang', l); history.replaceState(null, '', u); } } catch (e) {}
+    apply();
+    try { if (typeof render === 'function') render(); } catch (e) { console.error(e); }
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.langsw button[data-lang]');
+    if (b) { e.preventDefault(); setLang(b.dataset.lang); }
+  });
+  if (lang === 'en') startObs();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply); else apply();
+
+  window.I18N = { get lang() { return lang; }, setLang, tr };
+})();
+
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -1647,7 +1873,100 @@ function renderMembers() {
 }
 
 /* ---------------- 탭: 규칙 ---------------- */
+function renderRulesEn() {
+  return `<div class="card rules"><h2>📖 Rules and Internal Process</h2>
+
+  <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--risk);font-size:14px">
+    <b>⚠ Most important</b> — If you can no longer use time you've secured (lottery-confirmed or live booking),
+    <b>cancel it yourself in the system as soon as possible</b> so other members can use it.
+    (Next week: «Live booking» tab; <b>this week: «Schedule» tab (this-week view)</b> — click your cell → Cancel.
+    Leaving it unused costs the whole lab equipment uptime.)
+  </div>
+
+  <h3>1. Tokens</h3>
+  <ul>
+    <li>Each member on the 'Roster' receives <b>4 tokens every week</b>.</li>
+    <li>Reset automatically every <b>Monday 00:00 (KST)</b>. Unused tokens don't carry over.</li>
+    <li>1 token = one application for one cell [day + time slot + batch].</li>
+  </ul>
+
+  <h3>2. Timetable structure</h3>
+  <ul>
+    <li><b>[Day]</b> Mon/Tue/Wed/Thu 06:00–18:00 (4 slots, one per day)</li>
+    <li><b>[Night]</b> Mon/Tue/Wed/Thu 18:00–06:00 next day (4 slots, one per day)</li>
+    <li><b>[Weekend]</b> Fri/Sat/Sun (3 slots, one per day)</li>
+    <li>Each slot is split into synthesis batches <b>#1 / #2 / #3 / #4</b> → 44 cells per week.</li>
+  </ul>
+
+  <h3>3. Weekly cycle (all times KST, enforced by the server)</h3>
+  <ul>
+    <li><b>Mon 00:00 – Wed 24:00</b> — Pre-vote (tokens). Edit or cancel freely during this period.</li>
+    <li><b>Thu 00:00</b> — Voting closes. Vote data is then permanently frozen by server rules.</li>
+    <li><b>Thu 12:00</b> — Lottery results announced automatically + priority booking starts.</li>
+    <li><b>After priority booking – Sunday 24:00 of the target week</b> — first-come booking for everyone.</li>
+    <li>Voting, lottery and booking all target <b>next week's (Mon–Sun) schedule</b>.</li>
+  </ul>
+
+  <h3>4. Lottery rules (Thu 12:00)</h3>
+  <ul>
+    <li>(1) Each batch of each slot goes to <b>exactly one person</b>. Random draw on conflict.</li>
+    <li>(2) <b>Day slots: at most 2 batches per person per week</b>.</li>
+    <li>(3) Someone who voted for <b>2 or more different batches in the same slot (bundle vote) has priority</b>. If 2+ such people overlap on any batch, they draw randomly among themselves.</li>
+    <li>(4) Bundle votes are <b>all-or-nothing</b>: all batches in that slot are assigned or none are (never partially confirmed).</li>
+    <li>Order: slots are processed in a fixed order (Day Mon→Thu, Night Mon→Thu, Weekend Fri→Sun); in each slot, ① bundle votes (assigned in random order) → ② single votes (random draw per batch).</li>
+    <li>Derived rule: a bundle of 3+ batches in one Day slot can never win under rules (2)+(4), so <b>such votes are blocked</b>.</li>
+  </ul>
+
+  <h3>5. How randomness and fairness are guaranteed</h3>
+  <ul>
+    <li>Lottery seed = <b>SHA-256 hash of all closed vote data</b>. The result is determined only by the votes.</li>
+    <li>Nobody knows the final set of votes before the deadline, so the seed can't be predicted or manipulated.</li>
+    <li>Every visitor's browser <b>independently re-computes and verifies</b> the result with the same algorithm; a warning badge appears if it differs from the posted result.</li>
+    <li>Result documents can't be modified after creation (server rules). Only on a mismatch does an admin delete and regenerate them.</li>
+  </ul>
+
+  <h3>6. Live booking (after Thu 12:00)</h3>
+  <ul>
+    <li>After the lottery, open cells can be booked in real time with <b>no per-person limit</b>.</li>
+    <li><b>Cancelling a lottery-confirmed cell</b>: you can cancel a cell you won in the lottery by clicking it on the Live booking tab.</li>
+    <li>Cancelling a lottery-confirmed cell <b>forfeits the right immediately and permanently</b> (cannot be restored); the cell becomes an open slot anyone can book. Tokens used are not returned.</li>
+    <li><b>Priority booking</b>: members who spent at least 1 token on Day but weren't selected for any Day slot can book <b>exclusively</b> for a set time right after the announcement (default 60 min, set by admins). Then it opens to everyone.</li>
+    <li>Bookings are processed atomically on the server — if several people click at once, exactly one succeeds.</li>
+    <li>You can cancel your own booking (the cell becomes open immediately).</li>
+    <li><b>Live claims this week</b>: open cells in this week's confirmed schedule can also be claimed first-come in the <b>Schedule tab (this-week view)</b> (until Sunday 24:00 of that week, excluding ended times).</li>
+    <li><b>Cancelling your cells this week</b>: in the Schedule tab (this-week view) you can cancel <b>not only your live bookings but also lottery-confirmed cells</b>. A cancelled cell becomes open immediately and <b>anyone can claim it first-come</b>. Cancelling a lottery confirmation, as for next week, <b>forfeits the right permanently</b> and can't be undone (tokens not returned). Times that have ended can't be cancelled.</li>
+    <li>Whether the 2-batch Day limit also applies at booking is set by admins per lab policy (default: off).</li>
+    <li><b>Admin actions</b>: for no-show cleanup and proxy adjustments, admins can manage every cell on the Live booking tab — book on behalf of any member, cancel others' bookings, cancel others' lottery confirmations (forfeit). Admin actions are not restricted by the priority window.</li>
+    <li>The shared Google Calendar mirrors this system (auto-sync within 1 minute), so <b>never edit the calendar directly — always adjust in the app</b> (manual calendar edits are reverted automatically).</li>
+  </ul>
+
+  <h3>7. Safeguards against abuse and errors</h3>
+  <ul>
+    <li><b>Clock tampering</b> → all deadlines and opening times are enforced by the server (Firestore Security Rules) using server time, independent of the client clock.</li>
+    <li><b>Excess/duplicate token votes</b> → each person's vote is stored as a single document, and server rules check the count (≤4), valid slots and identity.</li>
+    <li><b>Impersonation</b> → per-member PIN + device binding. Only verified devices can write as that member. If lost, an admin resets the device/PIN.</li>
+    <li><b>Editing votes after the deadline</b> → server rules reject all writes outside the time window. Vote data is frozen permanently for later verification.</li>
+    <li><b>Lottery manipulation</b> → seed fixed to the hash of vote data + verification by everyone + result documents immutable.</li>
+    <li><b>Booking races / double assignment</b> → one unique document per slot (atomic create) makes double booking structurally impossible.</li>
+    <li><b>Forged or abusive confirmation cancellations</b> → server rules allow cancelling only cells assigned to you, and cancellation records can't be modified or deleted (except by admins). The original lottery results are preserved, so fairness verification is unaffected.</li>
+    <li><b>Booking into lottery-confirmed slots</b> → server rules reject bookings on lottery-assigned cells.</li>
+    <li><b>Jumping the priority window</b> → server rules reject bookings by non-eligible members during the priority window.</li>
+    <li><b>Known limits (assumes trust within the lab)</b>: ① an account that hasn't logged in for the first time can be claimed by an insider until then, so <b>log in (register your PIN) right after being added</b>. ② The Day-limit-at-booking toggle is enforced only in the UI (server aggregation limits).</li>
+  </ul>
+
+  <h3>8. Operating interpretations (decided where the original rules were silent)</h3>
+  <ul>
+    <li>Voting (Mon–Wed) and the announcement (Thu 12:00) target <b>next week's schedule</b>.</li>
+    <li>Weekend treats Fri, Sat and Sun each as an independent slot.</li>
+    <li>Priority booking duration: 60 min by default (adjustable by admins).</li>
+    <li>In weeks with no priority-eligible members, booking opens to everyone immediately.</li>
+    <li>Unbooked open slots can still be booked during the target week (until Sunday 24:00).</li>
+  </ul>
+  </div>`;
+}
+
 function renderRules() {
+  if (window.I18N && I18N.lang === 'en') return renderRulesEn();
   return `<div class="card rules"><h2>📖 운영 규칙 및 내부 프로세스</h2>
 
   <div class="note" style="border:1.5px solid var(--red);background:var(--red-soft);color:var(--risk);font-size:14px">
