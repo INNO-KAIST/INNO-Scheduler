@@ -450,39 +450,54 @@ function mention_(m) {
   return sid ? '<@' + sid + '>' : (typeof m === 'object' ? m.name : m);
 }
 
+/* ---------------- 영어 출력 (Slack·캘린더 공용 문구) ----------------
+ * 2026-11-11: Slack 공지와 캘린더 제목은 이름만 빼고 영어. 공유 코어(SLOT_DEFS·weekLabel)는
+ * 웹앱과 글자 그대로 같아야 하므로 건드리지 않고, 출력용 변환만 여기 둔다. */
+const SLOT_LABEL_EN = {
+  D0: 'Mon 06–18h', D1: 'Tue 06–18h', D2: 'Wed 06–18h', D3: 'Thu 06–18h',
+  N0: 'Mon 18h – Tue 06h', N1: 'Tue 18h – Wed 06h', N2: 'Wed 18h – Thu 06h', N3: 'Thu 18h – Fri 06h',
+  W0: 'Fri (all day)', W1: 'Sat (all day)', W2: 'Sun (all day)',
+};
+function weekLabelEn_(w) { return weekLabel(w).replace('(월)', '(Mon)').replace('(일)', '(Sun)'); }
+function leftTextEn_(leftMs) {
+  const h = Math.floor(leftMs / 3600000);
+  return h >= 24 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h + 'h ' + Math.floor(leftMs % 3600000 / 60000) + 'm';
+}
+const CAL_DESC_EN_ = 'Auto-created by Weekly Synthesis Scheduler. The bot keeps this in sync, so please do not edit or delete it here — make booking changes in the web app.';
+
 /* ---------------- 메시지 구성 ---------------- */
 function buildAnnounceMessage_(targetWeek, results, bookings, members, config) {
-  const nameOf = function (id) { return (members[id] && members[id].name) || '(알 수 없음)'; };
+  const nameOf = function (id) { return (members[id] && members[id].name) || '(unknown)'; };
   const a = results.assignments || {};
   const lines = [];
-  lines.push('📢 *합성 스케줄 확정 발표 — ' + weekLabel(targetWeek) + '*');
+  lines.push('📢 *Synthesis schedule confirmed — ' + weekLabelEn_(targetWeek) + '*');
   lines.push('');
   const byPeriod = { Day: [], Night: [], Weekend: [] };
   SLOT_DEFS.forEach(function (sd) {
     BATCHES.forEach(function (b) {
       const key = sd.key + '-' + b;
-      if (a[key]) byPeriod[sd.period].push('  • ' + sd.label + ' · Batch #' + b + ' — *' + nameOf(a[key]) + '*');
-      else if (bookings[key]) byPeriod[sd.period].push('  • ' + sd.label + ' · Batch #' + b + ' — *' + nameOf(bookings[key].memberId) + '* (예약)');
+      if (a[key]) byPeriod[sd.period].push('  • ' + SLOT_LABEL_EN[sd.key] + ' · Batch #' + b + ' — *' + nameOf(a[key]) + '*');
+      else if (bookings[key]) byPeriod[sd.period].push('  • ' + SLOT_LABEL_EN[sd.key] + ' · Batch #' + b + ' — *' + nameOf(bookings[key].memberId) + '* (booked)');
     });
   });
   const nAssigned = Object.keys(a).length, nBooked = Object.keys(bookings).length;
-  lines.push('🎲 *추첨 확정: ' + nAssigned + '건*' + (nBooked ? ' / 예약: ' + nBooked + '건' : ''));
+  lines.push('🎲 *Lottery confirmed: ' + nAssigned + '*' + (nBooked ? ' / Booked: ' + nBooked : ''));
   ['Day', 'Night', 'Weekend'].forEach(function (p) {
     if (byPeriod[p].length) { lines.push('*[' + p + ']*'); byPeriod[p].forEach(function (l) { lines.push(l); }); }
   });
-  if (!nAssigned && !nBooked) lines.push('_이번 주 배정 없음 (투표 없음)_');
+  if (!nAssigned && !nBooked) lines.push('_No assignments this week (no votes)_');
   lines.push('');
   const prio = results.priorityMembers || [];
   const prioMin = (config && config.priorityWindowMin != null) ? config.priorityWindowMin : 60;
   if (prio.length && prioMin > 0) {
-    lines.push('🎗 *Day 우선예약 대상* (Day 지원했으나 미선정): ' + prio.map(function (id) { return members[id] ? mention_(members[id]) : nameOf(id); }).join(', '));
-    lines.push('   → 지금부터 *' + prioMin + '분간* 위 인원만 빈 슬롯 선착순 예약 가능, 이후 전체 오픈');
+    lines.push('🎗 *Day priority booking* (applied for Day but not selected): ' + prio.map(function (id) { return members[id] ? mention_(members[id]) : nameOf(id); }).join(', '));
+    lines.push('   → For the next *' + prioMin + ' min* only these members can book open slots (first come, first served); then it opens to everyone');
   } else {
-    lines.push('⚡ 빈 슬롯 실시간 예약이 *지금부터* 전체 오픈되었습니다 (1인 횟수 제한 없음)');
+    lines.push('⚡ Live booking of open slots is *now open to everyone* (no per-person limit)');
   }
-  lines.push('▫ 남은 빈 슬롯: *' + (44 - nAssigned - nBooked) + '칸*');
-  if (GAS_CONFIG.appUrl) { lines.push(''); lines.push('👉 예약 바로가기: ' + GAS_CONFIG.appUrl); }
-  lines.push('_추첨 시드(투표 데이터 해시): ' + String(results.seed || '').slice(0, 16) + '… — 앱 «투표 결과» 탭에서 누구나 검증 가능_');
+  lines.push('▫ Open slots left: *' + (44 - nAssigned - nBooked) + '*');
+  if (GAS_CONFIG.appUrl) { lines.push(''); lines.push('👉 Book now: ' + GAS_CONFIG.appUrl); }
+  lines.push('_Lottery seed (hash of vote data): ' + String(results.seed || '').slice(0, 16) + '… — anyone can verify it in the app\'s «Lottery results» tab_');
   return lines.join('\n');
 }
 
@@ -494,21 +509,20 @@ function buildRemindMessage_(targetWeek, voteClose, activeMembers, votesByMember
     return (votesByMember[m.id] || []).length === 0 && slackIdOf_(m);
   });
   const leftMs = voteClose - nowMs;
-  const leftH = Math.floor(leftMs / 3600000);
-  const leftStr = leftH >= 24 ? Math.floor(leftH / 24) + '일 ' + (leftH % 24) + '시간' : leftH + '시간 ' + Math.floor(leftMs % 3600000 / 60000) + '분';
+  const leftStr = leftTextEn_(leftMs);
   const isLastDay = leftMs <= 12.5 * 3600000;
 
   const lines = [];
-  lines.push('📮 *합성 스케줄 사전 투표(토큰) 리마인드 — 대상: ' + weekLabel(targetWeek) + '*');
+  lines.push('📮 *Synthesis pre-vote (tokens) reminder — for ' + weekLabelEn_(targetWeek) + '*');
   lines.push('');
-  lines.push(isLastDay ? '⚠ *오늘 자정(수 24:00) 마감입니다!*' : '투표 마감까지 *' + leftStr + '* (수요일 24:00 KST 마감)');
-  lines.push('✅ 투표 완료: *' + voted.length + '명* / 전체 ' + activeMembers.length + '명');
+  lines.push(isLastDay ? '⚠ *Voting closes tonight at midnight (Wed 24:00)!*' : 'Voting closes in *' + leftStr + '* (Wed 24:00 KST)');
+  lines.push('✅ Voted: *' + voted.length + '* / ' + activeMembers.length + ' members');
   if (notVoted.length) {
-    lines.push('⏳ 아직 투표하지 않은 분들: ' + notVoted.map(function (m) { return mention_(m); }).join(' '));
+    lines.push('⏳ Not voted yet: ' + notVoted.map(function (m) { return mention_(m); }).join(' '));
   }
   lines.push('');
-  lines.push('• 1인당 토큰 4개 · 같은 시간표에 2개 이상 배치 시 우선권(묶음 처리) · 결과 발표: 목 12:00');
-  if (GAS_CONFIG.appUrl) lines.push('👉 투표하러 가기: ' + GAS_CONFIG.appUrl);
+  lines.push('• 4 tokens per person · 2+ batches in the same slot get priority (bundle) · Results: Thu 12:00');
+  if (GAS_CONFIG.appUrl) lines.push('👉 Vote now: ' + GAS_CONFIG.appUrl);
   return lines.join('\n');
 }
 
@@ -664,7 +678,7 @@ function buildDesired_(token, week) {
 
 function reconcileWeek_(week, desired, names) {
   function titleOf(d) {
-    return '[합성 #' + d.batches.join('·#') + '] ' + (names[d.owner] || '(알 수 없음)');
+    return '[Synthesis #' + d.batches.join('·#') + '] ' + (names[d.owner] || '(unknown)');
   }
   const cal = CalendarApp.getCalendarById(GAS_CONFIG.calendarId);
   if (!cal) throw new Error('캘린더 접근 실패: ' + GAS_CONFIG.calendarId + ' (ID와 편집 권한 확인)');
@@ -680,7 +694,9 @@ function reconcileWeek_(week, desired, names) {
     if (!desired[key] || seen[key]) { ev.deleteEvent(); return; } // 취소됨/중복 → 삭제
     seen[key] = true;
     const want = titleOf(desired[key]);
-    if (ev.getTitle() !== want) ev.setTitle(want); // 배치 구성 변경 반영
+    if (ev.getTitle() !== want) ev.setTitle(want); // 배치 구성 변경·영어 제목 전환 반영
+    const wantDesc = CAL_DESC_EN_ + '\n[' + key + ']';
+    if (ev.getDescription() !== wantDesc) ev.setDescription(wantDesc);
   });
 
   // 아직 캘린더에 없는 확정 건 생성
@@ -690,7 +706,7 @@ function reconcileWeek_(week, desired, names) {
     const d = desired[key];
     const sc = SLOT_CAL_[d.slot];
     const title = titleOf(d);
-    const desc = 'Weekly Synthesis Scheduler 자동 등록 일정입니다. Bot에 의해 자동 동기화되므로 직접 수정/삭제를 금합니다. 예약 변경은 웹에서 진행해주세요\n[WSS|' + week + '|' + d.slot + '|' + d.owner + ']';
+    const desc = CAL_DESC_EN_ + '\n[WSS|' + week + '|' + d.slot + '|' + d.owner + ']';
     const base = weekStartMs(week) + sc.day * DAY_MS;
     if (sc.type === 'weekend') {
       cal.createAllDayEvent(title, new Date(base + 12 * 3600000), { description: desc });
@@ -740,16 +756,16 @@ function setup() {
 
 /* ---------------- 테스트용 ---------------- */
 function testSlack() {
-  postToSlack_('🔧 [테스트] Weekly Synthesis Scheduler 봇 연결 확인 — 이 메시지가 보이면 설정 성공!');
+  postToSlack_('🔧 [Test] Weekly Synthesis Scheduler bot connection check — if you can see this, setup worked!');
 }
 /* 캘린더 연결 확인: 1시간 뒤 시작하는 테스트 일정을 만들어 봄 (확인 후 직접 삭제) */
 function testCalendar() {
   if (!GAS_CONFIG.calendarId) throw new Error('GAS_CONFIG.calendarId를 먼저 입력하세요.');
   const cal = CalendarApp.getCalendarById(GAS_CONFIG.calendarId);
   if (!cal) throw new Error('캘린더 접근 실패 — ID가 정확한지, 이 구글 계정에 해당 캘린더의 "일정 변경" 권한이 있는지 확인하세요.');
-  cal.createEvent('[WSS 테스트] 연결 확인 — 확인 후 삭제하세요',
+  cal.createEvent('[WSS test] Connection check — delete after confirming',
     new Date(Date.now() + 3600000), new Date(Date.now() + 7200000),
-    { description: '캘린더 연동 테스트 일정입니다.' });
+    { description: 'Calendar integration test event.' });
   Logger.log('캘린더 "' + cal.getName() + '"에 테스트 일정 생성 완료 — 캘린더에서 확인 후 삭제하세요.');
 }
 /* 투표 기간 여부와 무관하게 리마인드 메시지를 즉시 미리보기 발송 */
@@ -761,5 +777,5 @@ function previewRemind() {
   const voteDocs = fsQueryByWeek_(token, 'votes', c.targetWeek);
   const votesByMember = {};
   voteDocs.forEach(function (d) { votesByMember[d.memberId] = Object.keys(d.cells || {}); });
-  postToSlack_('_(미리보기 발송입니다)_\n' + buildRemindMessage_(c.targetWeek, c.voteClose, activeMembers, votesByMember));
+  postToSlack_('_(preview)_\n' + buildRemindMessage_(c.targetWeek, c.voteClose, activeMembers, votesByMember));
 }

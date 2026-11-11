@@ -805,26 +805,63 @@ function postToSlack_(text) {
   if (r.code !== 200) throw new Error('Slack 전송 실패(' + r.code + '): ' + r.text.slice(0, 200));
 }
 
+/* ---------------- 영어 출력 (Slack·캘린더 공용 문구) ----------------
+ * 2026-11-11: Slack 공지와 캘린더 제목은 이름만 빼고 영어. 공유 코어(optDayLabel·
+ * optQuartersLabel·optAdminLabel …)는 웹앱과 글자 그대로 같아야 하므로 건드리지 않고,
+ * 출력용 변환만 여기 둔다. */
+const EN_DOW_ = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const EN_DOW_OF_ = { '월': 'Mon', '화': 'Tue', '수': 'Wed', '목': 'Thu', '금': 'Fri', '토': 'Sat', '일': 'Sun' };
+function enDowParen_(s) { return String(s).replace(/\(([월화수목금토일])\)/g, function (m, d) { return '(' + EN_DOW_OF_[d] + ')'; }); }
+function weekLabelEn_(w) { return enDowParen_(weekLabel(w)); }
+function optDayLabelEn_(w, d) { return fmtDate(optDayDate(w, d)) + '(' + EN_DOW_[d] + ')'; }
+function optFmtDateDowEn_(ms) { return enDowParen_(optFmtDateDow(ms)); }
+function optQuartersLabelEn_(qs) { const t = optQuartersLabel(qs); return t === '종일' ? 'all day' : t.replace(/시$/, 'h'); }
+const OPT_ADMIN_KIND_EN_ = { repair: 'Repair', visit: 'External visit' };
+function optAdminLabelEn_(v) {
+  const p = optAdminParse(v);
+  return p ? (OPT_ADMIN_KIND_EN_[p.code] || p.kind) + (p.memo ? ' · ' + p.memo : '') : '';
+}
+function leftTextEn_(leftMs) {
+  const h = Math.floor(leftMs / 3600000);
+  return h >= 24 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h + 'h ' + Math.floor(leftMs % 3600000 / 60000) + 'm';
+}
+/* 하드웨어 변경 요약은 웹앱이 한국어 고정 문구로 저장한다 → 고정 문구만 영어로(사용자가 쓴 값은 그대로) */
+const HW_SECTION_EN_ = { '기타 요소': 'Other items' };
+const HW_FIELD_EN_ = { '파장범위': 'Wavelength range', '파장': 'Wavelength', '컨트롤러': 'Controller', '번호': 'No.', '품목': 'Item', '위치': 'Location' };
+function hwSummaryEn_(text) {
+  return String(text || '').split('\n').map(function (line) {
+    return line
+      .replace(/: 제거됨$/, ': removed')
+      .replace(/: 신규 추가 \(/, ': newly added (')
+      .replace(/(: |, |\()(파장범위|파장|컨트롤러|번호|품목|위치)(?=[ =])/g, function (m, p, f) { return p + HW_FIELD_EN_[f]; })
+      .replace(/([ =]|→ )(연결|해제)(?=$|,|\)| →)/g, function (m, p, v) { return p + (v === '연결' ? 'connected' : 'disconnected'); })
+      .replace(/\(없음\)/g, '(none)').replace(/\(무명\)/g, '(unnamed)');
+  }).join('\n');
+}
+const CAL_DESC_EN_ = 'Auto-created by Weekly Optics Scheduler. The bot keeps this in sync, so please do not edit or delete it here — make schedule changes in the web app.';
+function calTitleEn_(owner, names) {
+  return '[Optics] ' + (optIsAdminOwner(owner) ? optAdminLabelEn_(owner) : (names[owner] || '(unknown)'));
+}
+
 /* ---------------- 월/화/수 12:00 — 투표 리마인드 ---------------- */
 function buildOptRemindMessage_(targetWeek, voteClose, opticsMembers, votedIds) {
   const nowMs = Date.now();
   const voted = opticsMembers.filter(function (m) { return votedIds[m.id]; });
   const notVoted = opticsMembers.filter(function (m) { return !votedIds[m.id] && slackIdOf_(m); });
   const leftMs = voteClose - nowMs;
-  const leftH = Math.floor(leftMs / 3600000);
-  const leftStr = leftH >= 24 ? Math.floor(leftH / 24) + '일 ' + (leftH % 24) + '시간' : leftH + '시간 ' + Math.floor(leftMs % 3600000 / 60000) + '분';
+  const leftStr = leftTextEn_(leftMs);
   const isLastDay = leftMs <= 12.5 * 3600000;
   const lines = [];
-  lines.push('🔬 *광학방 사전 투표(요일 순위) 리마인드 — 대상: ' + weekLabel(targetWeek) + '*');
+  lines.push('🔬 *Optics pre-vote (day ranking) reminder — for ' + weekLabelEn_(targetWeek) + '*');
   lines.push('');
-  lines.push(isLastDay ? '⚠ *오늘 자정(수 24:00) 마감입니다!*' : '투표 마감까지 *' + leftStr + '* (수요일 24:00 KST 마감)');
-  lines.push('✅ 투표 완료: *' + voted.length + '명* / 광학 활성 ' + opticsMembers.length + '명');
+  lines.push(isLastDay ? '⚠ *Voting closes tonight at midnight (Wed 24:00)!*' : 'Voting closes in *' + leftStr + '* (Wed 24:00 KST)');
+  lines.push('✅ Voted: *' + voted.length + '* / ' + opticsMembers.length + ' active Optics members');
   if (notVoted.length) {
-    lines.push('⏳ 아직 투표하지 않은 분들: ' + notVoted.map(function (m) { return mention_(m); }).join(' '));
+    lines.push('⏳ Not voted yet: ' + notVoted.map(function (m) { return mention_(m); }).join(' '));
   }
   lines.push('');
-  lines.push('• 원하는 요일에 1/2/3순위 지정 (3개 다 채울 필요 없음, 적게 낼수록 동순위 경쟁 우선) · 발표: 목 12:00');
-  if (GAS_CONFIG.appUrl) lines.push('👉 투표하러 가기: ' + GAS_CONFIG.appUrl);
+  lines.push('• Pick your 1st/2nd/3rd choice days (no need to fill all three; fewer votes win same-rank ties) · Announcement: Thu 12:00');
+  if (GAS_CONFIG.appUrl) lines.push('👉 Vote now: ' + GAS_CONFIG.appUrl);
   return lines.join('\n');
 }
 function remindJob() {
@@ -848,7 +885,7 @@ function optDayOwnersText_(results, d, names) {
   const qa = ((results || {}).quarterAssign || {})[String(d)];
   if (!qa) {
     const mid = ((results || {}).dayAssign || {})[String(d)];
-    return mid ? '*' + (names[mid] || '?') + '*' : '_미배정 (자유 사용 가능)_';
+    return mid ? '*' + (names[mid] || '?') + '*' : '_Unassigned (free to use)_';
   }
   const byMid = {}, free = [];
   OPT_ALL_QUARTERS.forEach(function (q) {
@@ -856,9 +893,9 @@ function optDayOwnersText_(results, d, names) {
     if (m) (byMid[m] = byMid[m] || []).push(q); else free.push(q);
   });
   const mids = Object.keys(byMid).sort(function (x, y) { return byMid[x][0] - byMid[y][0]; });
-  if (!mids.length) return '_미배정 (자유 사용 가능)_';
-  const parts = mids.map(function (m) { return '*' + (names[m] || '?') + '* ' + optQuartersLabel(byMid[m]); });
-  if (free.length) parts.push('_' + optQuartersLabel(free) + ' 비어 있음_');
+  if (!mids.length) return '_Unassigned (free to use)_';
+  const parts = mids.map(function (m) { return '*' + (names[m] || '?') + '* ' + optQuartersLabelEn_(byMid[m]); });
+  if (free.length) parts.push('_' + optQuartersLabelEn_(free) + ' open_');
   return parts.join(' · ');
 }
 
@@ -885,7 +922,7 @@ function announceJob() {
   const names = {}; memberDocs.forEach(function (m) { names[m.id] = m.name; });
 
   const lines = [];
-  lines.push('🔬 *광학방 요일 배정 확정 — ' + weekLabel(c.targetWeek) + '*');
+  lines.push('🔬 *Optics day assignments confirmed — ' + weekLabelEn_(c.targetWeek) + '*');
   lines.push('');
   // 관리자 지정 일정(Repair·외부인 방문측정)도 함께 공지 — 당첨자는 이 시간을 제외하고 사용
   const admDocs = fsQueryByWeek_(token, 'opticsAdminBlocks', c.targetWeek);
@@ -896,20 +933,20 @@ function announceJob() {
     const free = optFreeSlotCount(adm, d);
     let suffix = '';
     if (blocks.length) {
-      suffix = '  🔒 ' + blocks.map(function (b) { return optAdminLabel(b.owner) + ' ' + optRangeLabel(b.start, b.end); }).join(', ')
-        + (free === 0 ? ' — *종일 사용 불가*' : ' — 나머지 ' + (free / 2) + 'h 사용 가능');
+      suffix = '  🔒 ' + blocks.map(function (b) { return optAdminLabelEn_(b.owner) + ' ' + optRangeLabel(b.start, b.end); }).join(', ')
+        + (free === 0 ? ' — *unavailable all day*' : ' — remaining ' + (free / 2) + 'h usable');
     }
-    lines.push('  • ' + optDayLabel(c.targetWeek, d) + ' — ' + optDayOwnersText_(results, d, names) + suffix);
+    lines.push('  • ' + optDayLabelEn_(c.targetWeek, d) + ' — ' + optDayOwnersText_(results, d, names) + suffix);
   }
   const un = results.unassignedMembers || [];
   if (un.length) {
     lines.push('');
-    lines.push('🙏 이번 주 미배정: ' + un.map(function (m) { return names[m] || '?'; }).join(', ') + ' — 조율 협의를 우선 배려해주세요.');
+    lines.push('🙏 Unassigned this week: ' + un.map(function (m) { return names[m] || '?'; }).join(', ') + ' — please give them priority when coordinating.');
   }
   lines.push('');
-  lines.push('💬 지금부터 *전원 자유 조율* 가능: 앱의 «실시간 예약» 탭에서 채팅으로 협의하고 30분 단위로 바로 수정하세요.');
-  if (GAS_CONFIG.appUrl) lines.push('👉 스케줄 조율하러 가기: ' + GAS_CONFIG.appUrl);
-  lines.push('_시드: ' + String(results.seed || '').slice(0, 16) + '… — 앱 «투표 결과» 탭에서 검증 가능_');
+  lines.push('💬 *Open coordination for everyone* starts now: agree in the chat on the app\'s «Coordinate» tab and edit directly in 30-minute steps.');
+  if (GAS_CONFIG.appUrl) lines.push('👉 Coordinate the schedule: ' + GAS_CONFIG.appUrl);
+  lines.push('_Seed: ' + String(results.seed || '').slice(0, 16) + '… — verify it in the app\'s «Results» tab_');
   postToSlack_(lines.join('\n'));
   Logger.log('발표 완료');
   try { calendarSync_(true); } catch (e) { Logger.log('캘린더 동기화 오류: ' + e.message); }
@@ -998,13 +1035,18 @@ function reconcileWeek_(week, blocks, names) {
     const key = 'WOS|' + m[1] + '|' + m[2] + '|' + m[3] + '|' + m[4] + '|' + m[5];
     if (!desired[key] || seen[key]) { ev.deleteEvent(); return; }
     seen[key] = true;
+    // 제목·설명이 지금 규칙과 다르면 고친다(영어 전환·이름 변경 반영)
+    const want = calTitleEn_(desired[key].owner, names);
+    if (ev.getTitle() !== want) ev.setTitle(want);
+    const wantDesc = CAL_DESC_EN_ + '\n[' + key + ']';
+    if (ev.getDescription() !== wantDesc) ev.setDescription(wantDesc);
   });
   let created = 0;
   for (const key in desired) {
     if (seen[key]) continue;
     const b = desired[key];
-    const title = '[광학] ' + (optIsAdminOwner(b.owner) ? optAdminLabel(b.owner) : (names[b.owner] || '(알 수 없음)'));
-    const desc = 'Weekly Optics Scheduler 자동 등록 일정입니다. Bot에 의해 자동 동기화되므로 직접 수정/삭제를 금합니다. 예약 변경은 웹에서 진행해주세요\n[' + key + ']';
+    const title = calTitleEn_(b.owner, names);
+    const desc = CAL_DESC_EN_ + '\n[' + key + ']';
     const base = weekStartMs(week) + b.day * DAY_MS;
     cal.createEvent(title, new Date(base + b.start * 1800000), new Date(base + b.end * 1800000), { description: desc });
     created++;
@@ -1024,13 +1066,13 @@ function hardwareNotify_() {
   if (!fresh.length) return;
   const memberDocs = fsList_(token, 'members');
   const names = {}; memberDocs.forEach(function (m) { names[m.id] = m.name; });
-  const lines = ['🛠 *광학 하드웨어 구성 변경 알림*'];
+  const lines = ['🛠 *Optics hardware configuration changed*'];
   fresh.forEach(function (l) {
     lines.push('');
-    lines.push('*[' + l.section + ']* — ' + (names[l.memberId] || '?') + ' · ' + optFmtDateDow(l.tsMs || Date.now()));
-    lines.push(l.summary);
+    lines.push('*[' + (HW_SECTION_EN_[l.section] || l.section) + ']* — ' + (names[l.memberId] || '?') + ' · ' + optFmtDateDowEn_(l.tsMs || Date.now()));
+    lines.push(hwSummaryEn_(l.summary));
   });
-  if (GAS_CONFIG.appUrl) { lines.push(''); lines.push('👉 현황판 확인: ' + GAS_CONFIG.appUrl); }
+  if (GAS_CONFIG.appUrl) { lines.push(''); lines.push('👉 Check the status board: ' + GAS_CONFIG.appUrl); }
   postToSlack_(lines.join('\n'));
   props.setProperty('wos_hw_last', String(fresh[fresh.length - 1].tsMs || Date.now()));
   Logger.log('하드웨어 변경 ' + fresh.length + '건 공지');
@@ -1061,11 +1103,11 @@ function setup() {
 }
 
 /* ---------------- 테스트 ---------------- */
-function testSlack() { postToSlack_('🔧 [테스트] Weekly Optics Scheduler 봇 연결 확인 — 이 메시지가 보이면 성공!'); }
+function testSlack() { postToSlack_('🔧 [Test] Weekly Optics Scheduler bot connection check — if you can see this, it works!'); }
 function testCalendar() {
   const cal = CalendarApp.getCalendarById(GAS_CONFIG.calendarId);
   if (!cal) throw new Error('캘린더 접근 실패 — ID/권한 확인');
-  cal.createEvent('[WOS 테스트] 연결 확인 — 삭제하세요', new Date(Date.now() + 3600000), new Date(Date.now() + 7200000));
+  cal.createEvent('[WOS test] Connection check — please delete', new Date(Date.now() + 3600000), new Date(Date.now() + 7200000));
   Logger.log('캘린더 "' + cal.getName() + '" 테스트 일정 생성 완료');
 }
 function forceCalendarResync() { calendarSync_(true); }
@@ -1078,5 +1120,5 @@ function previewRemind() {
   const voteDocs = fsQueryByWeek_(token, 'opticsVotes', c.targetWeek);
   const votedIds = {};
   voteDocs.forEach(function (d) { if (d.ranks && Object.keys(d.ranks).length) votedIds[d.memberId] = true; });
-  postToSlack_('_(미리보기 발송입니다)_\n' + buildOptRemindMessage_(c.targetWeek, c.voteClose, opticsMembers, votedIds));
+  postToSlack_('_(preview)_\n' + buildOptRemindMessage_(c.targetWeek, c.voteClose, opticsMembers, votedIds));
 }
